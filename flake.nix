@@ -1,21 +1,45 @@
 {
-  description = "Home Manager configuration of Jane Doe";
+  description = "System Config";
 
   inputs = {
-    # Specify the source of Home Manager and Nixpkgs.
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+   nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
-  outputs = { nixpkgs, home-manager, ... }:
+  outputs = { nixpkgs, home-manager, ... }@inputs:
     let
+      inherit (nixpkgs) lib;
+      
+      pkgs = import nixpkgs {
+        inherit system;
+        config.allowUnfree = true;
+        overlays = [];
+      };
+
       system = "x86_64-linux";
-      pkgs = nixpkgs.legacyPackages.${system};
+
+      util = import ./lib {
+        inherit system pkgs home-manager lib;
+      };
+
+      inherit (util) host;
     in {
-      homeConfigurations.thibault = home-manager.lib.homeManagerConfiguration {
+      nixosConfigurations = {
+        griffin = host.mkHost {
+          name = "griffin";
+          userName = "tguimbert";
+          initrdAvailMods = [ "xhci_pci" "nvme" "usb_storage" "sd_mod" "sdhci_pci" ];
+          initrdMods = [ ];
+          kernelMods = [ "kvm-intel" ];
+          extraModPkgs = [ ];
+        };
+      };
+
+      homeConfigurations.tguimbert = home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
 
         # Specify your home configuration modules here, for example,
