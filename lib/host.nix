@@ -79,7 +79,7 @@ with builtins;
           alsa.support32Bit = true;
           pulse.enable = true;
         };
-    
+
         services.pcscd.enable = true;
 
     		users.users."${userName}" = {

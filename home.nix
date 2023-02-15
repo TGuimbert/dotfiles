@@ -58,7 +58,7 @@ in {
       enable = true;
       interactiveShellInit = ''
         zellij setup --generate-completion fish | source
-        zellij setup --generate-auto-start fish | source
+        eval "$(zellij setup --generate-auto-start fish)"
       '';
       shellAliases = {
         k = "kubectl";
