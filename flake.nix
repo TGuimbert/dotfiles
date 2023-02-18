@@ -36,6 +36,11 @@
           initrdMods = [ ];
           kernelMods = [ "kvm-intel" ];
           extraModPkgs = [ ];
+
+          systemConfig = {
+            miscs.fixTpmInterruptBootMessage = true;
+            plymouth.enable = true;
+          };
         };
       };
 

@@ -3,14 +3,18 @@ with builtins;
 {
   mkHost = { name, userName,
     initrdAvailMods, initrdMods,
-    kernelMods, extraModPkgs
+    kernelMods, extraModPkgs, systemConfig
   }:
   lib.nixosSystem {
     inherit system;
 
     modules = [
       {
-        imports = [ ../modules/system/griffin.nix ];
+        imports = [ 
+          ../modules/system/griffin.nix
+          ../modules/boot  
+          ../modules/miscs
+        ];
 
         # Bootloader.
         boot.loader.systemd-boot.enable = true;
@@ -31,6 +35,10 @@ with builtins;
         boot.initrd.kernelModules = initrdMods;
         boot.kernelModules = kernelMods;
         boot.extraModulePackages = extraModPkgs;
+
+        boot.initrd.systemd.enable = true;
+
+        tg = systemConfig;
 
         # Allow unfree packages
         nixpkgs.config.allowUnfree = true;
