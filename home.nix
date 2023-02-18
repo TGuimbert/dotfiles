@@ -145,6 +145,11 @@ in {
           s = "move_line_up";
           n = "move_char_right";
 
+          j = "find_till_char";
+          J = "till_prev_char";
+
+          T = "join_selections";
+
           l = "search_next";
           L = "search_prev";
 
@@ -172,6 +177,11 @@ in {
             p = "goto_previous_buffer";
             "." = "goto_last_modification";
           };
+        };
+
+        keys.select = {
+          l = "extend_search_next";
+          L = "extend_search_prev";
         };
       };
     };
