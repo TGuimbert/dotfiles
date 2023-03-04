@@ -8,7 +8,10 @@
 in {
 	options.tg.miscs = {
 		fixTpmInterruptBootMessage = mkOption {
-			description = "Wether to enable the workaround for the TPM interrupt message during boot.";
+			description = ''
+				Wether to enable the workaround for the TPM interrupt message during boot.
+				See https://bugzilla.kernel.org/show_bug.cgi?id=204121.
+			'';
 			default = false;
 			type = types.bool;
 		};
