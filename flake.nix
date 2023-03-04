@@ -12,35 +12,20 @@
 
   outputs = { nixpkgs, home-manager, ... }@inputs:
     let
-      inherit (nixpkgs) lib;
-      
+      system = "x86_64-linux";
       pkgs = import nixpkgs {
         inherit system;
         config.allowUnfree = true;
         overlays = [];
       };
 
-      system = "x86_64-linux";
-
-      util = import ./lib {
-        inherit system pkgs home-manager lib;
-      };
-
-      inherit (util) host;
+      inherit (nixpkgs) lib;
     in {
       nixosConfigurations = {
-        griffin = host.mkHost {
-          name = "griffin";
-          userName = "tguimbert";
-          initrdAvailMods = [ "xhci_pci" "nvme" "usb_storage" "sd_mod" "sdhci_pci" ];
-          initrdMods = [ ];
-          kernelMods = [ "kvm-intel" ];
-          extraModPkgs = [ ];
+        griffin = lib.nixosSystem {
+          inherit system;
 
-          systemConfig = {
-            miscs.fixTpmInterruptBootMessage = true;
-            plymouth.enable = true;
-          };
+          modules = [ ./modules/nixos ] ++ [./modules/systems/griffin/nixos ];
         };
       };
 

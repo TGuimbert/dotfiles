@@ -22,6 +22,7 @@
       '';
       shellAliases = {
         k = "kubectl";
+        tree = "exa --tree";
       };
     };
 
