@@ -7,9 +7,13 @@
   "nix" : {
     "enabled": true
   },
+  "lockFileMaintenance": { "enabled": true},
 
   "timezone": "Europe/Paris",
   "schedule": [
     "after 9am on Monday"
+  ],
+  "reviewers": [
+    "TGuimbert"
   ]
 }
