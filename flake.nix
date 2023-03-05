@@ -3,6 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    nixos-hardware.url = "github:NixOS/nixos-hardware/master";
     devenv.url = "github:cachix/devenv";
 
     home-manager = {
@@ -11,7 +12,7 @@
     };
   };
 
-  outputs = { nixpkgs, home-manager, devenv, ... } @ inputs:
+  outputs = { nixpkgs, home-manager, ... } @ inputs:
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs {
@@ -27,7 +28,11 @@
         griffin = lib.nixosSystem {
           inherit system;
 
-          modules = [ ./modules/nixos ] ++ [ ./modules/systems/griffin/nixos ];
+          modules = [ ./modules/nixos ] ++
+            [
+              ./modules/systems/griffin/nixos
+              inputs.nixos-hardware.nixosModules.lenovo-thinkpad-t490
+            ];
         };
       };
 
@@ -37,7 +42,7 @@
         modules = [ ./modules/home ] ++ [ ./modules/systems/griffin/home ];
       };
 
-      devShells.${system}.default = devenv.lib.mkShell {
+      devShells.${system}.default = inputs.devenv.lib.mkShell {
         inherit inputs pkgs;
         modules = [
           {
