@@ -45,5 +45,14 @@
 				"--header"
 			];
 		};
+    zoxide.enable = true;
+    tealdeer.enable = true;
 	};
+  home.packages = with pkgs; [
+    fd
+    procs
+    sd
+    du-dust
+    ripgrep
+  ];
 }
