@@ -2,7 +2,8 @@
   description = "System Config";
 
   inputs = {
-   nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    devenv.url = "github:cachix/devenv";
 
     home-manager = {
       url = "github:nix-community/home-manager";
@@ -10,7 +11,7 @@
     };
   };
 
-  outputs = { nixpkgs, home-manager, ... }@inputs:
+  outputs = { self, nixpkgs, home-manager, devenv, ... } @ inputs:
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs {
@@ -35,9 +36,17 @@
         modules = [ ./modules/home ] ++ [ ./modules/systems/griffin/home ];
       };
 
-      devShells.${system}.default = pkgs.mkShell {
-        packages = [
-          pkgs.nil
+      devShells.${system}.default = devenv.lib.mkShell {
+        inherit inputs pkgs;
+        modules = [
+          {
+            languages.nix.enable = true;
+            pre-commit.hooks = {
+              deadnix.enable = true;
+              nixpkgs-fmt.enable = true;
+              statix.enable = true;
+            };
+          }
         ];
       };
     };
