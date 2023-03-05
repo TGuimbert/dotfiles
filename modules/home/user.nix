@@ -1,8 +1,9 @@
-{ config, pkgs, ... }:
+{ pkgs, ... }:
 
 let
   username = "tguimbert";
-in {
+in
+{
   home.username = username;
   home.homeDirectory = "/home/${username}";
 
@@ -46,4 +47,4 @@ in {
       nix-direnv.enable = true;
     };
   };
- }
+}

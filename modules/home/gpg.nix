@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ ... }:
 
 {
   services.gpg-agent = {
@@ -6,5 +6,5 @@
     pinentryFlavor = "gnome3";
   };
 
-	programs.gpg.enable = true;
+  programs.gpg.enable = true;
 }

@@ -1,7 +1,7 @@
 {
-	imports = [
-		./system.nix
-		./user.nix
-		./plymouth.nix
-	];
+  imports = [
+    ./system.nix
+    ./user.nix
+    ./plymouth.nix
+  ];
 }

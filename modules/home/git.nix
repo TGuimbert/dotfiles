@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ ... }:
 {
   programs.git = {
     enable = true;
@@ -23,14 +23,14 @@
 
     aliases = {
       co = "checkout";
-			up = "pull --prune --progress";
+      up = "pull --prune --progress";
     };
 
-		extraConfig = {
-			diff = {
-				colorMoved = "default";
-			};
-		};
+    extraConfig = {
+      diff = {
+        colorMoved = "default";
+      };
+    };
 
     difftastic = {
       enable = true;

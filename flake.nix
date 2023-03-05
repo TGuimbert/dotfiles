@@ -11,22 +11,23 @@
     };
   };
 
-  outputs = { self, nixpkgs, home-manager, devenv, ... } @ inputs:
+  outputs = { nixpkgs, home-manager, devenv, ... } @ inputs:
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs {
         inherit system;
         config.allowUnfree = true;
-        overlays = [];
+        overlays = [ ];
       };
 
       inherit (nixpkgs) lib;
-    in {
+    in
+    {
       nixosConfigurations = {
         griffin = lib.nixosSystem {
           inherit system;
 
-          modules = [ ./modules/nixos ] ++ [./modules/systems/griffin/nixos ];
+          modules = [ ./modules/nixos ] ++ [ ./modules/systems/griffin/nixos ];
         };
       };
 

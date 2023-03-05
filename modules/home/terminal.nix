@@ -1,7 +1,7 @@
-{ config, pkgs, ...}:
+{ pkgs, ... }:
 
 {
-	programs = {
+  programs = {
     wezterm = {
       enable = true;
       extraConfig = ''
@@ -35,19 +35,19 @@
     starship.enable = true;
     bat.enable = true;
     bottom.enable = true;
-		exa = {
-			enable = true;
-			enableAliases = true;
-			git = true;
-			icons = true;
-			extraOptions = [
-				"--group-directories-first"
-				"--header"
-			];
-		};
+    exa = {
+      enable = true;
+      enableAliases = true;
+      git = true;
+      icons = true;
+      extraOptions = [
+        "--group-directories-first"
+        "--header"
+      ];
+    };
     zoxide.enable = true;
     tealdeer.enable = true;
-	};
+  };
   home.packages = with pkgs; [
     fd
     procs
