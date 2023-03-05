@@ -26,8 +26,18 @@
 
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
-  # Enable flakes
-  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+  nix.settings = {
+    # Enable flakes
+    experimental-features = [ "nix-command" "flakes" ];
+    # Add cachix binary cache
+    substituters = [
+      "https://cache.nixos.org/"
+      "https://tguimbert.cachix.org"
+    ];
+    trusted-public-keys = [
+      "tguimbert.cachix.org-1:PDa22nLjEwxsABhCz09ONTfYAP3DJOAJRszoy007ojs="
+    ];
+  };
 
   time.timeZone = "Europe/Paris";
   # Select internationalisation properties.
