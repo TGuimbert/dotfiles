@@ -8,23 +8,34 @@
       signByDefault = true;
       key = "11C1D08CC148FEBC";
     };
+
+    # Modify commit email for work related repos
+    includes = [
+      {
+        condition = "hasconfig:remote.*.url:git@github.com:scortexio/**";
+        contents = {
+          user = {
+            email = "tguimbert@scortex.io";
+          };
+        };
+      }
+    ];
+
     aliases = {
       co = "checkout";
 			up = "pull --prune --progress";
     };
+
 		extraConfig = {
 			diff = {
 				colorMoved = "default";
 			};
 		};
-    delta = {
-			enable = true;
-			options = {
-				navigate = true;
-				line-numbers = true;
-				side-by-side = true;
-			};
-		};
+
+    difftastic = {
+      enable = true;
+      background = "dark";
+    };
   };
 
   programs.gh = {

@@ -1,4 +1,4 @@
-{	lib, config, pkgs, ...}: with lib; 
+{	lib, config, pkgs, ...}:
 
 let
 	pack = "pack_1";
