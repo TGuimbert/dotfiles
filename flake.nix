@@ -46,6 +46,7 @@
               deadnix.enable = true;
               nixpkgs-fmt.enable = true;
               statix.enable = true;
+              actionlint.enable = true;
             };
           }
         ];
