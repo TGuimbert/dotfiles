@@ -12,12 +12,9 @@
   # Bootloader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
-  boot.loader.efi.efiSysMountPoint = "/boot/efi";
+  boot.loader.efi.efiSysMountPoint = "/boot";
 
-  # Setup keyfile
-  boot.initrd.secrets = {
-    "/crypto_keyfile.bin" = null;
-  };
+  boot.tmpOnTmpfs = true;
 
   networking.networkmanager.enable = true;
   networking.useDHCP = lib.mkDefault true;
@@ -87,6 +84,9 @@
   environment.systemPackages = with pkgs; [
     pinentry-gnome
     wl-clipboard
+  ];
+  environment.gnome.excludePackages = with pkgs;[
+    gnome-tour
   ];
 
   virtualisation.podman = {

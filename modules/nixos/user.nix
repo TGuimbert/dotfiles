@@ -1,6 +1,6 @@
 { pkgs, ... }:
-
 {
+  users.mutableUsers = false;
   users.users.tguimbert = {
     name = "tguimbert";
     description = "Thibault Guimbert";
@@ -8,7 +8,10 @@
     isSystemUser = false;
     extraGroups = [ "networkmanager" "wheel" ];
     uid = 1000;
-    initialPassword = "password";
     shell = pkgs.bashInteractive;
+    initialPassword = "password";
+    passwordFile = "/persist-root/tguimbert-password";
   };
+
+  security.sudo.extraConfig = "Defaults lecture=\"never\"";
 }

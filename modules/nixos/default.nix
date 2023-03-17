@@ -1,7 +1,8 @@
 {
   imports = [
     ./system.nix
+    ./persist.nix
     ./user.nix
-    ./plymouth.nix
+    # ./plymouth.nix
   ];
 }
