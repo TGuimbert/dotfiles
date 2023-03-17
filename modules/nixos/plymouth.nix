@@ -32,7 +32,7 @@ in
   boot.plymouth = {
     enable = true;
     themePackages = [ plymouth-package ];
-    theme = theme;
+    inherit theme;
   };
   boot.kernelParams = [ "quiet" ];
 }
