@@ -46,7 +46,18 @@
       ];
     };
     zoxide.enable = true;
-    tealdeer.enable = true;
+    tealdeer = {
+      enable = true;
+      settings = {
+        display = {
+          use_pager = true;
+          compact = true;
+        };
+        updates = {
+          auto_update = false;
+        };
+      };
+    };
   };
   home.packages = with pkgs; [
     fd

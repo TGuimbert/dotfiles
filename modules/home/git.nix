@@ -43,7 +43,7 @@
     enableGitCredentialHelper = false;
     settings = {
       git_protocol = "ssh";
-
+      editor = "hx";
       aliases = {
         co = "pr checkout";
         pv = "pr view";
