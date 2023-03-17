@@ -23,7 +23,7 @@ jobs:
         authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
     - name: Build NixOs configuration
       run: nix build .#nixosConfigurations.griffin.config.system.build.toplevel
-    - name: Build Home-Manager configuration
-      run: nix build .#homeConfigurations."tguimbert@griffin".activationPackage
+    # - name: Build Home-Manager configuration
+    #   run: nix build .#homeConfigurations."tguimbert@griffin".activationPackage
     - name: Build DevShell configuration
       run: nix develop --build
