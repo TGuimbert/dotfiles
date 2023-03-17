@@ -29,9 +29,11 @@
     # Add cachix binary cache
     substituters = [
       "https://cache.nixos.org/"
+      "https://nix-community.cachix.org"
       "https://tguimbert.cachix.org"
     ];
     trusted-public-keys = [
+      "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
       "tguimbert.cachix.org-1:PDa22nLjEwxsABhCz09ONTfYAP3DJOAJRszoy007ojs="
     ];
   };
