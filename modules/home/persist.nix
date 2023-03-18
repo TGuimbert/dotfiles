@@ -7,11 +7,13 @@
       "Music"
       "Pictures"
       "Videos"
+      ".config/spotify"
       ".dotfiles"
       ".ssh"
       ".local/share/direnv"
       ".mozilla"
       ".cache/tealdeer"
+      ".cache/spotify"
       ".local/state/wireplumber"
     ];
     files = [
