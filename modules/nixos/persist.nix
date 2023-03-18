@@ -7,6 +7,7 @@
       "/var/lib/fwupd"
       "/var/lib/systemd/coredump"
       "/var/lib/bluetooth"
+      "/var/lib/boltd"
       "/etc/NetworkManager/system-connections"
     ];
     files = [
