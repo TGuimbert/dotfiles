@@ -36,6 +36,11 @@
       "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
       "tguimbert.cachix.org-1:PDa22nLjEwxsABhCz09ONTfYAP3DJOAJRszoy007ojs="
     ];
+    auto-optimise-store = true;
+  };
+  nix.gc = {
+    automatic = true;
+    dates = "weekly";
   };
 
   time.timeZone = "Europe/Paris";
