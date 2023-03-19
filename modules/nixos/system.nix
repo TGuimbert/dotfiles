@@ -88,6 +88,8 @@
 
   services.pcscd.enable = true;
 
+  services.fwupd.enable = true;
+
   environment.systemPackages = with pkgs; [
     pinentry-gnome
     wl-clipboard
