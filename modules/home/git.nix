@@ -6,7 +6,7 @@
     userEmail = "33598842+TGuimbert@users.noreply.github.com";
     signing = {
       signByDefault = true;
-      key = "11C1D08CC148FEBC";
+      key = null;
     };
 
     # Modify commit email for work related repos

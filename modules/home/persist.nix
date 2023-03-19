@@ -10,6 +10,7 @@
       ".config/spotify"
       ".dotfiles"
       ".ssh"
+      ".gnupg/private-keys-v1.d/"
       ".local/share/direnv"
       ".mozilla"
       ".cache/tealdeer"
