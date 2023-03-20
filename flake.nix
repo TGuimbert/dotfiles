@@ -50,6 +50,30 @@
             inputs.nixos-hardware.nixosModules.lenovo-thinkpad-t490
           ];
         };
+
+        leshen = lib.nixosSystem {
+          inherit system;
+
+          modules = [
+            home-manager.nixosModules.home-manager
+            inputs.impermanence.nixosModules.impermanence
+            ./modules/nixos
+            {
+              home-manager.useGlobalPkgs = true;
+              home-manager.useUserPackages = true;
+              home-manager.users.tguimbert.imports = [
+                inputs.impermanence.nixosModules.home-manager.impermanence
+                ./modules/home
+              ];
+            }
+          ] ++
+          [
+            ./modules/systems/leshen/nixos
+            {
+              home-manager.users.tguimbert = import ./modules/systems/leshen/home;
+            }
+          ];
+        };
       };
 
       homeConfigurations."tguimbert@griffin" = home-manager.lib.homeManagerConfiguration {
