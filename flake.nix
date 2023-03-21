@@ -23,6 +23,17 @@
       };
 
       inherit (nixpkgs) lib;
+
+      gaming.modules = [
+        {
+          tg.gaming.enable = true;
+          home-manager.users.tguimbert.imports = [
+            {
+              tg.gaming.enable = true;
+            }
+          ];
+        }
+      ];
     in
     {
       nixosConfigurations = {
@@ -72,7 +83,7 @@
             {
               home-manager.users.tguimbert = import ./modules/systems/leshen/home;
             }
-          ];
+          ] ++ gaming.modules;
         };
       };
 

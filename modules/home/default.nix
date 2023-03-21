@@ -7,5 +7,7 @@
     ./git.nix
     ./gpg.nix
     ./helix.nix
+
+    ./gaming.nix
   ];
 }

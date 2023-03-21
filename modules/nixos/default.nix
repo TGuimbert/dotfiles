@@ -4,5 +4,7 @@
     ./persist.nix
     ./user.nix
     # ./plymouth.nix
+
+    ./gaming.nix
   ];
 }
