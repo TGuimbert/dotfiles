@@ -9,7 +9,7 @@ jobs:
   build-hosts:
     strategy:
       matrix:
-        host: [ griffin leshen ]
+        host: [ griffin, leshen ]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
