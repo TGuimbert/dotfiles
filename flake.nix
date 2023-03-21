@@ -76,17 +76,6 @@
         };
       };
 
-      homeConfigurations."tguimbert@griffin" = home-manager.lib.homeManagerConfiguration {
-        inherit pkgs;
-
-        modules = [
-          ./modules/home
-        ] ++
-        [
-          ./modules/systems/griffin/home
-        ];
-      };
-
       devShells.${system}.default = inputs.devenv.lib.mkShell {
         inherit inputs pkgs;
         modules = [
