@@ -7,6 +7,7 @@
       "Music"
       "Pictures"
       "Videos"
+      "Workspace"
       ".config/spotify"
       ".dotfiles"
       ".ssh"
