@@ -9,6 +9,7 @@
       "/var/lib/bluetooth"
       "/var/lib/boltd"
       "/etc/NetworkManager/system-connections"
+      "/etc/secureboot"
     ];
     files = [
       "/etc/machine-id"

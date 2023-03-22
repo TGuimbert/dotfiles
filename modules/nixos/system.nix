@@ -10,9 +10,17 @@
   system.stateVersion = "22.11"; # Did you read the comment?
 
   # Bootloader.
-  boot.loader.systemd-boot.enable = true;
+  boot.loader.systemd-boot.enable = false;
+
+  boot.lanzaboote = {
+    enable = true;
+    pkiBundle = "/etc/secureboot";
+  };
+
   boot.loader.efi.canTouchEfiVariables = true;
   boot.loader.efi.efiSysMountPoint = "/boot";
+
+  boot.bootspec.enable = true;
 
   boot.tmpOnTmpfs = true;
 
@@ -93,6 +101,7 @@
   environment.systemPackages = with pkgs; [
     pinentry-gnome
     wl-clipboard
+    sbctl
   ];
   environment.gnome.excludePackages = with pkgs;[
     gnome-tour

@@ -6,6 +6,10 @@
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
     devenv.url = "github:cachix/devenv";
     impermanence.url = "github:nix-community/impermanence";
+    lanzaboote = {
+      url = "github:nix-community/lanzaboote";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     home-manager = {
       url = "github:nix-community/home-manager";
@@ -68,7 +72,9 @@
           modules = [
             home-manager.nixosModules.home-manager
             inputs.impermanence.nixosModules.impermanence
+            inputs.lanzaboote.nixosModules.lanzaboote
             ./modules/nixos
+
             {
               home-manager.useGlobalPkgs = true;
               home-manager.useUserPackages = true;
