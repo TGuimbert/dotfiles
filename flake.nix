@@ -47,6 +47,7 @@
           modules = [
             home-manager.nixosModules.home-manager
             inputs.impermanence.nixosModules.impermanence
+            inputs.lanzaboote.nixosModules.lanzaboote
             ./modules/nixos
             {
               home-manager.useGlobalPkgs = true;
