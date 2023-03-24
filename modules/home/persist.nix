@@ -8,6 +8,7 @@
       "Pictures"
       "Videos"
       "Workspace"
+      ".config/discord"
       ".config/spotify"
       ".dotfiles"
       ".ssh"
