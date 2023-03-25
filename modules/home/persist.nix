@@ -14,6 +14,7 @@
       ".ssh"
       ".gnupg/private-keys-v1.d/"
       ".local/share/direnv"
+      ".local/share/zoxide"
       ".mozilla"
       ".cache/tealdeer"
       ".cache/spotify"
