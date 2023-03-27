@@ -1,6 +1,5 @@
 { lib, config, pkgs, ... }:
-
-{
+with lib; {
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions
   # on your system were taken. It‘s perfectly fine and recommended to leave
@@ -108,7 +107,7 @@
   ];
 
   virtualisation.podman = {
-    enable = true;
+    enable = mkDefault true;
     dockerCompat = true;
     defaultNetwork.settings.dns_enabled = true;
   };

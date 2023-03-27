@@ -11,6 +11,8 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    scortex.url = "git+ssh://git@github.com/scortexio/nix-config.git";
+
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -27,6 +29,8 @@
       };
 
       inherit (nixpkgs) lib;
+
+      user = "tguimbert";
 
       gaming.modules = [
         {
@@ -91,6 +95,38 @@
               home-manager.users.tguimbert = import ./modules/systems/leshen/home;
             }
           ] ++ gaming.modules;
+        };
+
+        basilisk = lib.nixosSystem {
+          inherit system;
+
+          modules = [
+            home-manager.nixosModules.home-manager
+            inputs.impermanence.nixosModules.impermanence
+            inputs.lanzaboote.nixosModules.lanzaboote
+            ./modules/nixos
+            {
+              home-manager.useGlobalPkgs = true;
+              home-manager.useUserPackages = true;
+              home-manager.users.tguimbert.imports = [
+                inputs.impermanence.nixosModules.home-manager.impermanence
+                ./modules/home
+              ];
+            }
+          ] ++
+          [
+            ./modules/systems/basilisk/nixos
+            {
+              home-manager.users.tguimbert.imports = [
+                ./modules/systems/basilisk/home
+                inputs.scortex.nixosModules.home-manager.scortex
+              ];
+              home-manager.extraSpecialArgs = {
+                inherit user;
+              };
+            }
+            inputs.nixos-hardware.nixosModules.lenovo-thinkpad-t480
+          ];
         };
       };
 

@@ -26,6 +26,7 @@ in
     kubectl
     minikube
     discord
+    vlc
   ];
 
   home.file = {
