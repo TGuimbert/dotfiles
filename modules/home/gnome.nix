@@ -13,6 +13,14 @@ in
     "org/gnome/desktop/interface" = {
       color-scheme = gv.mkString "prefer-dark";
     };
+    "org/gnome/shell" = {
+      favorite-apps = gv.mkArray gv.type.string [
+        "firefox.desktop"
+        "org.wezfurlong.wezterm.desktop"
+        "spotify.desktop"
+        "org.gnome.Nautilus.desktop"
+      ];
+    };
     "org/gnome/desktop/screensave" = {
       color-shading-type = gv.mkString "solid";
       picture-options = gv.mkString "zoom";
