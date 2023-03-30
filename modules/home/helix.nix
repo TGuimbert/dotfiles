@@ -13,6 +13,8 @@
       editor = {
         bufferline = "multiple";
         color-modes = true;
+        rulers = [ 80 ];
+        line-number = "relative";
       };
 
       editor.cursor-shape = {
