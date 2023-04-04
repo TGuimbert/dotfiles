@@ -38,11 +38,11 @@
         "pre-commit-hooks": "pre-commit-hooks"
       },
       "locked": {
-        "lastModified": 1679700890,
-        "narHash": "sha256-u8GqQF/z57LaDf5x/O3IC5qtvwwhLtak+kWosp51F2w=",
+        "lastModified": 1680615119,
+        "narHash": "sha256-EtkInfNzLtSPkVVEHKviuhSytjkQAsM2V+CgL9HP0ik=",
         "owner": "cachix",
         "repo": "devenv",
-        "rev": "c9ff5bd489ca36a526e46440fec4d10a87988363",
+        "rev": "5ddf7c17f870542b6d4e7939c7df5094590ee8cf",
         "type": "github"
       },
       "original": {
@@ -290,11 +290,11 @@
         "utils": "utils"
       },
       "locked": {
-        "lastModified": 1680114304,
-        "narHash": "sha256-XymtLu8G2nzenjDUWI7XV2MMHztvPkEZUFpwmZFcxVM=",
+        "lastModified": 1680597706,
+        "narHash": "sha256-ZqJ3T+BxzjPH9TnmeUwS4Uu9ZQPeBXAFC9sUWlharT4=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "0e065e1b6f0776ebbacea9dcbc977af7bc9eddc0",
+        "rev": "ec06f419af79207b33d797064dfb3fc9dbe1df4a",
         "type": "github"
       },
       "original": {
@@ -589,11 +589,11 @@
     },
     "nixpkgs_3": {
       "locked": {
-        "lastModified": 1679944645,
-        "narHash": "sha256-e5Qyoe11UZjVfgRfwNoSU57ZeKuEmjYb77B9IVW7L/M=",
+        "lastModified": 1680487167,
+        "narHash": "sha256-9FNIqrxDZgSliGGN2XJJSvcDYmQbgOANaZA4UWnTdg4=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "4bb072f0a8b267613c127684e099a70e1f6ff106",
+        "rev": "53dad94e874c9586e71decf82d972dfb640ef044",
         "type": "github"
       },
       "original": {
@@ -763,11 +763,11 @@
         "nixpkgs": "nixpkgs_5"
       },
       "locked": {
-        "lastModified": 1679947525,
-        "narHash": "sha256-08euBccJ9jHKwvK57TVb5ePWgb8K25FAkI+Gfas/7Ec=",
+        "lastModified": 1680615115,
+        "narHash": "sha256-+DH9kRgWJBDgv2kjLdb6AXHix0P5c47HopY2bJ3y4B8=",
         "ref": "refs/heads/main",
-        "rev": "7c62835060c9294152ec3a4cb5294ad8a79b3462",
-        "revCount": 7,
+        "rev": "3dd391ac8f289971b27c4b400e0195b2e05f60bf",
+        "revCount": 8,
         "type": "git",
         "url": "ssh://git@github.com/scortexio/nix-config.git"
       },
@@ -778,11 +778,11 @@
     },
     "utils": {
       "locked": {
-        "lastModified": 1676283394,
-        "narHash": "sha256-XX2f9c3iySLCw54rJ/CZs+ZK6IQy7GXNY4nSOyu2QG4=",
+        "lastModified": 1678901627,
+        "narHash": "sha256-U02riOqrKKzwjsxc/400XnElV+UtPUQWpANPlyazjH0=",
         "owner": "numtide",
         "repo": "flake-utils",
-        "rev": "3db36a8b464d0c4532ba1c7dda728f4576d6d073",
+        "rev": "93a2b84fc4b70d9e089d029deacc3583435c2ed6",
         "type": "github"
       },
       "original": {
