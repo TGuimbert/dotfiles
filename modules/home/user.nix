@@ -27,6 +27,7 @@ in
     minikube
     discord
     vlc
+    remmina
   ];
 
   home.file = {
