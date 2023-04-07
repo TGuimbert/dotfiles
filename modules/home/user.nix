@@ -26,6 +26,7 @@ with lib;
     bitwarden-cli
     kubectl
     minikube
+    kind
     discord
     vlc
     remmina
