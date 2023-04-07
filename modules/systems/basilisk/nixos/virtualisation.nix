@@ -4,7 +4,7 @@ with lib; {
 
   virtualisation.docker = {
     enable = true;
-    storageDriver = "btrfs";
+    storageDriver = "overlay2";
     autoPrune.enable = true;
   };
   users.users.tguimbert.extraGroups = [ "docker" ];
