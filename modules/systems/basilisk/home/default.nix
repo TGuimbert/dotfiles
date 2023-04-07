@@ -1,4 +1,6 @@
-{ pkgs, ... }: {
+{ pkgs, lib, ... }:
+with lib;
+{
   home.packages = with pkgs; [
     zoom-us
     slack
@@ -20,5 +22,15 @@
   scortex = {
     impermanence.enable = true;
     devOpsTools.enable = true;
+  };
+
+  home.file = {
+    minikubeConfig = mkForce {
+      target = ".minikube/config/config.json";
+      text = builtins.toJSON {
+        container-runtime = "docker";
+        rootless = false;
+      };
+    };
   };
 }

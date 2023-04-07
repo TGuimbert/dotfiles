@@ -1,8 +1,9 @@
-{ pkgs, ... }:
+{ pkgs, lib, ... }:
 
 let
   username = "tguimbert";
 in
+with lib;
 {
   home.username = username;
   home.homeDirectory = "/home/${username}";
@@ -31,7 +32,7 @@ in
   ];
 
   home.file = {
-    minikubeConfig = {
+    minikubeConfig = mkDefault {
       target = ".minikube/config/config.json";
       text = builtins.toJSON {
         container-runtime = "containerd";
