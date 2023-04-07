@@ -38,11 +38,11 @@
         "pre-commit-hooks": "pre-commit-hooks"
       },
       "locked": {
-        "lastModified": 1680615119,
-        "narHash": "sha256-EtkInfNzLtSPkVVEHKviuhSytjkQAsM2V+CgL9HP0ik=",
+        "lastModified": 1680620497,
+        "narHash": "sha256-w5BRbEAwyGYZl2HulMcuiJjSrxLAei4qqd74uN2aOGE=",
         "owner": "cachix",
         "repo": "devenv",
-        "rev": "5ddf7c17f870542b6d4e7939c7df5094590ee8cf",
+        "rev": "cf0cba195b9f4a093b9d4e15f274263aafaa99be",
         "type": "github"
       },
       "original": {
@@ -763,17 +763,14 @@
         "nixpkgs": "nixpkgs_5"
       },
       "locked": {
-        "lastModified": 1680615115,
-        "narHash": "sha256-+DH9kRgWJBDgv2kjLdb6AXHix0P5c47HopY2bJ3y4B8=",
-        "ref": "refs/heads/main",
-        "rev": "3dd391ac8f289971b27c4b400e0195b2e05f60bf",
-        "revCount": 8,
-        "type": "git",
-        "url": "ssh://git@github.com/scortexio/nix-config.git"
+        "lastModified": 1680698071,
+        "narHash": "sha256-sxmnz6DKg5FKhUHI+YpOik/jIpY/DJWo3VQdboEnfWI=",
+        "path": "/home/tguimbert/Workspace/nix-config",
+        "type": "path"
       },
       "original": {
-        "type": "git",
-        "url": "ssh://git@github.com/scortexio/nix-config.git"
+        "path": "/home/tguimbert/Workspace/nix-config",
+        "type": "path"
       }
     },
     "utils": {
