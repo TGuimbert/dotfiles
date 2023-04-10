@@ -10,6 +10,7 @@
       "Workspace"
       ".config/discord"
       ".config/spotify"
+      ".doppler"
       ".dotfiles"
       ".ssh"
       ".gnupg/private-keys-v1.d/"
