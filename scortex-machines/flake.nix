@@ -7,8 +7,8 @@
     devenv.url = "github:cachix/devenv";
     impermanence.url = "github:nix-community/impermanence";
     lanzaboote = {
-      url = "github:nix-community/lanzaboote/v0.2.0";
-      # inputs.nixpkgs.follows = "nixpkgs";
+      url = "github:nix-community/lanzaboote";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     scortex.url = "git+ssh://git@github.com/scortexio/nix-config.git";
