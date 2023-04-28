@@ -21,7 +21,7 @@ with lib; {
 
   boot.bootspec.enable = true;
 
-  boot.tmpOnTmpfs = true;
+  boot.tmp.useTmpfs = true;
 
   networking.networkmanager.enable = true;
   networking.useDHCP = lib.mkDefault true;
