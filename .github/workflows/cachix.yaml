@@ -43,4 +43,4 @@ jobs:
         name: tguimbert
         authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
     - name: Build DevShell configuration
-      run: nix develop --build
+      run: nix develop --build --impure
