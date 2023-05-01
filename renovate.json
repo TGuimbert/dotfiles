@@ -5,7 +5,7 @@
   ],
 
   "nix" : {
-    "enabled": true
+    "enabled": true,
     "ignorePaths": [
       "^scortex-machines"
     ]
