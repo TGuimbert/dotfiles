@@ -7,7 +7,7 @@
   "nix" : {
     "enabled": true,
     "ignorePaths": [
-      "^scortex-machines"
+      "(^|/)scortex-machines"
     ]
   },
   "lockFileMaintenance": { "enabled": true},
