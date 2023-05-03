@@ -16,6 +16,10 @@
       ".gnupg/private-keys-v1.d/"
       ".kube"
       ".local/share/direnv"
+      {
+        directory = ".local/share/keyrings";
+        method = "symlink";
+      }
       ".local/share/zoxide"
       ".minikube"
       ".mozilla"
