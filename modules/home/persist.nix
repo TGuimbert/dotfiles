@@ -26,6 +26,8 @@
       ".mozilla"
       ".cache/tealdeer"
       ".cache/spotify"
+      ".cache/pip"
+      ".cache/pre-commit"
       ".local/state/wireplumber"
     ];
     files = [
