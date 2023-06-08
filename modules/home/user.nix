@@ -30,6 +30,7 @@ with lib;
     discord
     vlc
     remmina
+    anki-bin
   ];
 
   home.file = {

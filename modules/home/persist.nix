@@ -15,6 +15,7 @@
       ".ssh"
       ".gnupg/private-keys-v1.d/"
       ".kube"
+      ".local/share/Anki2"
       ".local/share/direnv"
       {
         directory = ".local/share/keyrings";
