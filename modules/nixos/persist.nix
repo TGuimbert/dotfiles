@@ -8,6 +8,7 @@
       "/var/lib/systemd/coredump"
       "/var/lib/bluetooth"
       "/var/lib/boltd"
+      "/var/lib/tailscale"
       "/etc/NetworkManager/system-connections"
       "/etc/secureboot"
     ];
