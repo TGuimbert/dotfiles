@@ -7,6 +7,7 @@
     ./git.nix
     ./gpg.nix
     ./helix.nix
+    ./easyeffects.nix
 
     ./gaming.nix
   ];

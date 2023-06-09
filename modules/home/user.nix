@@ -79,11 +79,4 @@ with lib;
       "application/x-extension-xht" = "firefox.desktop;";
     };
   };
-
-  services = {
-    easyeffects = {
-      enable = true;
-      preset = "Noise is Cancelled";
-    };
-  };
 }
