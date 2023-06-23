@@ -1,4 +1,4 @@
-{ ... }:
+{ pkgs, ... }:
 {
   programs.git = {
     enable = true;
@@ -45,9 +45,16 @@
       git_protocol = "ssh";
       editor = "hx";
       aliases = {
+        pc = "pr create --assignee @me";
         co = "pr checkout";
         pv = "pr view";
+        pw = "pr view --web";
       };
     };
+    extensions = with pkgs; [
+      gh-dash
+      gh-eco
+      gh-markdown-preview
+    ];
   };
 }
