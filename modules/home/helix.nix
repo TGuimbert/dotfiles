@@ -8,7 +8,7 @@
   programs.helix = {
     enable = true;
     settings = {
-      theme = "gruvbox";
+      theme = "gruvbox-zellij";
 
       editor = {
         bufferline = "multiple";
@@ -74,6 +74,16 @@
       keys.select = {
         l = "extend_search_next";
         L = "extend_search_prev";
+      };
+    };
+    themes = {
+      # Workaround for this bug https://github.com/zellij-org/zellij/issues/1594
+      gruvbox-zellij = {
+        "inherits" = "gruvbox";
+        "diagnostic.warning" = { "underline" = { "color" = "orange1"; "style" = "line"; }; };
+        "diagnostic.error" = { "underline" = { "color" = "red1"; "style" = "line"; }; };
+        "diagnostic.info" = { "underline" = { "color" = "aqua1"; "style" = "line"; }; };
+        "diagnostic.hint" = { "underline" = { "color" = "blue1"; "style" = "line"; }; };
       };
     };
   };
