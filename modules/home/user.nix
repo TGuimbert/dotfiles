@@ -31,7 +31,19 @@ with lib;
     vlc
     remmina
     anki-bin
+    kochi-substitute-naga10
+    libsForQt5.fcitx5-qt
   ];
+
+  i18n.inputMethod = {
+    enabled = "fcitx5";
+    fcitx5.addons = with pkgs; [
+      fcitx5-mozc
+      fcitx5-gtk
+      libsForQt5.fcitx5-qt
+    ];
+  };
+  home.sessionVariables.QT_IM_MODULE = lib.mkForce "fcitx anki";
 
   home.file = {
     minikubeConfig = mkDefault {
