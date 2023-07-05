@@ -49,6 +49,7 @@
         co = "pr checkout";
         pv = "pr view";
         pw = "pr view --web";
+        pcw = "pr checks --web";
       };
     };
     extensions = with pkgs; [
