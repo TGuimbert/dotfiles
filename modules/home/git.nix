@@ -36,6 +36,12 @@
       enable = true;
       background = "dark";
     };
+
+    ignores = [
+      ".devenv/"
+      ".direnv/"
+      ".envrc"
+    ];
   };
 
   programs.gh = {
