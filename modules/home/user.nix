@@ -35,6 +35,7 @@ with lib;
     libsForQt5.fcitx5-qt
     jetbrains.pycharm-community
     jetbrains.idea-community
+    obsidian
   ];
 
   i18n.inputMethod = {
