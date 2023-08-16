@@ -28,6 +28,7 @@
       ".cache/spotify"
       ".cache/pip"
       ".cache/pre-commit"
+      ".config/obsidian"
       ".local/state/wireplumber"
     ];
     files = [
