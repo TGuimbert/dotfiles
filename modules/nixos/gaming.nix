@@ -15,6 +15,7 @@ in
       protonup-ng
       heroic
       lutris
+      clonehero
     ];
   };
 }
