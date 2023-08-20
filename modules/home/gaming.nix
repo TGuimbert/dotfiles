@@ -19,6 +19,7 @@ in
           directory = ".steam";
           method = "symlink";
         }
+        ".clonehero"
       ];
       allowOther = true;
     };
