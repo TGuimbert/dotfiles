@@ -36,6 +36,8 @@ with lib;
     jetbrains.pycharm-community
     jetbrains.idea-community
     obsidian
+    bitwarden
+    bitwarden-cli
   ];
 
   i18n.inputMethod = {
