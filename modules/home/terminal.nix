@@ -35,7 +35,7 @@
     starship.enable = true;
     bat.enable = true;
     bottom.enable = true;
-    exa = {
+    eza = {
       enable = true;
       enableAliases = true;
       git = true;

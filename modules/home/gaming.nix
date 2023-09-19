@@ -20,6 +20,7 @@ in
           method = "symlink";
         }
         ".clonehero"
+        ".config/unity3d/srylain Inc_/Clone Hero"
       ];
       allowOther = true;
     };
