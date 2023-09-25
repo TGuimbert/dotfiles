@@ -11,7 +11,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    scortex.url = "git+ssh://git@github.com/scortexio/nix-config.git";
+    scortex = {
+      url = "git+ssh://git@github.com/scortexio/nix-config.git";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     home-manager = {
       url = "github:nix-community/home-manager";
