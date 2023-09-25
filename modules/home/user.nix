@@ -33,8 +33,6 @@ with lib;
     anki-bin
     kochi-substitute-naga10
     libsForQt5.fcitx5-qt
-    jetbrains.pycharm-community
-    jetbrains.idea-community
     obsidian
     bitwarden
     bitwarden-cli
