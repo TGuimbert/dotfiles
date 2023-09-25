@@ -29,7 +29,7 @@ jobs:
         nix run github:Mic92/nix-fast-build -- \
         --flake .#nixosConfigurations.${{ matrix.host }}.config.system.build.toplevel \
         --skip-cached \
-        -no-nom
+        --no-nom
 
   build-devshell:
     runs-on: ubuntu-latest
