@@ -25,7 +25,11 @@ jobs:
         name: tguimbert
         authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
     - name: Build NixOs configuration
-      run: nix build .#nixosConfigurations.${{ matrix.host }}.config.system.build.toplevel
+      run: |
+        nix run github:Mic92/nix-fast-build -- \
+        --flake .#nixosConfigurations.${{ matrix.host }}.config.system.build.toplevel \
+        --skip-cached \
+        -no-nom
 
   build-devshell:
     runs-on: ubuntu-latest
