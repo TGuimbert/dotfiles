@@ -17,8 +17,10 @@
     fish = {
       enable = true;
       interactiveShellInit = ''
-        zellij setup --generate-completion fish | source
-        eval "$(zellij setup --generate-auto-start fish)"
+        # Python config
+        if test -f ~/.pip/pip.conf
+            set -x PIP_EXTRA_INDEX_URL (sed -nE 's/extra-index-url = (.*)/\1/p' ~/.pip/pip.conf)
+        end
       '';
       shellAliases = {
         k = "kubectl";
@@ -27,6 +29,7 @@
 
     zellij = {
       enable = true;
+      enableFishIntegration = true;
       settings = {
         default_shell = "fish";
       };
@@ -66,4 +69,8 @@
     du-dust
     ripgrep
   ];
+  home.sessionVariables = {
+    ZELLIJ_AUTO_ATTACH = "true";
+    ZELLIJ_AUTO_EXIT = "true";
+  };
 }
