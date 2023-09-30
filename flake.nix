@@ -1,18 +1,46 @@
 {
   description = "System Config";
 
+  # Flake inputs
   inputs = {
+    # Nixpkgs Unstable
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    nixos-hardware.url = "github:NixOS/nixos-hardware/master";
-    devenv.url = "github:cachix/devenv";
-    impermanence.url = "github:nix-community/impermanence";
+
+    # Unified configuration for systems, packages, modules, shells, templates,
+    # and more with Nix Flakes
+    snowfall-lib = {
+      url = "github:snowfallorg/lib/v2.1.0";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # Collection of NixOS modules covering hardware quirks
+    nixos-hardware = {
+      url = "github:NixOS/nixos-hardware/master";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # Modules to help handle persistent state on systems with ephemeral root
+    # storage
+    impermanence = {
+      url = "github:nix-community/impermanence/master";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # Secure Boot for NixOS
     lanzaboote = {
       url = "github:nix-community/lanzaboote/v0.3.0";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Manage a user environment using Nix
     home-manager = {
       url = "github:nix-community/home-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # Fast, Declarative, Reproducible, and Composable Developer Environments
+    devenv = {
+      url = "github:cachix/devenv/main";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -40,6 +68,8 @@
       ];
     in
     {
+
+
       nixosConfigurations = {
         griffin = lib.nixosSystem {
           inherit system;
