@@ -16,14 +16,12 @@
     # Collection of NixOS modules covering hardware quirks
     nixos-hardware = {
       url = "github:NixOS/nixos-hardware/master";
-      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     # Modules to help handle persistent state on systems with ephemeral root
     # storage
     impermanence = {
       url = "github:nix-community/impermanence/master";
-      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     # Secure Boot for NixOS
@@ -40,103 +38,95 @@
 
     # Fast, Declarative, Reproducible, and Composable Developer Environments
     devenv = {
-      url = "github:cachix/devenv/main";
+      url = "github:cachix/devenv";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
-  outputs = { nixpkgs, home-manager, ... } @ inputs:
+  outputs = inputs:
+    # This is an example and in your actual flake you can use `snowfall-lib.mkFlake`
+    # directly unless you explicitly need a feature of `lib`.
     let
-      system = "x86_64-linux";
-      pkgs = import nixpkgs {
-        inherit system;
-        config.allowUnfree = true;
-        overlays = [ ];
+      lib = inputs.snowfall-lib.mkLib {
+        # You must pass in both your flake's inputs and the root directory of
+        # your flake.
+        inherit inputs;
+        src = ./.;
       };
-
-      inherit (nixpkgs) lib;
-
-      gaming.modules = [
-        {
-          tg.gaming.enable = true;
-          home-manager.users.tguimbert.imports = [
-            {
-              tg.gaming.enable = true;
-            }
-          ];
-        }
-      ];
     in
-    {
-
-
-      nixosConfigurations = {
-        griffin = lib.nixosSystem {
-          inherit system;
-
-          modules = [
-            home-manager.nixosModules.home-manager
-            inputs.impermanence.nixosModules.impermanence
-            inputs.lanzaboote.nixosModules.lanzaboote
-            ./modules/nixos
-            {
-              home-manager.useGlobalPkgs = true;
-              home-manager.useUserPackages = true;
-              home-manager.users.tguimbert.imports = [
-                inputs.impermanence.nixosModules.home-manager.impermanence
-                ./modules/home
-              ];
-            }
-          ] ++
-          [
-            ./modules/systems/griffin/nixos
-            {
-              home-manager.users.tguimbert = import ./modules/systems/griffin/home;
-            }
-            inputs.nixos-hardware.nixosModules.lenovo-thinkpad-t490
-          ];
-        };
-
-        leshen = lib.nixosSystem {
-          inherit system;
-
-          modules = [
-            home-manager.nixosModules.home-manager
-            inputs.impermanence.nixosModules.impermanence
-            inputs.lanzaboote.nixosModules.lanzaboote
-            ./modules/nixos
-
-            {
-              home-manager.useGlobalPkgs = true;
-              home-manager.useUserPackages = true;
-              home-manager.users.tguimbert.imports = [
-                inputs.impermanence.nixosModules.home-manager.impermanence
-                ./modules/home
-              ];
-            }
-          ] ++
-          [
-            ./modules/systems/leshen/nixos
-            {
-              home-manager.users.tguimbert = import ./modules/systems/leshen/home;
-            }
-          ] ++ gaming.modules;
-        };
-      };
-
-      devShells.${system}.default = inputs.devenv.lib.mkShell {
-        inherit inputs pkgs;
-        modules = [
-          {
-            languages.nix.enable = true;
-            pre-commit.hooks = {
-              deadnix.enable = true;
-              nixpkgs-fmt.enable = true;
-              statix.enable = true;
-              actionlint.enable = true;
-            };
-          }
-        ];
-      };
+    lib.mkFlake {
+      # Add modules to all systems.
+      systems.modules.nixos = with inputs; [
+        home-manager.nixosModules.home-manager
+        lanzaboote.nixosModules.lanzaboote
+        impermanence.nixosModules.impermanence
+      ];
     };
+  # let
+  #   system = "x86_64-linux";
+  #   pkgs = import nixpkgs {
+  #     inherit system;
+  #     config.allowUnfree = true;
+  #     overlays = [ ];
+  #   };
+
+  #   inherit (nixpkgs) lib;
+
+  #   gaming.modules = [
+  #     {
+  #       tg.gaming.enable = true;
+  #       home-manager.users.tguimbert.imports = [
+  #         {
+  #           tg.gaming.enable = true;
+  #         }
+  #       ];
+  #     }
+  #   ];
+  # in
+  # {
+
+
+  #   nixosConfigurations = {
+  #     leshen = lib.nixosSystem {
+  #       inherit system;
+
+  #       modules = [
+  #         home-manager.nixosModules.home-manager
+  #         inputs.impermanence.nixosModules.impermanence
+  #         inputs.lanzaboote.nixosModules.lanzaboote
+  #         ./modules/nixos
+
+  #         {
+  #           home-manager.useGlobalPkgs = true;
+  #           home-manager.useUserPackages = true;
+  #           home-manager.users.tguimbert.imports = [
+  #             inputs.impermanence.nixosModules.home-manager.impermanence
+  #             ./modules/home
+  #           ];
+  #         }
+  #       ] ++
+  #       [
+  #         ./modules/systems/leshen/nixos
+  #         {
+  #           home-manager.users.tguimbert = import ./modules/systems/leshen/home;
+  #         }
+  #       ] ++ gaming.modules;
+  #     };
+  #   };
+
+  #   devShells.${system}.default = inputs.devenv.lib.mkShell {
+  #     inherit inputs pkgs;
+  #     modules = [
+  #       {
+  #         languages.nix.enable = true;
+  #         pre-commit.hooks = {
+  #           deadnix.enable = true;
+  #           nixpkgs-fmt.enable = true;
+  #           statix.enable = true;
+  #           actionlint.enable = true;
+  #         };
+  #       }
+  #     ];
+  #   };
+  # };
 }

@@ -1,12 +1,29 @@
-{ config, lib, modulesPath, ... }:
+{ config, lib, modulesPath, inputs, ... }:
 
 {
+  system.stateVersion = "22.11"; # Did you read the comment?
+
   networking.hostName = "griffin";
 
   imports =
     [
       (modulesPath + "/installer/scan/not-detected.nix")
+      # inputs.home-manager.nixosModules.home-manager
+      # inputs.impermanence.nixosModules.impermanence
+      # inputs.lanzaboote.nixosModules.lanzaboote
+      # inputs.nixos-hardware.nixosModules.lenovo-thinkpad-t490
     ];
+
+  # home-manager.useGlobalPkgs = true;
+  # home-manager.useUserPackages = true;
+  # home-manager.users.tguimbert.imports = [
+  #   inputs.impermanence.nixosModules.home-manager.impermanence
+  # ];
+
+  tguimbert = {
+    system.boot.secureBoot = true;
+    virtualisation.containerPlatform = "podman";
+  };
 
   boot.initrd.availableKernelModules = [ "xhci_pci" "nvme" "usb_storage" "usbhid" "sd_mod" "sdhci_pci" ];
   boot.initrd.kernelModules = [ ];

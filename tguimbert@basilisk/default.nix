@@ -1,10 +1,11 @@
-{ pkgs, lib, ... }:
+{ config, pkgs, lib, ... }:
 with lib;
 {
   home.packages = with pkgs; [
     zoom-us
     slack
     chromium
+    souatinoua
   ];
 
   home.persistence."/persist-home/tguimbert" = {
