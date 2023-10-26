@@ -2,7 +2,7 @@
 {
   config = {
     # Allow unfree packages
-    nixpkgs.config.allowUnfree = true;
+    # nixpkgs.config.allowUnfree = true;
     nix.settings = {
       # Enable flakes
       experimental-features = [ "nix-command" "flakes" ];

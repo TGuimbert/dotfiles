@@ -24,7 +24,13 @@ in
       pkiBundle = "/etc/secureboot";
     };
 
-    environment.systemPackages = with pkgs; [
+    environment.persistence."/persist-root" = mkIf (cfg.secureBoot && config.tguimbert.impermanence.enable) {
+      directories = [
+        "/etc/secureboot"
+      ];
+    };
+
+    environment.systemPackages = with pkgs; mkIf cfg.secureBoot [
       sbctl
     ];
   };

@@ -9,7 +9,7 @@
     # Unified configuration for systems, packages, modules, shells, templates,
     # and more with Nix Flakes
     snowfall-lib = {
-      url = "github:snowfallorg/lib/v2.1.0";
+      url = "github:snowfallorg/lib/v2.1.1";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -55,6 +55,11 @@
       };
     in
     lib.mkFlake {
+
+      channels-config = {
+        allowUnfree = true;
+      };
+
       # Add modules to all systems.
       systems.modules.nixos = with inputs; [
         home-manager.nixosModules.home-manager

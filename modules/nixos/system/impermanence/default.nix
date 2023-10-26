@@ -1,6 +1,13 @@
-{ ... }:
+{ lib, config, ... }:
+with lib;
+let
+  cfg = config.tguimbert.impermanence;
+in
 {
-  config = {
+  options.tguimbert.impermanence = {
+    enable = mkEnableOption "Wether to enable impermanence.";
+  };
+  config = mkIf cfg.enable {
     environment.persistence."/persist-root" = {
       hideMounts = true;
       directories = [
@@ -11,7 +18,6 @@
         "/var/lib/boltd"
         "/var/lib/tailscale"
         "/etc/NetworkManager/system-connections"
-        "/etc/secureboot"
       ];
       files = [
         "/etc/machine-id"

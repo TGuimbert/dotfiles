@@ -1,6 +1,6 @@
 { lib, ... }:
 let
-  gv = lib.hm.gvariant;
+  gv = lib.home-manager.hm.gvariant;
 in
 {
   dconf.settings = {
