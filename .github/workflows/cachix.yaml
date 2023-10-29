@@ -12,7 +12,7 @@ jobs:
         derivation: 
           - nixosConfigurations.griffin.config.system.build.toplevel
           - nixosConfigurations.leshen.config.system.build.toplevel
-          # - devShells.x86_64-linux.default
+          - devShells.x86_64-linux.default
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
