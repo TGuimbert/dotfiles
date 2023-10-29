@@ -1,8 +1,6 @@
-{ options, config, pkgs, lib, inputs, ... }:
+{ options, pkgs, lib, ... }:
 with lib;
 with pkgs.lib.options;
-let cfg = config.tguimbert.virtualisation;
-in
 {
   options.tguimbert.virtualisation = {
     containerPlatform =

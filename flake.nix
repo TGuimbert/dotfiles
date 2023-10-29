@@ -36,9 +36,9 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # Fast, Declarative, Reproducible, and Composable Developer Environments
-    devenv = {
-      url = "github:cachix/devenv";
+    # Seamless integration of https://pre-commit.com git hooks with Nix.
+    pre-commit-hooks = {
+      url = "github:cachix/pre-commit-hooks.nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -66,72 +66,9 @@
         lanzaboote.nixosModules.lanzaboote
         impermanence.nixosModules.impermanence
       ];
+
+      systems.hosts.griffin.modules = with inputs; [
+        nixos-hardware.nixosModules.lenovo-thinkpad-t490
+      ];
     };
-  # let
-  #   system = "x86_64-linux";
-  #   pkgs = import nixpkgs {
-  #     inherit system;
-  #     config.allowUnfree = true;
-  #     overlays = [ ];
-  #   };
-
-  #   inherit (nixpkgs) lib;
-
-  #   gaming.modules = [
-  #     {
-  #       tg.gaming.enable = true;
-  #       home-manager.users.tguimbert.imports = [
-  #         {
-  #           tg.gaming.enable = true;
-  #         }
-  #       ];
-  #     }
-  #   ];
-  # in
-  # {
-
-
-  #   nixosConfigurations = {
-  #     leshen = lib.nixosSystem {
-  #       inherit system;
-
-  #       modules = [
-  #         home-manager.nixosModules.home-manager
-  #         inputs.impermanence.nixosModules.impermanence
-  #         inputs.lanzaboote.nixosModules.lanzaboote
-  #         ./modules/nixos
-
-  #         {
-  #           home-manager.useGlobalPkgs = true;
-  #           home-manager.useUserPackages = true;
-  #           home-manager.users.tguimbert.imports = [
-  #             inputs.impermanence.nixosModules.home-manager.impermanence
-  #             ./modules/home
-  #           ];
-  #         }
-  #       ] ++
-  #       [
-  #         ./modules/systems/leshen/nixos
-  #         {
-  #           home-manager.users.tguimbert = import ./modules/systems/leshen/home;
-  #         }
-  #       ] ++ gaming.modules;
-  #     };
-  #   };
-
-  #   devShells.${system}.default = inputs.devenv.lib.mkShell {
-  #     inherit inputs pkgs;
-  #     modules = [
-  #       {
-  #         languages.nix.enable = true;
-  #         pre-commit.hooks = {
-  #           deadnix.enable = true;
-  #           nixpkgs-fmt.enable = true;
-  #           statix.enable = true;
-  #           actionlint.enable = true;
-  #         };
-  #       }
-  #     ];
-  #   };
-  # };
 }

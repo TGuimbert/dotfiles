@@ -1,90 +1,22 @@
-{ config, lib, modulesPath, ... }:
-
+{ lib, ... }:
 {
+  imports = [ ./hardware.nix ];
+
   networking.hostName = "leshen";
 
   tguimbert = {
-    system.boot.secureBoot = true;
+    system = {
+      secure-boot.enable = true;
+      impermanence.enable = true;
+      btrfs.enable = true;
+    };
     virtualisation.containerPlatform = "podman";
+    suites = {
+      games.enable = true;
+    };
   };
 
-  imports =
-    [
-      (modulesPath + "/installer/scan/not-detected.nix")
-    ];
-
-  boot.initrd.availableKernelModules = [ "nvme" "xhci_pci" "ahci" "usb_storage" "usbhid" "sd_mod" ];
-  boot.initrd.kernelModules = [ ];
-  boot.kernelModules = [ "kvm-amd" ];
-  boot.extraModulePackages = [ ];
-  boot.kernelParams = [ ];
-
-  boot.initrd.luks.devices."root".device = "/dev/disk/by-partlabel/LUKS";
-
-  fileSystems."/" =
-    {
-      label = "btrfs-toplevel";
-      fsType = "btrfs";
-      options = [ "subvol=root" "compress=zstd" "noatime" ];
-    };
-
-  fileSystems."/boot" =
-    {
-      label = "BOOT";
-      fsType = "vfat";
-    };
-
-  fileSystems."/nix" =
-    {
-      label = "btrfs-toplevel";
-      fsType = "btrfs";
-      options = [ "subvol=nix" "compress=zstd" "noatime" ];
-    };
-
-  fileSystems."/persist-root" =
-    {
-      label = "btrfs-toplevel";
-      fsType = "btrfs";
-      options = [ "subvol=persist-root" "compress=zstd" "noatime" ];
-      neededForBoot = true;
-    };
-
-  fileSystems."/persist-home" =
-    {
-      label = "btrfs-toplevel";
-      fsType = "btrfs";
-      options = [ "subvol=persist-home" "compress=zstd" "noatime" ];
-      neededForBoot = true;
-    };
-
-  fileSystems."/home" =
-    {
-      label = "btrfs-toplevel";
-      fsType = "btrfs";
-      options = [ "subvol=home" "compress=zstd" "noatime" ];
-      neededForBoot = true;
-    };
-
-  fileSystems."/var/log" =
-    {
-      label = "btrfs-toplevel";
-      fsType = "btrfs";
-      options = [ "subvol=log" "compress=zstd" "noatime" ];
-    };
-
-  fileSystems."/swap" =
-    {
-      label = "btrfs-toplevel";
-      fsType = "btrfs";
-      options = [ "subvol=swap" "compress=zstd" "noatime" ];
-    };
-
-  swapDevices = [{ device = "/swap/swapfile"; }];
-
-  services.btrfs.autoScrub.enable = true;
-
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
-  hardware.cpu.amd.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
 
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions

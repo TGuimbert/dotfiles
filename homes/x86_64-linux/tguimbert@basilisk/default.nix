@@ -1,37 +1,43 @@
-{ pkgs, lib, ... }:
+{ pkgs, lib, inputs, ... }:
 with lib;
 {
-  home.packages = with pkgs; [
-    zoom-us
-    slack
-    chromium
-    souatinoua
+  imports = [
+    inputs.scortex.nixosModules.home-manager.scortex
   ];
 
-  home.persistence."/persist-home/tguimbert" = {
-    directories = [
-      ".config/Slack"
-      ".zoom"
+  home = {
+    packages = with pkgs; [
+      zoom-us
+      chromium
     ];
-    files = [
-      ".config/zoom.conf"
-      ".config/zoomus.conf"
-    ];
-    allowOther = true;
+
+    persistence."/persist-home/tguimbert" = {
+      directories = [
+        ".zoom"
+      ];
+      files = [
+        ".config/zoom.conf"
+        ".config/zoomus.conf"
+      ];
+      allowOther = true;
+    };
   };
 
   scortex = {
-    impermanence.enable = true;
+    impermanence = {
+      enable = true;
+      username = "tguimbert";
+    };
     devOpsTools.enable = true;
   };
 
-  home.file = {
-    minikubeConfig = mkForce {
-      target = ".minikube/config/config.json";
-      text = builtins.toJSON {
-        container-runtime = "docker";
-        rootless = false;
-      };
-    };
-  };
+  # This value determines the Home Manager release that your
+  # configuration is compatible with. This helps avoid breakage
+  # when a new Home Manager release introduces backwards
+  # incompatible changes.
+  #
+  # You can update Home Manager without changing this value. See
+  # the Home Manager release notes for a list of state version
+  # changes in each release.
+  home.stateVersion = "22.11";
 }

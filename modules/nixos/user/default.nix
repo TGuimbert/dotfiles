@@ -13,7 +13,7 @@ in
   config = {
     users.mutableUsers = false;
     users.users.tguimbert = {
-      name = cfg.name;
+      inherit (cfg) name;
       description = "Thibault Guimbert";
       isNormalUser = true;
       isSystemUser = false;

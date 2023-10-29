@@ -1,11 +1,11 @@
 { lib, config, ... }:
 with lib;
 let
-  cfg = config.tguimbert.impermanence;
+  cfg = config.tguimbert.system.impermanence;
 in
 {
-  options.tguimbert.impermanence = {
-    enable = mkEnableOption "Wether to enable impermanence.";
+  options.tguimbert.system.impermanence = {
+    enable = mkEnableOption "Whether to enable impermanence.";
   };
   config = mkIf cfg.enable {
     environment.persistence."/persist-root" = {

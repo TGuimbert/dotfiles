@@ -15,6 +15,19 @@ in
 
     environment.systemPackages = with pkgs; [
       docker-compose
+      minikube
     ];
+
+    home-manager.users.${username} = {
+      home.file = {
+        minikubeConfig = mkDefault {
+          target = ".minikube/config/config.json";
+          text = builtins.toJSON {
+            container-runtime = "docker";
+            rootless = false;
+          };
+        };
+      };
+    };
   };
 }
