@@ -4,9 +4,12 @@
   inputs = {
 
     # The flake at the root of the repo, already having all the inputs
-    root-flake.url = "./..";
+    root-flake.url = "git+file:./..";
     # Nixpkgs Unstable;
     nixpkgs.follows = "root-flake/nixpkgs";
+
+    # NixPkgs Stable
+    stable.follows = "root-flake/stable";
 
     # Unified configuration for systems, packages, modules, shells, templates,
     # and more with Nix Flakes
@@ -30,9 +33,9 @@
 
     # Company specific configuration
     scortex = {
-      # url = "git+ssh://git@github.com/scortexio/nix-config.git";
-      url = "git+file:///home/tguimbert/Workspace/nix-config";
-      inputs.nixpkgs.follows = "nixpkgs";
+      url = "git+ssh://git@github.com/scortexio/nix-config.git";
+      # url = "git+file:///home/tguimbert/Workspace/nix-config";
+      inputs.nixpkgs.follows = "root-flake/nixpkgs";
     };
   };
 

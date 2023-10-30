@@ -627,6 +627,10 @@
         "snowfall-lib": [
           "root-flake",
           "snowfall-lib"
+        ],
+        "stable": [
+          "root-flake",
+          "stable"
         ]
       }
     },
@@ -638,17 +642,20 @@
         "nixos-hardware": "nixos-hardware",
         "nixpkgs": "nixpkgs",
         "pre-commit-hooks": "pre-commit-hooks",
-        "snowfall-lib": "snowfall-lib"
+        "snowfall-lib": "snowfall-lib",
+        "stable": "stable"
       },
       "locked": {
-        "lastModified": 0,
-        "narHash": "sha256-cQl4LSQh7EXGbILaXZUTP5P6IbvVH3Og9zGneXTHS+c=",
-        "path": "/nix/store/lmm1d8crd4c3cq1mv2vymg2b38yj6psl-source",
-        "type": "path"
+        "dirtyRev": "a69ad12e263c3618d011f5e08397e4b863846fe2-dirty",
+        "dirtyShortRev": "a69ad12-dirty",
+        "lastModified": 1698656023,
+        "narHash": "sha256-xe0ARGKywistWsur5yPHiJjkWqXyEi/k66I2KaDEmoQ=",
+        "type": "git",
+        "url": "file:./.."
       },
       "original": {
-        "path": "/nix/store/lmm1d8crd4c3cq1mv2vymg2b38yj6psl-source",
-        "type": "path"
+        "type": "git",
+        "url": "file:./.."
       }
     },
     "rust-overlay": {
@@ -682,20 +689,22 @@
       "inputs": {
         "devenv": "devenv",
         "nixpkgs": [
+          "root-flake",
           "nixpkgs"
         ]
       },
       "locked": {
-        "dirtyRev": "aae3bc9125d6e66c23b50bd097906db407d05f1a-dirty",
-        "dirtyShortRev": "aae3bc9-dirty",
-        "lastModified": 1698154042,
-        "narHash": "sha256-1qsR3+EqMWFUSfeM0xQvTdZEmtCbiQ+8/uVDJr4cFqM=",
+        "lastModified": 1698613436,
+        "narHash": "sha256-OIZbXDUGFjtRrtagpFacpIeS1bJIZ8kD1g0RthMFGJo=",
+        "ref": "refs/heads/main",
+        "rev": "ec8e5bc6d6a53890420e4fbcf66d5fd827ddcd4b",
+        "revCount": 18,
         "type": "git",
-        "url": "file:///home/tguimbert/Workspace/nix-config"
+        "url": "ssh://git@github.com/scortexio/nix-config.git"
       },
       "original": {
         "type": "git",
-        "url": "file:///home/tguimbert/Workspace/nix-config"
+        "url": "ssh://git@github.com/scortexio/nix-config.git"
       }
     },
     "snowfall-lib": {
@@ -719,6 +728,22 @@
         "owner": "snowfallorg",
         "ref": "v2.1.1",
         "repo": "lib",
+        "type": "github"
+      }
+    },
+    "stable": {
+      "locked": {
+        "lastModified": 1698434055,
+        "narHash": "sha256-Phxi5mUKSoL7A0IYUiYtkI9e8NcGaaV5PJEaJApU1Ko=",
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "1a3c95e3b23b3cdb26750621c08cc2f1560cb883",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nixos",
+        "ref": "nixos-23.05",
+        "repo": "nixpkgs",
         "type": "github"
       }
     },

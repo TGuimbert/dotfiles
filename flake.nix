@@ -6,6 +6,9 @@
     # Nixpkgs Unstable
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
+    # NixPkgs Stable (nixos-23.05)
+    stable.url = "github:nixos/nixpkgs/nixos-23.05";
+
     # Unified configuration for systems, packages, modules, shells, templates,
     # and more with Nix Flakes
     snowfall-lib = {
