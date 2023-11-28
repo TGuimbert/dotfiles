@@ -4,7 +4,7 @@
   inputs = {
 
     # The flake at the root of the repo, already having all the inputs
-    root-flake.url = "git+file:./..";
+    root-flake.url = "path:./..";
     # Nixpkgs Unstable;
     nixpkgs.follows = "root-flake/nixpkgs";
 
