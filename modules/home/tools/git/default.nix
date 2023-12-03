@@ -24,6 +24,7 @@
     aliases = {
       co = "checkout";
       up = "pull --prune --progress";
+      lol = "log --oneline --graph --all";
     };
 
     extraConfig = {
