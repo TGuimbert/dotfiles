@@ -28,6 +28,9 @@
     # Manage a user environment using Nix
     home-manager.follows = "root-flake/home-manager";
 
+    # Declarative disk partitioning
+    disko.follows = "root-flake/disko";
+
     # Seamless integration of https://pre-commit.com git hooks with Nix.
     pre-commit-hooks.follows = "root-flake/pre-commit-hooks";
 
@@ -63,8 +66,15 @@
         impermanence.nixosModules.impermanence
       ];
 
-      systems.hosts.basilisk.modules = with inputs; [
-        nixos-hardware.nixosModules.lenovo-thinkpad-t480
-      ];
+      systems.hosts = {
+        basilisk.modules = with inputs; [
+          nixos-hardware.nixosModules.lenovo-thinkpad-t480
+        ];
+
+        wyvern.modules = with inputs; [
+          nixos-hardware.nixosModules.dell-xps-13-9380
+          disko.nixosModules.disko
+        ];
+      };
     };
 }

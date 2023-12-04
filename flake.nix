@@ -39,6 +39,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Declarative disk partitioning
+    disko = {
+      url = "github:nix-community/disko/master";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Seamless integration of https://pre-commit.com git hooks with Nix.
     pre-commit-hooks = {
       url = "github:cachix/pre-commit-hooks.nix";

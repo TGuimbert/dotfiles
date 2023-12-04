@@ -3,16 +3,16 @@
     disk = {
       main = {
         type = "disk";
-        device = "/dev/disk/by-id/...";
+        device = "/dev/nvme0n1";
         content = {
           type = "gpt";
           partitions = {
             ESP = {
               size = "1G";
               type = "EF00";
+              name = "EFI";
               content = {
                 type = "filesystem";
-                name = "EFI";
                 format = "vfat";
                 mountpoint = "/boot";
                 mountOptions = [
@@ -34,7 +34,6 @@
                 # additionalKeyFiles = [ "/tmp/additionalSecret.key" ];
                 content = {
                   type = "btrfs";
-                  name = "btrfs-toplevel";
                   extraArgs = [ "-f" ];
                   subvolumes = {
                     "/root" = {
@@ -88,5 +87,11 @@
         ];
       };
     };
+  };
+
+  fileSystems = {
+    "/persist-root".neededForBoot = true;
+    "/persist-home".neededForBoot = true;
+    "/home".neededForBoot = true;
   };
 }
