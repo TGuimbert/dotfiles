@@ -14,6 +14,9 @@ in
         trust = 5;
       }
     ];
+    scdaemonSettings = {
+      reader-port = "Yubico Yubi";
+    };
   };
 
   services.gpg-agent = {
