@@ -3,11 +3,11 @@
 
   # Flake inputs
   inputs = {
-    # Nixpkgs Unstable
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    # Nixpkgs Stable
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-23.11";
 
-    # NixPkgs Stable (nixos-23.05)
-    stable.url = "github:nixos/nixpkgs/nixos-23.05";
+    # Nixpkgs Unstable
+    unstable.url = "github:nixos/nixpkgs/nixos-unstable";
 
     # Unified configuration for systems, packages, modules, shells, templates,
     # and more with Nix Flakes
@@ -35,7 +35,7 @@
 
     # Manage a user environment using Nix
     home-manager = {
-      url = "github:nix-community/home-manager";
+      url = "github:nix-community/home-manager/release-23.11";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
