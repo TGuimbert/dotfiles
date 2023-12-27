@@ -11,7 +11,6 @@ in
   config = mkIf cfg.enable {
     environment = {
       systemPackages = with pkgs; [ slack ];
-      sessionVariables.NIXOS_OZONE_WL = "1";
     };
     xdg = {
       portal = {
