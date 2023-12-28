@@ -13,8 +13,6 @@
     initrd = {
       availableKernelModules = [ "xhci_pci" "nvme" "usb_storage" "usbhid" "sd_mod" "rtsx_pci_sdmmc" ];
       kernelModules = [ ];
-
-      luks.devices."root".device = "/dev/disk/by-partlabel/LUKS";
     };
 
     kernelModules = [ "kvm-intel" ];
