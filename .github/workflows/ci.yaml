@@ -1,0 +1,43 @@
+name: "CI"
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  linting:
+    name: Check Linting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Nix flake inputs
+        uses: DeterminateSystems/flake-checker-action@v4
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v4
+      - name: Run the Magic Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@v2
+      - name: Check pre-commit
+        run: nix develop . --command pre-commit run --all-files
+
+  cache-overlays:
+    name: Cache Overlays
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v4
+      - name: Run the Magic Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@v2
+      - name: Add personal cachix configuration
+        uses: cachix/cachix-action@v13
+        with:
+          name: tguimbert
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+      - name: Build overlay packages
+        working-directory: overlays
+        run: |
+          for dir in *; do
+            nix build .#pkgs.x86_64-linux.nixpkgs."$dir"
+          done;
+          
