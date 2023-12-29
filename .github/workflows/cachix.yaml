@@ -6,6 +6,20 @@ on:
       - main
 
 jobs:
+  linting:
+    name: Check Linting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Nix flake inputs
+        uses: DeterminateSystems/flake-checker-action@v4
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v4
+      - name: Run the Magic Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@v2
+      - name: Check pre-commit
+        run: nix develop . --command pre-commit run --all-files
+
   cache-overlays:
     name: Cache Overlays
     runs-on: ubuntu-latest
