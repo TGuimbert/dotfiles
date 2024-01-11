@@ -5,7 +5,7 @@ let
   inherit (channels.unstable) obsidian electron_25 libglvnd;
 in
 {
-  obsidian = throwIf (versionOlder "1.4.17" obsidian.version) "Obsidian no longer requires EOL Electron" (
+  obsidian = throwIf (versionOlder "1.5.3" obsidian.version) "Obsidian no longer requires EOL Electron" (
     obsidian.override {
       electron = electron_25.overrideAttrs (_: {
         preFixup = "patchelf --add-needed ${libglvnd}/lib/libEGL.so.1 $out/bin/electron"; # NixOS/nixpkgs#272912
