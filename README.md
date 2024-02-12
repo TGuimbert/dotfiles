@@ -2,16 +2,31 @@
 
 ## NixOs installation
 
+1. Clone this repo and move in it:
+```shell
+git clone https://github.com/TGuimbert/dotfiles.git
+cd dotfiles
+```
 1. Run disko command to format the disk(s)
+```shell
+sudo nix --experimental-feature "nix-command flakes" run github:nix-community/disko -- --mode disko ./systems/x86_64-linux/<hostname>/disks.nix
+```
 1. Add a password for the main user with:
 ```shell
 sudo -s
 mkpasswd -s > /mnt/persistent/tguimbert-password
 exit
 ```
+1. Install secure boot keys:
+```shell
+nix-shell -p sbctl
+sudo sbctl create-keys
+sudo mv /etc/secureboot/ /mnt/etc/
+exit
+```
 1. Install NixOS:
 ```shell
-sudo nixos-install --flake <path-to-flake>#<hostname>
+sudo nixos-install --flake ./#<hostname>
 ```
 
 ## Filesystem layout
