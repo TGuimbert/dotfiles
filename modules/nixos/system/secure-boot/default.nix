@@ -19,7 +19,7 @@ in
 
     environment = {
       persistence = mkIf config.tguimbert.system.impermanence.enable {
-        "/persist-root" = {
+        "/persistent" = {
           directories = [
             "/etc/secureboot"
           ];

@@ -14,7 +14,7 @@ in
     ];
     home-manager = mkIf config.tguimbert.system.impermanence.enable {
       users.${username} = {
-        home.persistence."/persist-home/${username}" = {
+        home.persistence."/persistent/home/${username}" = {
           directories = [
             ".clonehero"
             ".config/unity3d/srylain Inc_/Clone Hero"

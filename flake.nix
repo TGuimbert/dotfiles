@@ -78,6 +78,7 @@
 
       systems.hosts.griffin.modules = with inputs; [
         nixos-hardware.nixosModules.lenovo-thinkpad-t490
+        disko.nixosModules.disko
       ];
     };
 }

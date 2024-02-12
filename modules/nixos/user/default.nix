@@ -21,7 +21,7 @@ in
       uid = 1000;
       shell = pkgs.bashInteractive;
       initialPassword = "password";
-      hashedPasswordFile = "/persist-root/tguimbert-password";
+      hashedPasswordFile = "/persistent/tguimbert-password";
     };
 
     security.sudo.extraConfig = "Defaults lecture=\"never\"";
