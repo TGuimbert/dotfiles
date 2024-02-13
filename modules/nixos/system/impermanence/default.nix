@@ -38,11 +38,10 @@ in
       ];
       after = [
         # LUKS/TPM process
-        "systemd-cryptsetup@root.service"
+        "systemd-cryptsetup@encrypted.service"
       ];
       before = [
         "sysroot.mount"
-        "systemd-tmpfiles-setup.service"
       ];
       unitConfig.DefaultDependencies = "no";
       serviceConfig.Type = "oneshot";
