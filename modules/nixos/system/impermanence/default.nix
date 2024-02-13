@@ -47,13 +47,16 @@ in
       unitConfig.DefaultDependencies = "no";
       serviceConfig.Type = "oneshot";
       script = ''
+        echo "Mounting the BTRFS partition"
         mkdir /btrfs_tmp
         mount /dev/mapper/encrypted /btrfs_tmp
 
+        echo "Moving the root subvolume in snapshot"
         if [[ -e /btrfs_tmp/root ]]; then
             timestamp=$(date --date="@$(stat -c %Y /btrfs_tmp/root)" "+%Y-%m-%-d_%H:%M:%S")
             mv /btrfs_tmp/root "/btrfs_tmp/snapshot/root/$timestamp"
         fi
+        echo "Moving the home subvolume in snapshot"
         if [[ -e /btrfs_tmp/home]]; then
             timestamp=$(date --date="@$(stat -c %Y /btrfs_tmp/home)" "+%Y-%m-%-d_%H:%M:%S")
             mv /btrfs_tmp/home "/btrfs_tmp/snapshot/home/$timestamp"
@@ -67,14 +70,18 @@ in
             btrfs subvolume delete "$1"
         }
 
+        echo "Deleting the root subvolume"
         for i in $(find /btrfs_tmp/snapshot/root/ -maxdepth 1 -mtime +15); do
             delete_subvolume_recursively "$i"
         done
+        echo "Deleting the home subvolume"
         for i in $(find /btrfs_tmp/snapshot/home/ -maxdepth 1 -mtime +30); do
             delete_subvolume_recursively "$i"
         done
 
+        echo "Recreating the root subvolume"
         btrfs subvolume create /btrfs_tmp/root
+        echo "Recreating the home subvolume"
         btrfs subvolume create /btrfs_tmp/home
 
         umount /btrfs_tmp
