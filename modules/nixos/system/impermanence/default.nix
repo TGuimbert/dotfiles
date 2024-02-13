@@ -26,6 +26,15 @@ in
 
     programs.fuse.userAllowOther = true;
 
+    system = {
+      activationScripts.persistentHome.text = ''
+        install -d -m 0755 -o root -g root /persistent/home/
+      '';
+      userActivationScripts.persistentHome.text = ''
+        install -d -m 0700 -o $USER -g users /persistent/home/$USER
+      '';
+    };
+
     boot.initrd.systemd.services.rollback = {
       description = "Rollback BTRFS root and home subvolume to a pristine state";
       wantedBy = [

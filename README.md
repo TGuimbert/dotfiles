@@ -26,7 +26,7 @@ exit
 ```
 1. Install NixOS:
 ```shell
-sudo nixos-install --flake ./#<hostname>
+sudo nixos-install --no-root-password --flake ./#<hostname>
 ```
 
 ## Filesystem layout
