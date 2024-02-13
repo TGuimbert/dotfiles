@@ -52,7 +52,7 @@ in
       serviceConfig.Type = "oneshot";
       script = ''
         mkdir /btrfs_tmp
-        mount /dev/dm-0 /btrfs_tmp
+        mount /dev/mapper/encrypted /btrfs_tmp
 
         if [[ -e /btrfs_tmp/root ]]; then
             timestamp=$(date --date="@$(stat -c %Y /btrfs_tmp/root)" "+%Y-%m-%-d_%H:%M:%S")
