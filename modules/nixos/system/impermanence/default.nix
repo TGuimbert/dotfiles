@@ -26,14 +26,10 @@ in
 
     programs.fuse.userAllowOther = true;
 
-    system = {
-      activationScripts.persistentHome.text = ''
-        install -d -m 0755 -o root -g root /persistent/home/
-      '';
-      userActivationScripts.persistentHome.text = ''
-        install -d -m 0700 -o $USER -g users /persistent/home/$USER
-      '';
-    };
+    system.activationScripts.persistentHome.text = ''
+      install -d -m 0755 -o root -g root /persistent/home/
+      install -d -m 0700 -o tguimbert -g users /persistent/home/tguimbert
+    '';
 
     boot.initrd.systemd.services.rollback = {
       description = "Rollback BTRFS root and home subvolume to a pristine state";
@@ -59,8 +55,8 @@ in
             mv /btrfs_tmp/root "/btrfs_tmp/snapshot/root/$timestamp"
         fi
         if [[ -e /btrfs_tmp/home]]; then
-            timestamp=$(date --date="@$(stat -c %Y /btrfs_tmp/root)" "+%Y-%m-%-d_%H:%M:%S")
-            mv /btrfs_tmp/root "/btrfs_tmp/snapshot/home/$timestamp"
+            timestamp=$(date --date="@$(stat -c %Y /btrfs_tmp/home)" "+%Y-%m-%-d_%H:%M:%S")
+            mv /btrfs_tmp/home "/btrfs_tmp/snapshot/home/$timestamp"
         fi
 
         delete_subvolume_recursively() {
