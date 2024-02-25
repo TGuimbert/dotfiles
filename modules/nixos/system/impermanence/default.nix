@@ -63,6 +63,11 @@ in
             mv /btrfs_tmp/home "/btrfs_tmp/snapshot/home/$timestamp"
         fi
 
+        echo "Recreating the root subvolume"
+        btrfs subvolume create /btrfs_tmp/root
+        echo "Recreating the home subvolume"
+        btrfs subvolume create /btrfs_tmp/home
+
         delete_subvolume_recursively() {
             IFS=$'\n'
             for i in $(btrfs subvolume list -o "$1" | cut -f 9- -d ' '); do
@@ -79,11 +84,6 @@ in
         for i in $(find /btrfs_tmp/snapshot/home/ -maxdepth 1 -mtime +30); do
             delete_subvolume_recursively "$i"
         done
-
-        echo "Recreating the root subvolume"
-        btrfs subvolume create /btrfs_tmp/root
-        echo "Recreating the home subvolume"
-        btrfs subvolume create /btrfs_tmp/home
 
         umount /btrfs_tmp
       '';
