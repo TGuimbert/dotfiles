@@ -17,16 +17,23 @@ sudo -s
 mkpasswd -s > /mnt/persistent/tguimbert-password
 exit
 ```
+1. Disable lanzaboote setup and enable systemd boot:
+```shell
+nano systems/x86_64-linux/<hostname>/default.nix
+```
+1. Install NixOS:
+```shell
+sudo nixos-install --no-root-password --flake ./#<hostname>
+```
+
+**After the reboot**
+
 1. Install secure boot keys:
 ```shell
 nix-shell -p sbctl
 sudo sbctl create-keys
 sudo mv /etc/secureboot/ /mnt/etc/
 exit
-```
-1. Install NixOS:
-```shell
-sudo nixos-install --no-root-password --flake ./#<hostname>
 ```
 
 ## Filesystem layout
