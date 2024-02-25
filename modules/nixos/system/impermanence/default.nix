@@ -29,6 +29,8 @@ in
     system.activationScripts.persistentHome.text = ''
       install -d -m 0755 -o root -g root /persistent/home/
       install -d -m 0700 -o tguimbert -g users /persistent/home/tguimbert
+      install -d -m 0755 -o root -g root /.snapshot/root/
+      install -d -m 0755 -o root -g root /.snapshot/home/
     '';
 
     boot.initrd.systemd.services.rollback = {
