@@ -52,21 +52,21 @@ in
         mkdir /btrfs_tmp
         mount /dev/mapper/encrypted /btrfs_tmp
 
-        echo "Moving the root subvolume in snapshot"
         if [[ -e /btrfs_tmp/root ]]; then
-            timestamp=$(date --date="@$(stat -c %Y /btrfs_tmp/root)" "+%Y-%m-%-d_%H:%M:%S")
-            mv /btrfs_tmp/root "/btrfs_tmp/snapshot/root/$timestamp"
-        fi
-        echo "Moving the home subvolume in snapshot"
-        if [[ -e /btrfs_tmp/home]]; then
-            timestamp=$(date --date="@$(stat -c %Y /btrfs_tmp/home)" "+%Y-%m-%-d_%H:%M:%S")
-            mv /btrfs_tmp/home "/btrfs_tmp/snapshot/home/$timestamp"
+          echo "Moving the root subvolume in snapshot"
+          timestamp=$(date --date="@$(stat -c %Y /btrfs_tmp/root)" "+%Y-%m-%-d_%H:%M:%S")
+          mv /btrfs_tmp/root "/btrfs_tmp/snapshot/root/$timestamp"
+          echo "Recreating the root subvolume"
+          btrfs subvolume create /btrfs_tmp/root
         fi
 
-        echo "Recreating the root subvolume"
-        btrfs subvolume create /btrfs_tmp/root
-        echo "Recreating the home subvolume"
-        btrfs subvolume create /btrfs_tmp/home
+        if [[ -e /btrfs_tmp/home]]; then
+          echo "Moving the home subvolume in snapshot"
+          timestamp=$(date --date="@$(stat -c %Y /btrfs_tmp/home)" "+%Y-%m-%-d_%H:%M:%S")
+          mv /btrfs_tmp/home "/btrfs_tmp/snapshot/home/$timestamp"
+          echo "Recreating the home subvolume"
+          btrfs subvolume create /btrfs_tmp/home
+        fi
 
         delete_subvolume_recursively() {
             IFS=$'\n'
