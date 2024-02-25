@@ -60,7 +60,7 @@ in
           btrfs subvolume create /btrfs_tmp/root
         fi
 
-        if [[ -e /btrfs_tmp/home]]; then
+        if [[ -e /btrfs_tmp/home ]]; then
           echo "Moving the home subvolume in snapshot"
           timestamp=$(date --date="@$(stat -c %Y /btrfs_tmp/home)" "+%Y-%m-%-d_%H:%M:%S")
           mv /btrfs_tmp/home "/btrfs_tmp/snapshot/home/$timestamp"
