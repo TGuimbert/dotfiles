@@ -36,6 +36,15 @@ sudo mv /etc/secureboot/ /mnt/etc/
 exit
 ```
 
+**Other setups**
+
+1. Generate an SSH key and add it to Github:
+```shell
+ssh-keygen -t ed25519-sk -O verify-required
+mv ~/.ssh/id_ed25519_sk.pub ~/.ssh/id_ed25519_sk.pub.hidden
+cat ~/.ssh/id_ed25519_sk.pub.hidden
+```
+
 ## Filesystem layout
 
 The main idea on the filesystem are the following:
