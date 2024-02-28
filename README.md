@@ -28,13 +28,37 @@ sudo nixos-install --no-root-password --flake ./#<hostname>
 
 **After the reboot**
 
-1. Install secure boot keys:
+1. Check that `UEFI` and `systemd-boot` are used and that `Secure Boot` is disabled:
 ```shell
-nix-shell -p sbctl
-sudo sbctl create-keys
-sudo mv /etc/secureboot/ /mnt/etc/
-exit
+bootctl status
 ```
+1. Enable secure boot in the config and rebuild:
+```shell
+sudo nixos-rebuild switch --flake .
+```
+1. Create secure boot keys:
+```shell
+sudo sbctl create-keys
+```
+1. Sign the created keys by rebuilding:
+```shell
+sudo nixos-rebuild switch --flake .
+```
+1. Verify that everything is good (only bzImage.efi should not be signed):
+```shell
+sudo sbctl verify
+```
+1. Reboot and enable Secure Boot and its setup in the BIOS menu
+1. Enroll the keys in the BIOS:
+```shell
+sudo sbctl enroll-keys --microsoft
+```
+1. Reboot
+1. Check the everything is good:
+```shell
+bootctl status
+```
+1. Don't forget to put a password on the BIOS menu!
 
 **Other setups**
 
