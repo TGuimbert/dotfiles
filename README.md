@@ -60,6 +60,30 @@ bootctl status
 ```
 1. Don't forget to put a password on the BIOS menu!
 
+**Use Yubikey to unlock LUKS partition**
+
+1. Backup LUKS header
+```shell
+ sudo cryptsetup luksHeaderBackup /dev/nvme0n1p2 --header-backup-file /run/media/tguimbert/<usb-key-name>/luks_backup.bin
+```
+1. Enroll Yubikey
+```shell
+sudo systemd-cryptenroll /dev/nvme0n1p2 --fido2-device=auto
+```
+1. Create a Recovery Key (don't forget to write it somewhere)
+```shell
+sudo systemd-cryptenroll /dev/nvme0n1p2 --recovery-key
+```
+1. Create a new password if needed (don't forget that the keyboard if in QWERTY during boot)
+```shell
+sudo systemd-cryptenroll /dev/nvme0n1p2 --password
+```
+1. Remove first key if needed
+```shell
+sudo systemd-cryptenroll /dev/nvme0n1p2 --wipe-slot=0
+```
+1. Test all the keys!
+
 **Other setups**
 
 1. Generate an SSH key and add it to Github:
