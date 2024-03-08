@@ -5,11 +5,11 @@
 
     # The flake at the root of the repo, already having all the inputs
     root-flake.url = "path:./..";
-    # Nixpkgs Unstable;
+    # Nixpkgs stable;
     nixpkgs.follows = "root-flake/nixpkgs";
 
-    # NixPkgs Stable
-    stable.follows = "root-flake/stable";
+    # NixPkgs Unstable
+    unstable.follows = "root-flake/unstable";
 
     # Unified configuration for systems, packages, modules, shells, templates,
     # and more with Nix Flakes

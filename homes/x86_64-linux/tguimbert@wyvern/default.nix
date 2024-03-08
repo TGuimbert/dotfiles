@@ -11,7 +11,7 @@ with lib;
       chromium
     ];
 
-    persistence."/persist-home/tguimbert" = {
+    persistence."/persistent/home/tguimbert" = {
       directories = [
         ".zoom"
       ];
