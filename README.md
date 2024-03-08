@@ -9,7 +9,8 @@ cd dotfiles
 ```
 1. Run disko command to format the disk(s)
 ```shell
-sudo nix --experimental-features "nix-command flakes" run github:nix-community/disko -- --mode disko ./systems/x86_64-linux/<hostname>/disks.nix
+NEW_HOSTNAME=<hostname>
+sudo nix --experimental-features "nix-command flakes" run github:nix-community/disko -- --mode disko ./systems/x86_64-linux/$NEW_HOSTNAME/disks.nix
 ```
 1. Add a password for the main user with:
 ```shell
@@ -19,11 +20,11 @@ exit
 ```
 1. Disable lanzaboote setup and enable systemd boot:
 ```shell
-nano systems/x86_64-linux/<hostname>/default.nix
+nano systems/x86_64-linux/$NEW_HOSTNAME/default.nix
 ```
 1. Install NixOS:
 ```shell
-sudo nixos-install --no-root-password --flake ./#<hostname>
+sudo nixos-install --no-root-password --flake ./#$NEW_HOSTNAME
 ```
 
 **After the reboot**

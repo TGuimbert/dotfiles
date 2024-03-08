@@ -25,13 +25,9 @@
               content = {
                 type = "luks";
                 name = "encrypted";
-                # disable settings.keyFile if you want to use interactive password entry
-                passwordFile = "/tmp/secret.key"; # Interactive
                 settings = {
                   allowDiscards = true;
-                  # keyFile = "/tmp/secret.key";
                 };
-                # additionalKeyFiles = [ "/tmp/additionalSecret.key" ];
                 content = {
                   type = "btrfs";
                   extraArgs = [ "-f" ];
@@ -44,12 +40,8 @@
                       mountpoint = "/nix";
                       mountOptions = [ "compress=zstd" "noatime" ];
                     };
-                    "/persist-root" = {
-                      mountpoint = "/persist-root";
-                      mountOptions = [ "compress=zstd" "noatime" ];
-                    };
-                    "/persist-home" = {
-                      mountpoint = "/persist-home";
+                    "/persistent" = {
+                      mountpoint = "/persistent";
                       mountOptions = [ "compress=zstd" "noatime" ];
                     };
                     "/log" = {
@@ -90,8 +82,7 @@
   };
 
   fileSystems = {
-    "/persist-root".neededForBoot = true;
-    "/persist-home".neededForBoot = true;
+    "/persistent".neededForBoot = true;
     "/home".neededForBoot = true;
   };
 }
