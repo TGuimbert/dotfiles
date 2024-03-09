@@ -74,11 +74,11 @@
         home-manager.nixosModules.home-manager
         lanzaboote.nixosModules.lanzaboote
         impermanence.nixosModules.impermanence
+        disko.nixosModules.disko
       ];
 
       systems.hosts.griffin.modules = with inputs; [
         nixos-hardware.nixosModules.lenovo-thinkpad-t490
-        disko.nixosModules.disko
       ];
     };
 }
