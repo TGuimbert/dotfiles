@@ -1,6 +1,9 @@
 { lib, ... }:
 {
-  imports = [ ./hardware.nix ];
+  imports = [
+    ./hardware.nix
+    ./disks.nix
+  ];
 
   networking.hostName = "leshen";
 
