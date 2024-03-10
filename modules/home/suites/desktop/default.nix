@@ -8,6 +8,6 @@
     anki-bin
     obsidian
     bitwarden
-    signal-desktop
   ];
+  tguimbert.apps.signal.enable = true;
 }

@@ -65,7 +65,7 @@ bootctl status
 
 1. Backup LUKS header
 ```shell
- sudo cryptsetup luksHeaderBackup /dev/nvme0n1p2 --header-backup-file /run/media/tguimbert/<usb-key-name>/luks_backup.bin
+sudo cryptsetup luksHeaderBackup /dev/nvme0n1p2 --header-backup-file /run/media/tguimbert/<usb-key-name>/luks_backup.bin
 ```
 1. Enroll Yubikey
 ```shell
