@@ -10,7 +10,7 @@
 
   tguimbert = {
     system = {
-      secure-boot.enable = false;
+      secure-boot.enable = true;
       impermanence.enable = true;
       btrfs.enable = true;
     };
