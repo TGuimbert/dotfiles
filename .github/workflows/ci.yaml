@@ -18,7 +18,7 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v10
       - name: Run the Magic Nix Cache
-        uses: DeterminateSystems/magic-nix-cache-action@v4
+        uses: DeterminateSystems/magic-nix-cache-action@v6
       - name: Check pre-commit
         run: nix develop . --command pre-commit run --all-files
 
@@ -30,7 +30,7 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v10
       - name: Run the Magic Nix Cache
-        uses: DeterminateSystems/magic-nix-cache-action@v4
+        uses: DeterminateSystems/magic-nix-cache-action@v6
       - name: Add personal cachix configuration
         uses: cachix/cachix-action@v14
         with:
