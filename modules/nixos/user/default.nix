@@ -20,7 +20,6 @@ in
       extraGroups = [ "networkmanager" "wheel" ];
       uid = 1000;
       shell = pkgs.bashInteractive;
-      initialPassword = "password";
       hashedPasswordFile = "/persistent/tguimbert-password";
     };
 

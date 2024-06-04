@@ -14,8 +14,8 @@ in
       xpadneo.enable = true;
       steam-hardware.enable = true;
     };
-    home-manager = mkIf config.tguimbert.system.impermanence.enable {
-      users.${username} = {
+    snowfallorg = mkIf config.tguimbert.system.impermanence.enable {
+      users.${username}.home.config = {
         home.persistence."/persistent/home/${username}" = {
           directories = [
             {

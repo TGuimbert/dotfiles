@@ -1,27 +1,8 @@
-{ pkgs, lib, inputs, ... }:
-with lib;
+{ inputs, ... }:
 {
   imports = [
     inputs.scortex.nixosModules.home-manager.scortex
   ];
-
-  home = {
-    packages = with pkgs; [
-      zoom-us
-      chromium
-    ];
-
-    persistence."/persistent/home/tguimbert" = {
-      directories = [
-        ".zoom"
-      ];
-      files = [
-        ".config/zoom.conf"
-        ".config/zoomus.conf"
-      ];
-      allowOther = true;
-    };
-  };
 
   scortex = {
     impermanence = {
@@ -30,14 +11,4 @@ with lib;
     };
     devOpsTools.enable = true;
   };
-
-  # This value determines the Home Manager release that your
-  # configuration is compatible with. This helps avoid breakage
-  # when a new Home Manager release introduces backwards
-  # incompatible changes.
-  #
-  # You can update Home Manager without changing this value. See
-  # the Home Manager release notes for a list of state version
-  # changes in each release.
-  home.stateVersion = "23.11";
 }

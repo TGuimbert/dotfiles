@@ -12,8 +12,8 @@ in
     environment.systemPackages = with pkgs; [
       clonehero
     ];
-    home-manager = mkIf config.tguimbert.system.impermanence.enable {
-      users.${username} = {
+    snowfallorg = mkIf config.tguimbert.system.impermanence.enable {
+      users.${username}.home.config = {
         home.persistence."/persistent/home/${username}" = {
           directories = [
             ".clonehero"

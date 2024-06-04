@@ -12,7 +12,7 @@
     # Unified configuration for systems, packages, modules, shells, templates,
     # and more with Nix Flakes
     snowfall-lib = {
-      url = "github:snowfallorg/lib/v2.1.1";
+      url = "github:snowfallorg/lib/v3.0.2";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -35,7 +35,7 @@
 
     # Manage a user environment using Nix
     home-manager = {
-      url = "github:nix-community/home-manager/release-23.11";
+      url = "github:nix-community/home-manager/release-24.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 

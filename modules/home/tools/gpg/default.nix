@@ -1,4 +1,4 @@
-{ ... }:
+{ pkgs, ... }:
 let
   publicKey = builtins.fetchurl {
     url = "https://github.com/TGuimbert.gpg";
@@ -22,6 +22,6 @@ in
 
   services.gpg-agent = {
     enable = true;
-    pinentryFlavor = "gnome3";
+    pinentryPackage = pkgs.pinentry-gnome3;
   };
 }

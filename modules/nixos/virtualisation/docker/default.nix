@@ -18,7 +18,7 @@ in
       minikube
     ];
 
-    home-manager.users.${username} = {
+    snowfallorg.users.${username}.home.config = {
       home.file = {
         minikubeConfig = mkDefault {
           target = ".minikube/config/config.json";
