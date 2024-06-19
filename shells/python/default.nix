@@ -10,7 +10,7 @@ pkgs.mkShell {
     geos
   ];
   shellHook = ''
-    uv venv --link-mode copy --allow-existing
+    uv venv --link-mode copy --allow-existing --quiet
     source .venv/bin/activate
     # Postgis libraries
     export "GDAL_LIBRARY_PATH=${pkgs.gdal}/lib/libgdal.so"
