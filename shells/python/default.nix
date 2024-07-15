@@ -5,9 +5,12 @@ pkgs.mkShell {
     channels.unstable.uv
     ruff
     pre-commit
+    python312Packages.python-lsp-server
     # Postgis libraries
     gdal
     geos
+    # TOML lsp
+    taplo
   ];
   shellHook = ''
     uv venv --link-mode copy --allow-existing --quiet
