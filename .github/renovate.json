@@ -1,7 +1,10 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:base"
+    "config:best-practices",
+    ":maintainLockFilesWeekly",
+    ":timezone(Europe/Paris)",
+    ":reviewer(TGuimbert)"
   ],
 
   "nix" : {
@@ -10,13 +13,4 @@
       "**/scortex-machines/**"
     ]
   },
-  "lockFileMaintenance": { "enabled": true},
-
-  "timezone": "Europe/Paris",
-  "schedule": [
-    "after 9am on Monday"
-  ],
-  "reviewers": [
-    "TGuimbert"
-  ]
 }
