@@ -10,15 +10,15 @@ jobs:
     name: Check Linting
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
       - name: Check Nix flake inputs
-        uses: DeterminateSystems/flake-checker-action@v8
+        uses: DeterminateSystems/flake-checker-action@ae43dea95bc73541287cfd10e2dee994d1877291 # v8
         with:
           nixpkgs-keys: nixpkgs,unstable
       - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@v12
+        uses: DeterminateSystems/nix-installer-action@7993355175c2765e5733dae74f3e0786fe0e5c4f # v12
       - name: Run the Magic Nix Cache
-        uses: DeterminateSystems/magic-nix-cache-action@v7
+        uses: DeterminateSystems/magic-nix-cache-action@b46e247b898aa56e6d2d2e728dc6df6c84fdb738 # v7
       - name: Check pre-commit
         run: nix develop . --command pre-commit run --all-files
 
@@ -26,13 +26,13 @@ jobs:
     name: Cache Overlays
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
       - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@v12
+        uses: DeterminateSystems/nix-installer-action@7993355175c2765e5733dae74f3e0786fe0e5c4f # v12
       - name: Run the Magic Nix Cache
-        uses: DeterminateSystems/magic-nix-cache-action@v7
+        uses: DeterminateSystems/magic-nix-cache-action@b46e247b898aa56e6d2d2e728dc6df6c84fdb738 # v7
       - name: Add personal cachix configuration
-        uses: cachix/cachix-action@v15
+        uses: cachix/cachix-action@ad2ddac53f961de1989924296a1f236fcfbaa4fc # v15
         with:
           name: tguimbert
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
