@@ -5,6 +5,8 @@
     rage
     age-plugin-yubikey
     bitwarden-cli
+    jq
+    dig
   ];
 
   programs = {
