@@ -9,6 +9,8 @@
     anki-bin
     obsidian
     bitwarden
+    sweethome3d.application
+    prusa-slicer
   ];
   tguimbert.apps.signal.enable = true;
 }
