@@ -7,6 +7,7 @@
     bitwarden-cli
     jq
     dig
+    dprint
   ];
 
   programs = {

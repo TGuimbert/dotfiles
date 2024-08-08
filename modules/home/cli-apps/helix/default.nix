@@ -1,5 +1,4 @@
 { ... }:
-
 {
   programs.helix = {
     enable = true;
@@ -7,7 +6,15 @@
     ignores = [
       ".obsidian/"
       ".direnv/"
+      ".envrc"
     ];
+    languages = {
+      language = [{
+        name = "markdown";
+        formatter = { command = "dprint"; args = [ "fmt" "--stdin" "md" ]; };
+        auto-format = true;
+      }];
+    };
     settings = {
       theme = "gruvbox";
 
