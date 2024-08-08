@@ -1,19 +1,20 @@
 { ... }:
 
 {
-  home.sessionVariables = {
-    EDITOR = "hx";
-  };
-
   programs.helix = {
     enable = true;
+    defaultEditor = true;
+    ignores = [
+      ".obsidian/"
+      ".direnv/"
+    ];
     settings = {
-      theme = "gruvbox-zellij";
+      theme = "gruvbox";
 
       editor = {
         bufferline = "multiple";
         color-modes = true;
-        rulers = [ 80 ];
+        rulers = [ 120 ];
         line-number = "relative";
       };
 
@@ -29,6 +30,17 @@
 
       editor.file-picker = {
         hidden = false;
+      };
+
+      editor.statusline = {
+        left = [
+          "mode"
+          "spinner"
+          "version-control"
+          "file-name"
+          "read-only-indicator"
+          "file-modification-indicator"
+        ];
       };
 
       keys.normal = {
@@ -74,16 +86,6 @@
       keys.select = {
         l = "extend_search_next";
         L = "extend_search_prev";
-      };
-    };
-    themes = {
-      # Workaround for this bug https://github.com/zellij-org/zellij/issues/1594
-      gruvbox-zellij = {
-        "inherits" = "gruvbox";
-        "diagnostic.warning" = { "underline" = { "color" = "orange1"; "style" = "line"; }; };
-        "diagnostic.error" = { "underline" = { "color" = "red1"; "style" = "line"; }; };
-        "diagnostic.info" = { "underline" = { "color" = "aqua1"; "style" = "line"; }; };
-        "diagnostic.hint" = { "underline" = { "color" = "blue1"; "style" = "line"; }; };
       };
     };
   };
