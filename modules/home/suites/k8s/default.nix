@@ -3,6 +3,7 @@
   home.packages = with pkgs; [
     kubectl
     kind
+    kubectx
   ];
 
   programs = {
