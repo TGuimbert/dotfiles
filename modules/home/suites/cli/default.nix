@@ -5,6 +5,7 @@
     rage
     age-plugin-yubikey
     bitwarden-cli
+    bws
     jq
     dig
     dprint

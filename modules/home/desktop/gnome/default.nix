@@ -5,7 +5,7 @@ in
 {
   dconf.settings = {
     "org/gnome/desktop/input-sources" = {
-      sources = gv.mkArray (gv.type.tupleOf [ gv.type.string gv.type.string ]) [ (gv.mkTuple [ "xkb" "fr+bepo" ]) (gv.mkTuple [ "xkb" "fr+oss" ]) (gv.mkTuple [ "xkb" "us+intl" ]) ];
+      sources = gv.mkArray (gv.type.tupleOf [ gv.type.string gv.type.string ]) [ (gv.mkTuple [ "xkb" "us+intl" ]) (gv.mkTuple [ "xkb" "fr+bepo" ]) (gv.mkTuple [ "xkb" "fr+oss" ]) ];
     };
     "org/gnome/desktop/peripherals/keyboard" = {
       numlock-state = true;
