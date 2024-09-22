@@ -85,5 +85,7 @@
           nixos-hardware.nixosModules.dell-xps-13-9380
         ];
       };
+
+      formatter.x86_64-linux = inputs.nixpkgs.legacyPackages.x86_64-linux.nixfmt-rfc-style;
     };
 }

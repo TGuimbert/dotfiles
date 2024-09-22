@@ -9,11 +9,27 @@
       ".envrc"
     ];
     languages = {
-      language = [{
-        name = "markdown";
-        formatter = { command = "dprint"; args = [ "fmt" "--stdin" "md" ]; };
-        auto-format = true;
-      }];
+      language = [
+        {
+          name = "markdown";
+          formatter = {
+            command = "dprint";
+            args = [
+              "fmt"
+              "--stdin"
+              "md"
+            ];
+          };
+          auto-format = true;
+        }
+        {
+          name = "nix";
+          formatter = {
+            command = "nixfmt";
+          };
+          auto-format = true;
+        }
+      ];
     };
     settings = {
       theme = "gruvbox";

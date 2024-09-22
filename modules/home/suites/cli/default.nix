@@ -9,6 +9,7 @@
     jq
     dig
     dprint
+    nixfmt-rfc-style
   ];
 
   programs = {
