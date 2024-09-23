@@ -205,15 +205,22 @@
       };
     };
   };
-  home.packages = with pkgs; [
-    fd
-    procs
-    sd
-    du-dust
-    ripgrep
-  ];
-  home.sessionVariables = {
-    ZELLIJ_AUTO_ATTACH = "true";
-    ZELLIJ_AUTO_EXIT = "true";
+  home = {
+    packages = with pkgs; [
+      fd
+      procs
+      sd
+      du-dust
+      ripgrep
+    ];
+    sessionVariables = {
+      ZELLIJ_AUTO_ATTACH = "true";
+      ZELLIJ_AUTO_EXIT = "true";
+    };
+    persistence."/persistent/home/tguimbert" = {
+      files = [
+        ".config/fish/conf.d/private.fish"
+      ];
+    };
   };
 }

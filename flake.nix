@@ -77,8 +77,13 @@
         disko.nixosModules.disko
       ];
 
-      systems.hosts.griffin.modules = with inputs; [
-        nixos-hardware.nixosModules.lenovo-thinkpad-t490
-      ];
+      systems.hosts = {
+        griffin.modules = with inputs; [
+          nixos-hardware.nixosModules.lenovo-thinkpad-t490
+        ];
+        wyvern.modules = with inputs; [
+          nixos-hardware.nixosModules.dell-xps-13-9380
+        ];
+      };
     };
 }
