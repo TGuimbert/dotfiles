@@ -3,7 +3,10 @@ with lib;
 {
   boot = {
     loader = {
-      systemd-boot.enable = mkDefault true;
+      systemd-boot = {
+        enable = mkDefault true;
+        configurationLimit = 10;
+      };
 
       efi = {
         canTouchEfiVariables = true;
