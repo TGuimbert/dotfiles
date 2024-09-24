@@ -6,6 +6,11 @@
       enableFishIntegration = true;
       settings = {
         default_shell = "fish";
+        ui = {
+          pane_frames = {
+            rounded_corners = true;
+          };
+        };
       };
     };
   };
