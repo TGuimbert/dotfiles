@@ -32,8 +32,6 @@
       ];
     };
     settings = {
-      theme = "gruvbox";
-
       editor = {
         bufferline = "multiple";
         color-modes = true;
