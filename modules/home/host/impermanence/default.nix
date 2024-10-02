@@ -30,9 +30,9 @@
       ".cache/pre-commit"
       ".config/obsidian"
       ".local/state/wireplumber"
+      ".local/share/fish"
     ];
     files = [
-      ".local/share/fish/fish_history"
       ".config/monitors.xml"
       ".config/gh/hosts.yml"
     ];

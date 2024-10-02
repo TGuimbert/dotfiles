@@ -2,7 +2,7 @@
 let
   publicKey = builtins.fetchurl {
     url = "https://github.com/TGuimbert.gpg";
-    sha256 = "84860ac53b31e30cdbdb3ac88cf20ac78827370b5782b8038e646616293368a9";
+    sha256 = "07b7gfhr13923jv7vfdnq80rpahgdzd8anxy07876395ywsrnvkb";
   };
 in
 {
