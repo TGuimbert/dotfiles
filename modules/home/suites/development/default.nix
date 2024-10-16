@@ -11,9 +11,7 @@
       ".pip/pip.conf"
       ".vault-token"
     ];
-    directories = [
-      ".ssh"
-    ];
+    directories = [ ".ssh" ];
   };
 
   tguimbert.apps.azure-cli.enable = true;

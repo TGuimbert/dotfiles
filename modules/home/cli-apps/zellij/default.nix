@@ -5,7 +5,7 @@
       enable = true;
       enableFishIntegration = true;
       settings = {
-        default_shell = "fish";
+        default_shell = "nu";
         ui.pane_frames.rounded_corners = true;
         keybinds = {
           scroll = {
