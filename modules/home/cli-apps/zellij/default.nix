@@ -6,6 +6,7 @@
       enableFishIntegration = true;
       settings = {
         default_shell = "nu";
+        default_layout = "yazelix";
         ui.pane_frames.rounded_corners = true;
         keybinds = {
           scroll = {
@@ -107,7 +108,7 @@
                       args "YAZI_CONFIG_HOME=~/.config/yazelix/yazi/sidebar" "yazi"
                   	size "20%"
                   }
-                  pane 
+                  pane name="helix"
               }
           }
       }
@@ -120,9 +121,9 @@
                       args "YAZI_CONFIG_HOME=~/.config/yazelix/yazi/sidebar" "yazi"
                   	size "20%"
                   }
-                  pane name="main" split_direction="vertical" {
-                      pane
-                      pane stacked=true { children; }
+                  pane name="main" split_direction="horizontal" {
+                      pane name="helix"
+                      pane size="25%" stacked=true { children; }
                   }
               }
           }
@@ -136,9 +137,9 @@
                       args "YAZI_CONFIG_HOME=~/.config/yazelix/yazi/sidebar" "yazi"
                   	size "1%"
                   }
-                  pane name="main" split_direction="vertical" {
+                  pane name="main" split_direction="horizontal" {
                       pane
-                      pane stacked=true { children; }
+                      pane size="25%" stacked=true { children; }
                   }
               }
           }

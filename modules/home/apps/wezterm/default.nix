@@ -176,6 +176,7 @@
     bottom.enable = true;
     eza = {
       enable = true;
+      enableNushellIntegration = true;
       git = true;
       icons = true;
       extraOptions = [
@@ -210,9 +211,7 @@
       ZELLIJ_AUTO_EXIT = "true";
     };
     persistence."/persistent/home/tguimbert" = {
-      files = [
-        ".config/fish/conf.d/private.fish"
-      ];
+      files = [ ".config/fish/conf.d/private.fish" ];
     };
   };
 }
