@@ -29,6 +29,11 @@
           };
           auto-format = true;
         }
+        {
+          name = "go";
+          auto-format = true;
+          formatter = { command = "goimports"; };
+        }
       ];
     };
     settings = {

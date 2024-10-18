@@ -176,7 +176,6 @@
     bottom.enable = true;
     eza = {
       enable = true;
-      enableNushellIntegration = true;
       git = true;
       icons = true;
       extraOptions = [
