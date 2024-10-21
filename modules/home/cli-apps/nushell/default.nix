@@ -7,6 +7,10 @@
       extraConfig = ''
         plugin add ${pkgs.nushellPlugins.formats}/bin/nu_plugin_formats
         plugin use formats
+
+        const private_config_path = /home/tguimbert/.config/nushell/private.nu
+        touch $private_config_path
+        source $private_config_path
       '';
     };
     carapace = {
