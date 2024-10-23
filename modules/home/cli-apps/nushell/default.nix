@@ -1,16 +1,25 @@
 { pkgs, ... }:
+let
+  private_config_path = ".config/nushell/private.nu";
+in
 {
   programs = {
     nushell = {
       enable = true;
       configFile.source = ./config.nu;
-      extraConfig = ''
-        plugin add ${pkgs.nushellPlugins.formats}/bin/nu_plugin_formats
-        plugin use formats
+      extraEnv = ''
+        $env.NU_PLUGIN_DIRS = (
+          $env.NU_PLUGIN_DIRS |
+          append ${pkgs.nushellPlugins.formats}/bin
+        )
 
-        const private_config_path = /home/tguimbert/.config/nushell/private.nu
-        touch $private_config_path
-        source $private_config_path
+        if (not ("~/${private_config_path}" | path exists)) {
+          touch ~/${private_config_path}
+        }
+      '';
+      extraConfig = ''
+        plugin use formats
+        source ~/${private_config_path}
       '';
     };
     carapace = {
@@ -19,13 +28,10 @@
   };
 
   home = {
-
-    # packages = with pkgs; [ nushellPlugins.formats ];
-
     persistence."/persistent/home/tguimbert" = {
       files = [
         ".config/nushell/history.txt"
-        ".config/nushell/private.nu"
+        private_config_path
       ];
     };
   };
