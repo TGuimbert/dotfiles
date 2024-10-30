@@ -1,7 +1,7 @@
 { pkgs, ... }:
 {
   home.packages = with pkgs; [
-    vault
+    # vault
   ];
 
   home.persistence."/persistent/home/tguimbert" = {
