@@ -28,14 +28,6 @@
       };
     };
 
-    zellij = {
-      enable = true;
-      enableFishIntegration = true;
-      settings = {
-        default_shell = "fish";
-      };
-    };
-
     starship = {
       enable = true;
       enableTransience = true;
@@ -218,9 +210,7 @@
       ZELLIJ_AUTO_EXIT = "true";
     };
     persistence."/persistent/home/tguimbert" = {
-      files = [
-        ".config/fish/conf.d/private.fish"
-      ];
+      files = [ ".config/fish/conf.d/private.fish" ];
     };
   };
 }

@@ -11,16 +11,13 @@ let
       rev = "bf2f570bee8e84c5c20caac353cbe1d811a4745f";
     };
 
-    buildInputs = [
-      pkgs.git
-    ];
+    buildInputs = [ pkgs.git ];
 
     configurePhase = ''
       mkdir -p $out/share/plymouth/themes/
     '';
 
-    buildPhase = ''
-    '';
+    buildPhase = '''';
 
     installPhase = ''
       cp -r ${pack}/${theme} $out/share/plymouth/themes
@@ -32,7 +29,6 @@ in
   boot.plymouth = {
     enable = true;
     themePackages = [ plymouth-package ];
-    inherit theme;
   };
   boot.kernelParams = [ "quiet" ];
 }

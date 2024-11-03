@@ -1,7 +1,7 @@
 { pkgs, ... }:
 {
   home.packages = with pkgs; [
-    vault
+    # vault
   ];
 
   home.persistence."/persistent/home/tguimbert" = {
@@ -11,9 +11,7 @@
       ".pip/pip.conf"
       ".vault-token"
     ];
-    directories = [
-      ".ssh"
-    ];
+    directories = [ ".ssh" ];
   };
 
   tguimbert.apps.azure-cli.enable = true;

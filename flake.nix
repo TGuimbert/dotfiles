@@ -45,6 +45,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    stylix = {
+      url = "github:danth/stylix/release-24.05";
+      inputs.nixpkgs.follows = "unstable";
+    };
+
     # Seamless integration of https://pre-commit.com git hooks with Nix.
     pre-commit-hooks = {
       url = "github:cachix/pre-commit-hooks.nix";
@@ -52,7 +57,8 @@
     };
   };
 
-  outputs = inputs:
+  outputs =
+    inputs:
     # This is an example and in your actual flake you can use `snowfall-lib.mkFlake`
     # directly unless you explicitly need a feature of `lib`.
     let
@@ -75,15 +81,14 @@
         lanzaboote.nixosModules.lanzaboote
         impermanence.nixosModules.impermanence
         disko.nixosModules.disko
+        stylix.nixosModules.stylix
       ];
 
       systems.hosts = {
-        griffin.modules = with inputs; [
-          nixos-hardware.nixosModules.lenovo-thinkpad-t490
-        ];
-        wyvern.modules = with inputs; [
-          nixos-hardware.nixosModules.dell-xps-13-9380
-        ];
+        griffin.modules = with inputs; [ nixos-hardware.nixosModules.lenovo-thinkpad-t490 ];
+        wyvern.modules = with inputs; [ nixos-hardware.nixosModules.dell-xps-13-9380 ];
       };
+
+      formatter.x86_64-linux = inputs.nixpkgs.legacyPackages.x86_64-linux.nixfmt-rfc-style;
     };
 }

@@ -9,15 +9,34 @@
       ".envrc"
     ];
     languages = {
-      language = [{
-        name = "markdown";
-        formatter = { command = "dprint"; args = [ "fmt" "--stdin" "md" ]; };
-        auto-format = true;
-      }];
+      language = [
+        {
+          name = "markdown";
+          formatter = {
+            command = "dprint";
+            args = [
+              "fmt"
+              "--stdin"
+              "md"
+            ];
+          };
+          auto-format = true;
+        }
+        {
+          name = "nix";
+          formatter = {
+            command = "nixfmt";
+          };
+          auto-format = true;
+        }
+        {
+          name = "go";
+          auto-format = true;
+          formatter = { command = "goimports"; };
+        }
+      ];
     };
     settings = {
-      theme = "gruvbox";
-
       editor = {
         bufferline = "multiple";
         color-modes = true;

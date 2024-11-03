@@ -5,13 +5,29 @@ in
 {
   dconf.settings = {
     "org/gnome/desktop/input-sources" = {
-      sources = gv.mkArray (gv.type.tupleOf [ gv.type.string gv.type.string ]) [ (gv.mkTuple [ "xkb" "us+intl" ]) (gv.mkTuple [ "xkb" "fr+bepo" ]) (gv.mkTuple [ "xkb" "fr+oss" ]) ];
+      sources =
+        gv.mkArray
+          (gv.type.tupleOf [
+            gv.type.string
+            gv.type.string
+          ])
+          [
+            (gv.mkTuple [
+              "xkb"
+              "us+intl"
+            ])
+            (gv.mkTuple [
+              "xkb"
+              "fr+bepo"
+            ])
+            (gv.mkTuple [
+              "xkb"
+              "fr+oss"
+            ])
+          ];
     };
     "org/gnome/desktop/peripherals/keyboard" = {
       numlock-state = true;
-    };
-    "org/gnome/desktop/interface" = {
-      color-scheme = gv.mkString "prefer-dark";
     };
     "org/gnome/shell" = {
       favorite-apps = gv.mkArray gv.type.string [

@@ -13,7 +13,7 @@
       ".config/spotify"
       ".doppler"
       ".dotfiles"
-      ".gnupg/private-keys-v1.d/"
+      ".gnupg"
       ".kube"
       ".local/share/Anki2"
       ".local/share/direnv"
