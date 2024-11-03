@@ -1,6 +1,23 @@
-{ pkgs, ... }:
+{ pkgs, lib, ... }:
 let
   private_config_path = ".config/nushell/private.nu";
+  pluginNamesNixpkgs = [ "formats" ];
+  activateNushellPluginsNuScript = pkgs.writeTextFile {
+    name = "activateNushellPlugins";
+    destination = "/bin/activateNushellPlugins.nu";
+    text = ''
+      #!/usr/bin/env nu
+      ${lib.concatStringsSep "\n" (
+        map (x: "plugin add ${pkgs.nushellPlugins.${x}}/bin/nu_plugin_${x}") pluginNamesNixpkgs
+      )}
+    '';
+  };
+
+  msgPackz = pkgs.runCommand "nushellMsgPackz" { } ''
+    mkdir -p "$out"
+    # After some experimentation, I determined that this only works if --plugin-config is FIRST
+    ${pkgs.nushell}/bin/nu --plugin-config "$out/plugin.msgpackz" ${activateNushellPluginsNuScript}/bin/activateNushellPlugins.nu
+  '';
 in
 {
   programs = {
@@ -8,17 +25,11 @@ in
       enable = true;
       configFile.source = ./config.nu;
       extraEnv = ''
-        $env.NU_PLUGIN_DIRS = (
-          $env.NU_PLUGIN_DIRS |
-          append ${pkgs.nushellPlugins.formats}/bin
-        )
-
         if (not ("~/${private_config_path}" | path exists)) {
           touch ~/${private_config_path}
         }
       '';
       extraConfig = ''
-        plugin use formats
         source ~/${private_config_path}
       '';
     };
@@ -26,6 +37,9 @@ in
       enable = true;
     };
   };
+
+  # See https://github.com/nushell/nushell/discussions/12997#discussioncomment-9638977
+  xdg.configFile."nushell/plugin.msgpackz".source = "${msgPackz}/plugin.msgpackz";
 
   home = {
     persistence."/persistent/home/tguimbert" = {
