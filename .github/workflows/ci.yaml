@@ -10,7 +10,7 @@ jobs:
     name: Check Linting
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       - name: Check Nix flake inputs
         uses: DeterminateSystems/flake-checker-action@078f5f7f47ee188aa6cb472527ca5984e195222d # v9
         with:
@@ -26,7 +26,7 @@ jobs:
     name: Cache Overlays
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@da36cb69b1c3247ad7a1f931ebfd954a1105ef14 # v14
       - name: Run the Magic Nix Cache
