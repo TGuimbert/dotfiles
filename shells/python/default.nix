@@ -23,7 +23,7 @@ pkgs.mkShell {
     export "GDAL_LIBRARY_PATH=${gdal}/lib/libgdal.so"
     export "GEOS_LIBRARY_PATH=${geos}/lib/libgeos_c.so"
     # Other libraries
-    export LD_LIBRARY_PATH="${zlib}/lib:${glib.out}/lib:${libglvnd}/lib:${pkgs.stdenv.cc.cc.lib}/lib"
+    export LD_LIBRARY_PATH="${zlib}/lib:${glib.out}/lib:${libglvnd}/lib:${pkgs.stdenv.cc.cc.lib}/lib:${gfortran.cc.lib}/lib"
     # Skip ruff in pre-commit
     export "SKIP=ruff,ruff-format"
   '';
