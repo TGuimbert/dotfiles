@@ -4,7 +4,7 @@
   # Flake inputs
   inputs = {
     # Nixpkgs Stable
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-24.05";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-24.11";
 
     # Nixpkgs Unstable
     unstable.url = "github:nixos/nixpkgs/nixos-unstable";
