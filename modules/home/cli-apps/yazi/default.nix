@@ -21,11 +21,7 @@
         ];
       };
     };
-
-  };
-  # init.lua will be a proper option after 24.05
-  xdg.configFile = {
-    "yazi/init.lua".text = ''
+    initLua = ''
       function Status:render(area)
       	self.area = area
 
@@ -35,6 +31,9 @@
       	}
       end
     '';
+  };
+
+  xdg.configFile = {
     "yazi/open_file.nu" = {
       executable = true;
       text = ''

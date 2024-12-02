@@ -4,7 +4,7 @@
   # Flake inputs
   inputs = {
     # Nixpkgs Stable
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-24.05";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-24.11";
 
     # Nixpkgs Unstable
     unstable.url = "github:nixos/nixpkgs/nixos-unstable";
@@ -12,7 +12,7 @@
     # Unified configuration for systems, packages, modules, shells, templates,
     # and more with Nix Flakes
     snowfall-lib = {
-      url = "github:snowfallorg/lib/v3.0.2";
+      url = "github:snowfallorg/lib/v3.0.3";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -35,7 +35,7 @@
 
     # Manage a user environment using Nix
     home-manager = {
-      url = "github:nix-community/home-manager/release-24.05";
+      url = "github:nix-community/home-manager/release-24.11";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -46,7 +46,7 @@
     };
 
     stylix = {
-      url = "github:danth/stylix/release-24.05";
+      url = "github:danth/stylix/d13ffb381c83b6139b9d67feff7addf18f8408fe";
       inputs.nixpkgs.follows = "unstable";
     };
 
