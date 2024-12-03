@@ -18,31 +18,17 @@ in
             ])
             (gv.mkTuple [
               "xkb"
-              "fr+bepo"
-            ])
-            (gv.mkTuple [
-              "xkb"
               "fr+oss"
             ])
           ];
     };
-    "org/gnome/desktop/peripherals/keyboard" = {
-      numlock-state = true;
-    };
     "org/gnome/shell" = {
       favorite-apps = gv.mkArray gv.type.string [
         "firefox.desktop"
-        "org.wezfurlong.wezterm.desktop"
+        "footclient.desktop"
         "spotify.desktop"
         "org.gnome.Nautilus.desktop"
       ];
-    };
-    "org/gnome/desktop/screensave" = {
-      color-shading-type = gv.mkString "solid";
-      picture-options = gv.mkString "zoom";
-      picture-uri = gv.mkString "file:///run/current-system/sw/share/backgrounds/gnome/adwaita-l.webp";
-      primary-color = gv.mkString "#3071AE";
-      secondary-color = gv.mkString "#000000";
     };
   };
 }
