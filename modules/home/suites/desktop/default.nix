@@ -10,6 +10,7 @@
     obsidian
     bitwarden
     sweethome3d.application
+    freecad
   ];
   tguimbert = {
     apps = {

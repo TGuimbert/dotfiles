@@ -2,19 +2,6 @@
 
 {
   programs = {
-    wezterm = {
-      enable = true;
-      extraConfig = ''
-        return {
-          default_prog = { 'fish', '-l' },
-          color_scheme = "Gruvbox dark, hard (base16)",
-          hide_tab_bar_if_only_one_tab = true,
-          enable_kitty_keyboard = true,
-          hide_mouse_cursor_when_typing = false,
-        }
-      '';
-    };
-
     fish = {
       enable = true;
       interactiveShellInit = ''
