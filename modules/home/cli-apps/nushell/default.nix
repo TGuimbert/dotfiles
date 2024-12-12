@@ -24,6 +24,9 @@ in
     nushell = {
       enable = true;
       configFile.source = ./config.nu;
+      environmentVariables = {
+        BWS_SERVER_URL = "https://vault.bitwarden.eu";
+      };
       extraEnv = ''
         if (not ("~/${private_config_path}" | path exists)) {
           touch ~/${private_config_path}
@@ -31,6 +34,7 @@ in
       '';
       extraConfig = ''
         source ~/${private_config_path}
+        use ${pkgs.nu_scripts}/share/nu_scripts/aliases/eza/eza-aliases.nu *
       '';
     };
     carapace = {
