@@ -18,6 +18,9 @@
   programs.ssh = {
     enable = true;
     compression = true;
+    extraConfig = ''
+      SetEnv TERM=xterm-256color
+    '';
     includes = [ "private-config" ];
   };
 }
