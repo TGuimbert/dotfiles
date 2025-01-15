@@ -26,7 +26,7 @@ in
       configFile.source = ./config.nu;
       environmentVariables = {
         BWS_SERVER_URL = "https://vault.bitwarden.eu";
-        SHELL = pkgs.nushell;
+        SHELL = "nu";
       };
       extraEnv = ''
         if (not ("~/${private_config_path}" | path exists)) {
