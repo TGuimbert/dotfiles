@@ -45,6 +45,16 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    arkenfox-nixos = {
+      url = "github:dwarfmaster/arkenfox-nixos";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    firefox-addons = {
+      url = "gitlab:rycee/nur-expressions?dir=pkgs/firefox-addons";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     stylix = {
       url = "github:danth/stylix/release-24.11";
       inputs.nixpkgs.follows = "unstable";
@@ -82,6 +92,10 @@
         impermanence.nixosModules.impermanence
         disko.nixosModules.disko
         stylix.nixosModules.stylix
+      ];
+
+      homes.modules = with inputs; [
+        arkenfox-nixos.hmModules.arkenfox
       ];
 
       systems.hosts = {

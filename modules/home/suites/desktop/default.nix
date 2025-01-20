@@ -11,6 +11,7 @@
     bitwarden
     sweethome3d.application
     freecad
+    mullvad-browser
   ];
   tguimbert = {
     apps = {
