@@ -25,8 +25,10 @@ in
       enable = true;
       configFile.source = ./config.nu;
       environmentVariables = {
-        BWS_SERVER_URL = "https://vault.bitwarden.eu";
         SHELL = "nu";
+        TERM = "foot";
+        EDITOR = "hx";
+        BWS_SERVER_URL = "https://vault.bitwarden.eu";
       };
       extraEnv = ''
         if (not ("~/${private_config_path}" | path exists)) {
