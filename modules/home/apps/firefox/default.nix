@@ -63,6 +63,7 @@
         };
         settings = {
           "extensions.pocket.enabled" = false;
+          "browser.ctrlTab.recentlyUsedOrder" = true;
         };
         search = {
           force = true;
@@ -77,20 +78,26 @@
           };
         };
         containers = {
-          google = {
+          proton = {
             id = 1;
+            name = "Proton";
+            color = "purple";
+            icon = "fingerprint";
+          };
+          google = {
+            id = 2;
             name = "Google";
             color = "red";
             icon = "fingerprint";
           };
           work = {
-            id = 2;
+            id = 3;
             name = "Work";
             color = "blue";
             icon = "briefcase";
           };
           twitch = {
-            id = 3;
+            id = 4;
             name = "Twitch";
             color = "purple";
             icon = "chill";
