@@ -9,6 +9,7 @@ jobs:
   linting:
     name: Check Linting
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Check Nix flake inputs
@@ -20,9 +21,30 @@ jobs:
       - name: Check pre-commit
         run: nix develop . --command pre-commit run --all-files
 
+  define-overlays-matrix:
+    name: Define overlays matrix
+    runs-on: ubuntu-latest
+    outputs:
+      overlays: ${{ steps.overlays.outputs.overlays }}
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Find and export overlays
+        id: overlays
+        run: |
+          overlays=$(find . -maxdepth 1 -type d -not -path '*/\.*' -not -path . | sed 's|^\./||')
+          echo "Overlays found: $overlays"
+          overlays_json=$(printf '%s\n' "$overlays" | jq -R . | jq -s .)
+          echo "overlays=$overlays_json" >> "$GITHUB_OUTPUT"
+
   cache-overlays:
     name: Cache Overlays
     runs-on: ubuntu-latest
+    needs: define-overlays-matrix
+    strategy:
+      matrix:
+        overlay: ${{ fromJSON(needs.define-overlays-matrix.outputs.overlays) }}
+
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Install Nix
@@ -32,9 +54,5 @@ jobs:
         with:
           name: tguimbert
           authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
-      - name: Build overlay packages
-        working-directory: overlays
-        run: |
-          for dir in *; do
-            nix build .#pkgs.x86_64-linux.nixpkgs."$dir"
-          done;
+      - name: Build overlay package
+        run: nix build .#pkgs.x86_64-linux.nixpkgs.${{ matrix.overlay }}
