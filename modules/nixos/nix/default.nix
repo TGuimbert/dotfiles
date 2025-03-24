@@ -5,7 +5,10 @@
     # nixpkgs.config.allowUnfree = true;
     nix.settings = {
       # Enable flakes
-      experimental-features = [ "nix-command" "flakes" ];
+      experimental-features = [
+        "nix-command"
+        "flakes"
+      ];
       # Add cachix binary cache
       substituters = [
         "https://cache.nixos.org/"
@@ -24,6 +27,9 @@
       automatic = true;
       dates = "weekly";
     };
+    programs.nh = {
+      enable = true;
+      flake = "/home/tguimbert/.dotfiles";
+    };
   };
 }
-
