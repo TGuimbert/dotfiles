@@ -31,6 +31,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Find and export overlays
         id: overlays
+        working-directory: overlays
         run: |
           overlays=$(find . -maxdepth 1 -type d -not -path '*/\.*' -not -path . | sed 's|^\./||')
           echo "Overlays found: $overlays"
