@@ -34,7 +34,7 @@ jobs:
         run: |
           overlays=$(find . -maxdepth 1 -type d -not -path '*/\.*' -not -path . | sed 's|^\./||')
           echo "Overlays found: $overlays"
-          overlays_json=$(printf '%s\n' "$overlays" | jq -R . | jq -s .)
+          overlays_json=$(printf '%s\n' "$overlays" | jq -R . | jq -s -c .)
           echo "overlays=$overlays_json" >> "$GITHUB_OUTPUT"
 
   cache-overlays:
