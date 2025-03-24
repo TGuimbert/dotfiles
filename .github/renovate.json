@@ -9,8 +9,5 @@
 
   "nix" : {
     "enabled": true,
-    "ignorePaths": [
-      "**/scortex-machines/**"
-    ]
   }
 }
