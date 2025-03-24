@@ -9,7 +9,7 @@
       ];
       arkenfox = {
         enable = true;
-        version = "128.0";
+        version = "133.0";
       };
       profiles.default = {
         name = "default";
@@ -50,6 +50,10 @@
             "2811" = {
               "privacy.clearOnShutdown.history".value = false;
               "privacy.clearOnShutdown_v2.historyFormDataAndDownloads".value = false;
+              # "privacy.clearHistory.browsingHistoryAndDownloads".value = false;
+              # "privacy.clearOnShutdown_v2.browsingHistoryAndDownloads".value = false;
+              # "privacy.clearOnShutdown_v2.downloads".value = true;
+              # "privacy.clearSiteData.browsingHistoryAndDownloads".value = false;
             };
           };
           "4000".enable = false;
