@@ -16,7 +16,6 @@
   tguimbert = {
     apps = {
       signal.enable = true;
-      prusa-slicer.enable = true;
       orca-slicer.enable = true;
     };
   };
