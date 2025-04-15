@@ -10,6 +10,7 @@
     dig
     dprint
     nixfmt-rfc-style
+    asciinema
   ];
 
   programs = {
