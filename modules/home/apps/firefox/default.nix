@@ -82,29 +82,29 @@
           };
         };
         containers = {
-          proton = {
-            id = 1;
-            name = "Proton";
-            color = "purple";
-            icon = "fingerprint";
-          };
           google = {
-            id = 2;
+            id = 1;
             name = "Google";
             color = "red";
             icon = "fingerprint";
           };
           work = {
-            id = 3;
+            id = 2;
             name = "Work";
             color = "blue";
             icon = "briefcase";
           };
           twitch = {
-            id = 4;
+            id = 3;
             name = "Twitch";
             color = "purple";
             icon = "chill";
+          };
+          proton = {
+            id = 4;
+            name = "Proton";
+            color = "purple";
+            icon = "fingerprint";
           };
         };
         containersForce = true;
