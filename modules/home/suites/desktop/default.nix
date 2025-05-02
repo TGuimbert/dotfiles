@@ -13,6 +13,7 @@
     freecad
     mullvad-browser
   ];
+  programs.chromium.enable = true;
   tguimbert = {
     apps = {
       signal.enable = true;
