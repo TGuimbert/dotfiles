@@ -18,6 +18,8 @@ pkgs.mkShell {
     file
   ];
   shellHook = with pkgs; ''
+    # uv has to use copy mode because hardlinks do not work with impermanence
+    export UV_LINK_MODE=copy
     uv venv --link-mode copy --allow-existing --quiet
     source .venv/bin/activate
     # Postgis libraries

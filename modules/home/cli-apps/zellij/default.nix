@@ -3,7 +3,6 @@
   programs = {
     zellij = {
       enable = true;
-      enableFishIntegration = true;
       settings = {
         default_shell = "nu";
         default_layout = "yazelix";

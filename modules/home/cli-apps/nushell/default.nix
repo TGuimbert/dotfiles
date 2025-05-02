@@ -25,10 +25,11 @@ in
       enable = true;
       configFile.source = ./config.nu;
       environmentVariables = {
-        SHELL = "nu";
         TERM = "foot";
         EDITOR = "hx";
+        VISUAL = "hx";
         BWS_SERVER_URL = "https://vault.bitwarden.eu";
+        CARAPACE_BRIDGES = "zsh,fish,bash,inshellisense";
       };
       extraEnv = ''
         if (not ("~/${private_config_path}" | path exists)) {
@@ -42,6 +43,7 @@ in
     };
     carapace = {
       enable = true;
+      enableNushellIntegration = true;
     };
   };
 
