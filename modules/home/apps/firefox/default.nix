@@ -71,14 +71,14 @@
         };
         search = {
           force = true;
-          default = "DuckDuckGo";
-          privateDefault = "DuckDuckGo";
+          default = "ddg";
+          privateDefault = "ddg";
           order = [
-            "DuckDuckGo"
-            "Google"
+            "ddg"
+            "google"
           ];
           engines = {
-            "Bing".metaData.hidden = true;
+            "bing".metaData.hidden = true;
           };
         };
         containers = {
@@ -108,7 +108,7 @@
           };
         };
         containersForce = true;
-        extensions = with inputs.firefox-addons.packages.x86_64-linux; [
+        extensions.packages = with inputs.firefox-addons.packages.x86_64-linux; [
           ublock-origin
           bitwarden
           multi-account-containers

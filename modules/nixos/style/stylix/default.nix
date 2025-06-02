@@ -1,4 +1,7 @@
-{ pkgs, config, ... }:
+{ pkgs
+, config
+, ...
+}:
 {
   stylix = {
     enable = true;
@@ -12,6 +15,7 @@
     cursor = {
       package = pkgs.afterglow-cursors-recolored;
       name = "Afterglow-Recolored-Gruvbox-White";
+      size = 24;
     };
 
     fonts = {
@@ -21,7 +25,7 @@
       };
       serif = config.stylix.fonts.sansSerif;
       monospace = {
-        package = pkgs.nerdfonts.override { fonts = [ "IosevkaTerm" ]; };
+        package = pkgs.nerd-fonts.iosevka-term;
         name = "IosevkaTerm Nerd Font";
       };
     };

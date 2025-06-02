@@ -12,6 +12,5 @@
     environment.gnome.excludePackages = with pkgs; [ gnome-tour ];
 
     environment.systemPackages = with pkgs; [ wl-clipboard ];
-    fonts.packages = with pkgs; [ (nerdfonts.override { fonts = [ "IosevkaTerm" ]; }) ];
   };
 }

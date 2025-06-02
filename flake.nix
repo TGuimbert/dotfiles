@@ -4,7 +4,7 @@
   # Flake inputs
   inputs = {
     # Nixpkgs Stable
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-24.11";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05";
 
     # Nixpkgs Unstable
     unstable.url = "github:nixos/nixpkgs/nixos-unstable";
@@ -35,7 +35,7 @@
 
     # Manage a user environment using Nix
     home-manager = {
-      url = "github:nix-community/home-manager/release-24.11";
+      url = "github:nix-community/home-manager/release-25.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -56,7 +56,7 @@
     };
 
     stylix = {
-      url = "github:danth/stylix/release-24.11";
+      url = "github:danth/stylix/release-25.05";
       inputs.nixpkgs.follows = "unstable";
     };
 
