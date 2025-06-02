@@ -6,6 +6,7 @@ pkgs.mkShell {
     ruff
     pre-commit
     python312Packages.python-lsp-server
+    python312Packages.pip
     # Postgis libraries
     gdal
     geos
