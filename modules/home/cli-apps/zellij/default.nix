@@ -5,7 +5,7 @@
       enable = true;
       settings = {
         default_shell = "nu";
-        default_layout = "yazelix";
+        default_layout = "homepage";
         ui.pane_frames.rounded_corners = true;
         keybinds = {
           scroll = {
@@ -70,6 +70,28 @@
     };
   };
   xdg.configFile = {
+    "zellij/layouts/homepage.kdl".text = ''
+      layout {
+        default_tab_template {
+          pane size=1 borderless=true {
+              plugin location="zellij:tab-bar"
+          }
+          children
+          pane size=2 borderless=true {
+              plugin location="zellij:status-bar"
+          }
+        }
+        tab {
+          pane split_direction="vertical" {
+            pane name="Spotify" command="spotify_player" 
+            pane split_direction="horizontal" {
+              pane name="Bottom" command="btm"
+              pane name="Fastfetch" command="fastfetch"
+            }
+          }
+        }
+      }
+    '';
     "zellij/layouts/yazelix.kdl".text = ''
       layout {
         tab_template name="ui" {
