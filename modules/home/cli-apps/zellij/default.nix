@@ -86,7 +86,9 @@
             pane name="Spotify" command="spotify_player" 
             pane split_direction="horizontal" {
               pane name="Bottom" command="btm"
-              pane name="Fastfetch" command="fastfetch"
+              pane name="Fastfetch" command="nu" {
+                args "-c" "fastfetch"
+              }
             }
           }
         }

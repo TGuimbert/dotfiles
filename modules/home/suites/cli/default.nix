@@ -11,6 +11,7 @@
     dprint
     nixfmt-rfc-style
     asciinema
+    fastfetch
   ];
 
   programs = {
