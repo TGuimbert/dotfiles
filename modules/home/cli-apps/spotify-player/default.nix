@@ -1,3 +1,4 @@
+{ osConfig, ... }:
 {
   programs.spotify-player = {
     enable = true;
@@ -8,6 +9,10 @@
       client_id_command = {
         command = "cat";
         args = [ "/home/tguimbert/.config/spotify-player/client_id" ];
+      };
+
+      device = {
+        name = "${osConfig.networking.hostName}-spotify-player";
       };
     };
   };
