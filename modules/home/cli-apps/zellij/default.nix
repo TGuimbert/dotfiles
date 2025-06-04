@@ -43,6 +43,7 @@
             "bind \"Alt m\"" = {
               NewPane = "";
             };
+            "unbind \"Ctrl q\"" = { };
           };
           "shared_except \"scroll\" \"locked\"" = {
             "unbind \"Ctrl s\"" = { };
