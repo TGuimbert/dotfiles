@@ -3,6 +3,7 @@
   programs.spotify-player = {
     enable = true;
     settings = {
+      enable_notify = false;
       cover_img_width = 5;
       cover_img_length = 20;
       cover_img_scale = 0.8;
