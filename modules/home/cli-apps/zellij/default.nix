@@ -113,7 +113,8 @@
         }
         pane split_direction="vertical" {
           pane name="hx" {
-            edit "." 
+            command "direnv"
+            args "exec" "." "nu" "-e" "hx"
             focus true
           }
           pane {
