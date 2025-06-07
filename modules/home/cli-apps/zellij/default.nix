@@ -1,6 +1,9 @@
 { ... }:
 {
   programs = {
+    fastfetch = {
+      enable = true;
+    };
     zellij = {
       enable = true;
       settings = {
@@ -28,6 +31,9 @@
             "unbind \"Ctrl s\"" = { };
             "bind \"Ctrl y\"" = {
               SwitchToMode = "Scroll";
+            };
+            "bind \"Ctrl q\"" = {
+              Quit = { };
             };
           };
           "shared_except \"locked\"" = {
@@ -82,7 +88,10 @@
               plugin location="zellij:status-bar"
           }
         }
-        tab {
+        tab_template name="homepage" {
+          pane size=1 borderless=true {
+              plugin location="zellij:tab-bar"
+          }
           pane split_direction="vertical" {
             pane name="Spotify" command="spotify_player" 
             pane split_direction="horizontal" {
@@ -93,6 +102,7 @@
             }
           }
         }
+        homepage name="Homepage"
       }
     '';
     "zellij/layouts/yazelix.kdl".text = ''
