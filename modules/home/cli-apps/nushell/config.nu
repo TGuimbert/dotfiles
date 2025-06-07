@@ -17,3 +17,8 @@ def replace-with-layout [layout: string@available-layouts] {
   zellij action go-to-previous-tab
   zellij action close-tab
 }
+
+# Open in a browser a local copy of the rust documentation
+def open-rust-doc [] {
+  xdg-open (nix build fenix#latest.rust-docs --json --no-link | from json | first | get outputs.out | path join share/doc/rust/html/index.html)
+}
