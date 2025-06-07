@@ -9,6 +9,7 @@
       settings = {
         default_shell = "nu";
         default_layout = "homepage";
+        scrollback_editor = "hx";
         ui.pane_frames.rounded_corners = true;
         keybinds = {
           scroll = {
@@ -105,78 +106,30 @@
         homepage name="Homepage"
       }
     '';
-    "zellij/layouts/yazelix.kdl".text = ''
+    "zellij/layouts/rust.kdl".text = ''
       layout {
-        tab_template name="ui" {
-          pane size=1 borderless=true {
-            plugin location="zellij:tab-bar"
-          }
-          children
-          pane size=1 borderless=true {
-            plugin location="zellij:status-bar"
-          }
+        pane size=1 borderless=true {
+          plugin location="zellij:tab-bar"
         }
-
-        default_tab_template {
-          pane size=1 borderless=true {
-            plugin location="zellij:tab-bar"
+        pane split_direction="vertical" {
+          pane name="hx" {
+            edit "." 
+            focus true
           }
-          pane split_direction="vertical" {
-            pane name="sidebar" {
-              command "yazi"
-              size "100%"
+          pane {
+            pane name="cargo run" {
+              command "direnv" 
+              args "exec" "." "nu" "-c" "watch . --glob=**/*.rs {|| clear; cargo run }"
+            }
+            pane name="clippy" {
+              command "direnv" 
+              args "exec" "." "nu" "-c" "watch . --glob=**/*.rs {|| clear; cargo clippy }"
             }
           }
-          pane size=1 borderless=true {
-            plugin location="zellij:status-bar"
-          }
         }
-      }
-    '';
-    "zellij/layouts/yazelix.swap.kdl".text = ''
-      swap_tiled_layout name="one_pane" {
-          ui exact_panes=4 {
-              pane split_direction="vertical" {
-                  pane name="sidebar" {
-                      command "env"
-                      args "YAZI_CONFIG_HOME=~/.config/yazelix/yazi/sidebar" "yazi"
-                  	size "20%"
-                  }
-                  pane name="helix"
-              }
-          }
-      }
-
-      swap_tiled_layout name="sidebar_open_two_or_more_panes" {
-          ui min_panes=5 {
-              pane split_direction="vertical" {
-                  pane name="sidebar" {
-                      command "env"
-                      args "YAZI_CONFIG_HOME=~/.config/yazelix/yazi/sidebar" "yazi"
-                  	size "20%"
-                  }
-                  pane name="main" split_direction="horizontal" {
-                      pane name="helix"
-                      pane size="25%" stacked=true { children; }
-                  }
-              }
-          }
-      }
-
-      swap_tiled_layout name="sidebar_closed_two_or_more_panes" {
-          ui min_panes=5 {
-              pane split_direction="vertical" {
-                  pane name="sidebar" {
-                      command "env"
-                      args "YAZI_CONFIG_HOME=~/.config/yazelix/yazi/sidebar" "yazi"
-                  	size "1%"
-                  }
-                  pane name="main" split_direction="horizontal" {
-                      pane
-                      pane size="25%" stacked=true { children; }
-                  }
-              }
-          }
+        pane size=2 borderless=true {
+          plugin location="zellij:status-bar"
+        }
       }
     '';
   };

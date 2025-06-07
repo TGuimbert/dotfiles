@@ -5,3 +5,15 @@ $env.config = {
 
 alias ll = ls -la
 alias k = kubectl
+
+# List existing Zellij layouts (excluding homepage)
+def available-layouts [] {
+  ls ~/.config/zellij/layouts/ | get name | path parse | get stem | filter {|x| $x != "homepage" }
+}
+
+# Replace current Zellij tab with a new one based on the specified layout
+def replace-with-layout [layout: string@available-layouts] {
+  zellij action new-tab --layout $layout --name ($env.PWD | path basename)
+  zellij action go-to-previous-tab
+  zellij action close-tab
+}
