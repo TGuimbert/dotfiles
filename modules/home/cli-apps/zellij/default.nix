@@ -118,9 +118,22 @@
             focus true
           }
           pane {
-            pane name="cargo run" {
-              command "direnv" 
-              args "exec" "." "nu" "-c" "watch . --glob=**/*.rs {|| clear; cargo run }"
+            pane stacked=true {
+              pane name="cargo check" {
+                command "direnv" 
+                args "exec" "." "nu" "-c" "watch . --glob=**/*.rs {|| clear; cargo check }"
+                start_suspended true
+              }
+              pane name="cargo test" {
+                command "direnv" 
+                args "exec" "." "nu" "-c" "watch . --glob=**/*.rs {|| clear; cargo test }"
+                start_suspended true
+              }
+              pane name="cargo run" {
+                command "direnv" 
+                args "exec" "." "nu" "-c" "watch . --glob=**/*.rs {|| clear; cargo run }"
+                start_suspended true
+              }
             }
             pane name="clippy" {
               command "direnv" 
