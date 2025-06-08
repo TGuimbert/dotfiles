@@ -121,23 +121,23 @@
             pane stacked=true {
               pane name="cargo check" {
                 command "direnv" 
-                args "exec" "." "nu" "-c" "watch . --glob=**/*.rs {|| clear; cargo check }"
+                args "exec" "." "nu" "-c" "watch . --glob=**/*.rs {|| clear; try { cargo check } }"
                 start_suspended true
               }
               pane name="cargo test" {
                 command "direnv" 
-                args "exec" "." "nu" "-c" "watch . --glob=**/*.rs {|| clear; cargo test }"
+                args "exec" "." "nu" "-c" "watch . --glob=**/*.rs {|| clear; try { cargo test } }"
                 start_suspended true
               }
               pane name="cargo run" {
                 command "direnv" 
-                args "exec" "." "nu" "-c" "watch . --glob=**/*.rs {|| clear; cargo run }"
+                args "exec" "." "nu" "-c" "watch . --glob=**/*.rs {|| clear; try { cargo run } }"
                 start_suspended true
               }
             }
             pane name="clippy" {
               command "direnv" 
-              args "exec" "." "nu" "-c" "watch . --glob=**/*.rs {|| clear; cargo clippy }"
+              args "exec" "." "nu" "-c" "watch . --glob=**/*.rs {|| clear; try { cargo clippy } }"
             }
           }
         }
