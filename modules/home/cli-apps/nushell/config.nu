@@ -13,9 +13,11 @@ def available-layouts [] {
 
 # Replace current Zellij tab with a new one based on the specified layout
 def replace-with-layout [layout: string@available-layouts] {
+  let temp_tab_name = random chars 
+  zellij action rename-tab $temp_tab_name
   zellij action new-tab --layout $layout --name ($env.PWD | path basename)
-  zellij action go-to-previous-tab
-  zellij action close-tab
+  zellij action go-to-tab-name $temp_tab_name
+  zellij action close-tab 
 }
 
 # Open in a browser a local copy of the rust documentation
