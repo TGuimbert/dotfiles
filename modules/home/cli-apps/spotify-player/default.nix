@@ -20,6 +20,7 @@
   home.persistence."/persistent/home/tguimbert" = {
     files = [
       ".config/spotify-player/client_id"
+      ".cache/spotify-player/credentials.json"
     ];
   };
 }
