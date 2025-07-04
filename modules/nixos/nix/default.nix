@@ -27,9 +27,12 @@
       automatic = true;
       dates = "weekly";
     };
-    programs.nh = {
-      enable = true;
-      flake = "/home/tguimbert/.dotfiles";
+    programs = {
+      nh = {
+        enable = true;
+        flake = "/home/tguimbert/.dotfiles";
+      };
+      nix-ld.enable = true;
     };
   };
 }

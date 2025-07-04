@@ -3,6 +3,8 @@ $env.config = {
   buffer_editor: 'hx'
 }
 
+$env.path ++= ["~/.local/bin"]
+
 alias ll = ls -la
 alias k = kubectl
 
