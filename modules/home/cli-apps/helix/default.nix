@@ -57,29 +57,47 @@
             ];
           };
         }
-      ];
-      language-server.yaml-language-server.config.yaml = {
-        completion = true;
-        validation = true;
-        hover = true;
-        schemas = {
-          "https://json.schemastore.org/github-workflow.json" = ".github/workflows/*.{yml,yaml}";
-          "https://raw.githubusercontent.com/ansible-community/schemas/main/f/ansible-tasks.json" =
-            "roles/{tasks,handlers}/*.{yml,yaml}";
-          kubernetes = [
-            "*deployment*.yaml"
-            "*service*.yaml"
-            "*configmap*.yaml"
-            "*secret*.yaml"
-            "*pod*.yaml"
-            "*namespace*.yaml"
-            "*ingress*.yaml"
+        {
+          name = "python";
+          language-servers = [
+            "ruff"
+            "pylsp"
           ];
-          "https://raw.githubusercontent.com/SchemaStore/schemastore/master/src/schemas/json/kustomization.json" =
-            [
-              "*kustomization.yaml"
-              "*kustomize.yaml"
+          auto-format = true;
+        }
+      ];
+      language-server = {
+        yaml-language-server.config.yaml = {
+          completion = true;
+          validation = true;
+          hover = true;
+          schemas = {
+            "https://json.schemastore.org/github-workflow.json" = ".github/workflows/*.{yml,yaml}";
+            "https://raw.githubusercontent.com/ansible-community/schemas/main/f/ansible-tasks.json" =
+              "roles/{tasks,handlers}/*.{yml,yaml}";
+            kubernetes = [
+              "*deployment*.yaml"
+              "*service*.yaml"
+              "*configmap*.yaml"
+              "*secret*.yaml"
+              "*pod*.yaml"
+              "*namespace*.yaml"
+              "*ingress*.yaml"
             ];
+            "https://raw.githubusercontent.com/SchemaStore/schemastore/master/src/schemas/json/kustomization.json" =
+              [
+                "*kustomization.yaml"
+                "*kustomize.yaml"
+              ];
+          };
+        };
+        pylsp.config.pylsp = {
+          plugins.pylsp_mypy.enabled = true;
+          plugins.pylsp_mypy.live_mode = true;
+        };
+        ruff = {
+          command = "ruff";
+          arg = [ "server" ];
         };
       };
     };
