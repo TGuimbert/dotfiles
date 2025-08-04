@@ -10,7 +10,7 @@ alias k = kubectl
 
 # List existing Zellij layouts (excluding homepage)
 def available-layouts [] {
-  ls ~/.config/zellij/layouts/ | get name | path parse | get stem | filter {|x| $x != "homepage" }
+  ls ~/.config/zellij/layouts/ | get name | path parse | get stem | where {|x| $x != "homepage" }
 }
 
 # Replace current Zellij tab with a new one based on the specified layout
