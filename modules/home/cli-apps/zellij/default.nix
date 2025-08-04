@@ -7,6 +7,7 @@
     zellij = {
       enable = true;
       settings = {
+        theme = "stylix";
         default_shell = "nu";
         default_layout = "homepage";
         scrollback_editor = "hx";
