@@ -10,7 +10,6 @@
     obsidian
     bitwarden
     sweethome3d.application
-    freecad
     mullvad-browser
   ];
   programs.chromium.enable = true;
@@ -18,6 +17,7 @@
     apps = {
       signal.enable = true;
       orca-slicer.enable = true;
+      freecad.enable = true;
     };
   };
 }
