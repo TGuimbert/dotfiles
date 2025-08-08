@@ -1,0 +1,10 @@
+keys:
+  - &tguimbert 84C6034EC4BA4925!
+  - &klipper age1s4ejjw9ucnk73mvkdjlue5zjx8e96wszllystz5akdcrqjjacf4qcaudun
+creation_rules:
+  - path_regex: secrets/[^/]+\.(yaml|json|env|ini)$
+    key_groups:
+      - pgp:
+          - *tguimbert
+        age:
+          - *klipper
