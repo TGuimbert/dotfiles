@@ -11,6 +11,7 @@ in
     yubikey-manager
     rage
     age-plugin-yubikey
+    sops
     bitwarden-cli
     bws
     jq

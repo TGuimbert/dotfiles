@@ -17,5 +17,6 @@ with lib;
     bootspec.enable = true;
     tmp.useTmpfs = true;
     initrd.systemd.enable = true;
+    binfmt.emulatedSystems = [ "aarch64-linux" ];
   };
 }
