@@ -11,7 +11,8 @@
   };
 
   outputs =
-    { nixpkgs
+    { self
+    , nixpkgs
     , nixos-hardware
     , sops-nix
     ,
