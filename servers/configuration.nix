@@ -9,6 +9,18 @@ let
     "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAIFH1m31u/W8216NNkdrbvlJf0D3JRla16XD8clMeGDRyAAAABHNzaDo="
     "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAIItgAyaI4GxuTh2LU+Z7cWDb1HIEfVMWxJ5mRwDiGmbOAAAABHNzaDo="
   ];
+  klamp = pkgs.stdenv.mkDerivation {
+    pname = "klamp";
+    version = "1.0.0";
+    src = fetchGit {
+      url = "https://github.com/kyleisah/Klipper-Adaptive-Meshing-Purging.git";
+      rev = "b0dad8ec9ee31cb644b94e39d4b8a8fb9d6c9ba0";
+    };
+    installPhase = ''
+      mkdir -p $out/configuration;
+      cp Configuration/* $out/configuration/
+    '';
+  };
 in
 {
   boot.initrd.availableKernelModules = [ "usbhid" ];
@@ -69,6 +81,7 @@ in
   environment.systemPackages = with pkgs; [
     helix
     bottom
+    klamp
   ];
 
   services = {
