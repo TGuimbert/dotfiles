@@ -1,7 +1,8 @@
-{ lib
-, pkgs
-, config
-, ...
+{
+  lib,
+  pkgs,
+  config,
+  ...
 }:
 let
   authorizedKeys = [
@@ -12,13 +13,15 @@ let
   klamp = pkgs.stdenv.mkDerivation {
     pname = "klamp";
     version = "1.0.0";
-    src = fetchGit {
-      url = "https://github.com/kyleisah/Klipper-Adaptive-Meshing-Purging.git";
+    src = pkgs.fetchFromGitHub {
+      owner = "kyleisah";
+      repo = "Klipper-Adaptive-Meshing-Purging";
       rev = "b0dad8ec9ee31cb644b94e39d4b8a8fb9d6c9ba0";
+      hash = "sha256-05l1rXmjiI+wOj2vJQdMf/cwVUOyq5d21LZesSowuvc=";
     };
     installPhase = ''
-      mkdir -p $out/configuration;
-      cp Configuration/* $out/configuration/
+      mkdir -p $out/bin/configuration
+      cp Configuration/* $out/bin/configuration
     '';
   };
 in
@@ -81,7 +84,6 @@ in
   environment.systemPackages = with pkgs; [
     helix
     bottom
-    klamp
   ];
 
   services = {
@@ -97,7 +99,295 @@ in
     };
     klipper = {
       enable = true;
-      configFile = ./printer.cfg;
+      # configFile = ./printer.cfg;
+      settings = {
+        stepper_x = {
+          step_pin = "PB13";
+          dir_pin = "!PB12";
+          enable_pin = "!PB14";
+          microsteps = 16;
+          rotation_distance = 40;
+          endstop_pin = "^PC0";
+          position_endstop = 0;
+          position_max = 246;
+          homing_speed = 50;
+        };
+        "tmc2209 stepper_x" = {
+          uart_pin = "PC11";
+          tx_pin = "PC10";
+          uart_address = 0;
+          run_current = 0.580;
+          stealthchop_threshold = 999999;
+        };
+        stepper_y = {
+          step_pin = "PB10";
+          dir_pin = "!PB2";
+          enable_pin = "!PB11";
+          microsteps = 16;
+          rotation_distance = 40;
+          endstop_pin = "^PC1";
+          position_endstop = 0;
+          position_max = 235;
+          homing_speed = 50;
+        };
+        "tmc2209 stepper_y" = {
+          uart_pin = "PC11";
+          tx_pin = "PC10";
+          uart_address = 2;
+          run_current = 0.580;
+          stealthchop_threshold = 999999;
+        };
+        stepper_z = {
+          step_pin = "PB0";
+          dir_pin = "PC5";
+          enable_pin = "!PB1";
+          microsteps = 16;
+          rotation_distance = 8;
+          endstop_pin = "probe:z_virtual_endstop";
+          position_max = 250;
+          position_min = -2;
+        };
+        "tmc2209 stepper_z" = {
+          uart_pin = "PC11";
+          tx_pin = "PC10";
+          uart_address = 1;
+          run_current = 0.580;
+          stealthchop_threshold = 999999;
+        };
+        bltouch = {
+          sensor_pin = "^PC14";
+          control_pin = "PA1";
+          x_offset = -45.8;
+          y_offset = -7.2;
+          z_offset = 0.885;
+        };
+        safe_z_home = {
+          home_xy_position = "115,115";
+          speed = 50;
+          z_hop = 10;
+          z_hop_speed = 5;
+        };
+        bed_mesh = {
+          speed = 120;
+          horizontal_move_z = 3.5;
+          mesh_min = "10, 10";
+          mesh_max = "200, 220";
+          probe_count = 9;
+          algorithm = "bicubic";
+        };
+        screws_tilt_adjust = {
+          screw1 = "80.8, 42.2"; # 35-bltouch.x_offset, 35-btouch.y_offset;
+          screw1_name = "front left screw";
+          screw2 = "245.8, 42.2"; # 200-bltouch.x_offset, 35-btouch.y_offset;
+          screw2_name = "front right screw";
+          screw3 = "245.8, 207.2"; # 200-bltouch.x_offset, 200-btouch.y_offset;
+          screw3_name = "rear right screw";
+          screw4 = "80.8, 207.2"; # 35-bltouch.x_offset, 200-btouch.y_offset;
+          screw4_name = "rear left screw";
+          horizontal_move_z = 10.;
+          speed = 50.;
+          screw_thread = "CW-M4";
+        };
+        extruder = {
+          step_pin = "PB3";
+          dir_pin = "!PB4";
+          enable_pin = "!PD1";
+          microsteps = 16;
+          rotation_distance = 31.091742;
+          nozzle_diameter = 0.400;
+          filament_diameter = 1.750;
+          heater_pin = "PC8";
+          sensor_type = "Generic 3950";
+          sensor_pin = "PA0";
+          control = "pid";
+          pid_Kp = 25.348;
+          pid_Ki = 1.310;
+          pid_Kd = 122.621;
+          min_temp = 0;
+          max_temp = 250;
+          max_extrude_only_distance = 101;
+          max_extrude_cross_section = 5;
+        };
+        "tmc2209 extruder" = {
+          uart_pin = "PC11";
+          tx_pin = "PC10";
+          uart_address = 3;
+          run_current = 0.650;
+        };
+        heater_bed = {
+          heater_pin = "PC9";
+          sensor_type = "EPCOS 100K B57560G104F";
+          sensor_pin = "PC4";
+          control = "pid";
+          pid_Kp = 69.929;
+          pid_Ki = 1.087;
+          pid_Kd = 1124.990;
+          min_temp = 0;
+          max_temp = 130;
+
+        };
+        "heater_fan heatbreak_cooling_fan" = {
+          pin = "PC7";
+        };
+        "heater_fan controller_fan" = {
+          pin = "PB15";
+        };
+        fan = {
+          pin = "PC6";
+        };
+        mcu = {
+          serial = "/dev/serial/by-id/usb-Klipper_stm32g0b1xx_4F00350002504B5735313920-if00";
+        };
+        printer = {
+          kinematics = "cartesian";
+          max_velocity = 300;
+          max_accel = 3000;
+          max_z_velocity = 5;
+          max_z_accel = 100;
+        };
+        exclude_object = { };
+        display = {
+          lcd_type = "st7920";
+          cs_pin = "PB8";
+          sclk_pin = "PB9";
+          sid_pin = "PD6";
+          encoder_pins = "^PA10, ^PA9";
+          click_pin = "^!PA15";
+        };
+        "output_pin beeper" = {
+          pin = "PB5";
+        };
+        # Wrong?
+        "bed_screws" = {
+          screw1 = "30.5, 37";
+          screw2 = "30.5, 207";
+          screw3 = "204.5, 207";
+          screw4 = "204.5, 37";
+        };
+        board_pins = {
+          aliases = ''
+            # EXP1 header
+              EXP1_1=PB5,  EXP1_3=PA9,   EXP1_5=PA10, EXP1_7=PB8, EXP1_9=<GND>,
+              EXP1_2=PA15, EXP1_4=<RST>, EXP1_6=PB9,  EXP1_8=PD6, EXP1_10=<5V>
+          '';
+        };
+        pause_resume = { };
+        display_status = { };
+        virtual_sdcard = {
+          path = "/var/lib/moonraker/gcodes";
+        };
+        "gcode_macro PAUSE" = {
+          description = "Pause the actual running print";
+          rename_existing = "PAUSE_BASE";
+          # change this if you need more or less extrusion
+          variable_extrude = 1.0;
+          gcode = ''
+
+            ##### PAUSE #####
+              ##### read E from pause macro #####
+              {% set E = printer["gcode_macro PAUSE"].extrude|float %}
+              ##### set park position for x and y #####
+              # default is your max position from your printer.cfg
+              {% set x_park = printer.toolhead.axis_maximum.x|float - 5.0 %}
+              {% set y_park = printer.toolhead.axis_maximum.y|float - 5.0 %}
+              ##### calculate save lift position #####
+              {% set max_z = printer.toolhead.axis_maximum.z|float %}
+              {% set act_z = printer.toolhead.position.z|float %}
+              {% if act_z < (max_z - 2.0) %}
+                  {% set z_safe = 2.0 %}
+              {% else %}
+                  {% set z_safe = max_z - act_z %}
+              {% endif %}
+              ##### end of definitions #####
+              PAUSE_BASE
+              G91
+              {% if printer.extruder.can_extrude|lower == 'true' %}
+                G1 E-{E} F2100
+              {% else %}
+                {action_respond_info("Extruder not hot enough")}
+              {% endif %}
+              {% if "xyz" in printer.toolhead.homed_axes %}
+                G1 Z{z_safe} F900
+                G90
+                G1 X{x_park} Y{y_park} F6000
+              {% else %}
+                {action_respond_info("Printer not homed")}
+              {% endif %}
+          '';
+        };
+        "gcode_macro RESUME" = {
+          description = "Resume the actual running print";
+          rename_existing = "RESUME_BASE";
+          gcode = ''
+
+            ##### RESUME #####
+              ##### read E from pause macro #####
+              {% set E = printer["gcode_macro PAUSE"].extrude|float %}
+              #### get VELOCITY parameter if specified ####
+              {% if 'VELOCITY' in params|upper %}
+                {% set get_params = ('VELOCITY=' + params.VELOCITY)  %}
+              {%else %}
+                {% set get_params = "" %}
+              {% endif %}
+              ##### end of definitions #####
+              {% if printer.extruder.can_extrude|lower == 'true' %}
+                G91
+                G1 E{E} F2100
+              {% else %}
+                {action_respond_info("Extruder not hot enough")}
+              {% endif %}  
+              RESUME_BASE {get_params}
+          '';
+        };
+        "gcode_macro CANCEL_PRINT" = {
+          description = "Cancel the actual running print";
+          rename_existing = "CANCEL_PRINT_BASE";
+          gcode = ''
+
+            ##### CANCEL_PRINT #####
+              TURN_OFF_HEATERS
+              CANCEL_PRINT_BASE
+          '';
+        };
+
+        "include ${builtins.unsafeDiscardStringContext klamp}/bin/configuration/Adaptive_Meshing.cfg" =
+          { }; # Include to enable adaptive meshing configuration.
+        "include ${builtins.unsafeDiscardStringContext klamp}/bin/configuration/Line_Purge.cfg" = { }; # Include to enable adaptive line purging configuration.
+        # "include ${builtins.unsafeDiscardStringContext klamp}/configuration/Voron_Purge.cfg" = { }; # Include to enable adaptive Voron logo purging configuration.
+        # "include ${builtins.unsafeDiscardStringContext klamp}/configuration/Smart_Park.cfg" = { }; # Include to enable the Smart Park function, which parks the printhead near the print area for final heating.
+        "gcode_macro _KAMP_Settings" = {
+          description = "This macro contains all adjustable settings for KAMP";
+
+          # The following variables are settings for KAMP as a whole.
+          variable_verbose_enable = "True"; # Set to True to enable KAMP information output when running. This is useful for debugging.
+
+          # The following variables are for adjusting adaptive mesh settings for KAMP.
+          variable_mesh_margin = 0; # Expands the mesh size in millimeters if desired. Leave at 0 to disable.
+          variable_fuzz_amount = 0; # Slightly randomizes mesh points to spread out wear from nozzle-based probes. Leave at 0 to disable.
+
+          # The following variables are for those with a dockable probe like Klicky, Euclid, etc.                 # ----------------  Attach Macro | Detach Macro
+          variable_probe_dock_enable = "False"; # Set to True to enable the usage of a dockable probe.      # ---------------------------------------------
+          variable_attach_macro = "'Attach_Probe'"; # The macro that is used to attach the probe.               # Klicky Probe:   'Attach_Probe' | 'Dock_Probe'
+          variable_detach_macro = "'Dock_Probe'"; # The macro that is used to store the probe.                # Euclid Probe:   'Deploy_Probe' | 'Stow_Probe'
+          # Legacy Gcode:   'M401'         | 'M402'
+
+          # The following variables are for adjusting adaptive purge settings for KAMP.
+          variable_purge_height = 0.8; # Z position of nozzle during purge, default is 0.8.
+          variable_tip_distance = 0; # Distance between tip of filament and nozzle before purge. Should be similar to PRINT_END final retract amount.
+          variable_purge_margin = 10; # Distance the purge will be in front of the print area, default is 10.
+          variable_purge_amount = 30; # Amount of filament to be purged prior to printing.
+          variable_flow_rate = 12; # Flow rate of purge in mm3/s. Default is 12.
+
+          # The following variables are for adjusting the Smart Park feature for KAMP, which will park the printhead near the print area at a specified height.
+          variable_smart_park_height = 10; # Z position for Smart Park, default is 10.
+
+          gcode = ''
+            # Gcode section left intentionally blank. Do not disturb.
+
+               {action_respond_info(" Running the KAMP_Settings macro does nothing, it is only used for storing KAMP settings. ")}
+          '';
+        };
+      };
       firmwares.mcu = {
         enable = true;
         enableKlipperFlash = true;
@@ -135,6 +425,7 @@ in
           ];
         };
         history = { };
+        octoprint_compat = { };
         update_manager = {
           enable_auto_refresh = false;
           enable_system_updates = [ false ];
