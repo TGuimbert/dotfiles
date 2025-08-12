@@ -1,8 +1,7 @@
-{
-  lib,
-  pkgs,
-  config,
-  ...
+{ lib
+, pkgs
+, config
+, ...
 }:
 let
   authorizedKeys = [
@@ -84,6 +83,7 @@ in
   environment.systemPackages = with pkgs; [
     helix
     bottom
+    klamp
   ];
 
   services = {
@@ -185,7 +185,7 @@ in
           screw4 = "80.8, 207.2"; # 35-bltouch.x_offset, 200-btouch.y_offset;
           screw4_name = "rear left screw";
           horizontal_move_z = 10.;
-          speed = 50.;
+            speed = 50.;
           screw_thread = "CW-M4";
         };
         extruder = {
@@ -207,6 +207,7 @@ in
           max_temp = 250;
           max_extrude_only_distance = 101;
           max_extrude_cross_section = 5;
+          pressure_advance = 0.7;
         };
         "tmc2209 extruder" = {
           uart_pin = "PC11";
@@ -349,6 +350,52 @@ in
               CANCEL_PRINT_BASE
           '';
         };
+        "gcode_macro PRINT_START" = {
+          gcode = ''
+
+            ##### PRINT_START BED_TEMP={bed_temperature_initial_layer[current_extruder]} EXTRUDER_TEMP={nozzle_temperature_initial_layer[current_extruder]} #####
+              {% set BED_TEMP = params.BED_TEMP|default(60)|float %}
+              {% set EXTRUDER_TEMP = params.EXTRUDER_TEMP|default(190)|float %}
+              # Start bed heating
+              M140 S{BED_TEMP}
+              # Set temporary nozzle temp to prevent oozing during homing
+              M104 S150
+              # Use absolute coordinates
+              G90
+              # Reset the G-Code Z offset (adjust Z offset if needed)
+              SET_GCODE_OFFSET Z=0.0
+              # Home the printer
+              G28
+              # Wait for bed to reach temperature
+              M190 S{BED_TEMP}
+              BED_MESH_CALIBRATE
+              # Move the nozzle near the bed
+              G1 Z5 F3000
+              # Move the nozzle very close to the bed
+              G1 Z0.15 F300
+              # Set and wait for nozzle to reach temperature
+              M109 S{EXTRUDER_TEMP}
+              LINE_PURGE
+          '';
+        };
+        "gcode_macro PRINT_END" = {
+          gcode = ''
+
+            ##### PRINT_END #####
+              # Turn off bed, extruder, and fan
+              M140 S0
+              M104 S0
+              M106 S0
+              # Move nozzle away from print while retracting
+              G91
+              G1 X-2 Y-2 E-3 F300
+              # Raise nozzle by 10mm
+              G1 Z10 F3000
+              G90
+              # Disable steppers
+              M84
+          '';
+        };
 
         "include ${builtins.unsafeDiscardStringContext klamp}/bin/configuration/Adaptive_Meshing.cfg" =
           { }; # Include to enable adaptive meshing configuration.
@@ -373,7 +420,7 @@ in
 
           # The following variables are for adjusting adaptive purge settings for KAMP.
           variable_purge_height = 0.8; # Z position of nozzle during purge, default is 0.8.
-          variable_tip_distance = 0; # Distance between tip of filament and nozzle before purge. Should be similar to PRINT_END final retract amount.
+          variable_tip_distance = 3; # Distance between tip of filament and nozzle before purge. Should be similar to PRINT_END final retract amount.
           variable_purge_margin = 10; # Distance the purge will be in front of the print area, default is 10.
           variable_purge_amount = 30; # Amount of filament to be purged prior to printing.
           variable_flow_rate = 12; # Flow rate of purge in mm3/s. Default is 12.
