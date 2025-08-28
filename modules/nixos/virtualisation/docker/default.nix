@@ -23,6 +23,13 @@ in
       minikube
     ];
 
+    environment.persistence."/persistent" = {
+      hideMounts = true;
+      directories = [
+        "/var/lib/docker"
+      ];
+    };
+
     snowfallorg.users.${username}.home.config = {
       home.file = {
         minikubeConfig = mkDefault {

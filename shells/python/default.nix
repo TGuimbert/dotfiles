@@ -11,6 +11,9 @@ pkgs.mkShell {
   shellHook = with pkgs; ''
     export LD_LIBRARY_PATH="${
       lib.makeLibraryPath [
+        stdenv.cc.cc.lib
+        libGL
+        glib
       ]
     }:$LD_LIBRARY_PATH"
     export GDAL_LIBRARY_PATH="${lib.makeLibraryPath [ pkgs.gdal ]}/libgdal.so"

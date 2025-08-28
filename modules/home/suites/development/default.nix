@@ -10,7 +10,10 @@
       ".config/uv/uv.toml"
       ".vault-token"
     ];
-    directories = [ ".ssh" ];
+    directories = [
+      ".ssh"
+      ".cache/uv"
+    ];
   };
 
   tguimbert.apps.azure-cli.enable = true;
