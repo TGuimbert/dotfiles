@@ -17,10 +17,7 @@
       ".kube"
       ".local/share/Anki2"
       ".local/share/direnv"
-      {
-        directory = ".local/share/keyrings";
-        method = "symlink";
-      }
+      ".local/share/keyrings"
       ".local/share/zoxide"
       ".minikube"
       ".mozilla"
