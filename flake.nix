@@ -45,6 +45,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    sops-nix = {
+      url = "github:Mic92/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     arkenfox-nixos = {
       url = "github:dwarfmaster/arkenfox-nixos";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -91,6 +96,7 @@
         lanzaboote.nixosModules.lanzaboote
         impermanence.nixosModules.impermanence
         disko.nixosModules.disko
+        sops-nix.nixosModules.sops
         stylix.nixosModules.stylix
       ];
 
