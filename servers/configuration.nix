@@ -159,7 +159,7 @@ in
           control_pin = "PA1";
           x_offset = -45.8;
           y_offset = -7.2;
-          z_offset = 0.885;
+          z_offset = 1.250;
         };
         safe_z_home = {
           home_xy_position = "115,115";
@@ -200,9 +200,9 @@ in
           sensor_type = "Generic 3950";
           sensor_pin = "PA0";
           control = "pid";
-          pid_Kp = 25.348;
-          pid_Ki = 1.310;
-          pid_Kd = 122.621;
+          pid_Kp = 25.785;
+          pid_Ki = 1.386;
+          pid_Kd = 119.900;
           min_temp = 0;
           max_temp = 250;
           max_extrude_only_distance = 101;
@@ -388,7 +388,7 @@ in
               M106 S0
               # Move nozzle away from print while retracting
               G91
-              G1 X-2 Y-2 E-3 F300
+              G1 X-2 Y-2 E-10 F300
               # Raise nozzle by 10mm
               G1 Z10 F3000
               G90
@@ -420,7 +420,7 @@ in
 
           # The following variables are for adjusting adaptive purge settings for KAMP.
           variable_purge_height = 0.8; # Z position of nozzle during purge, default is 0.8.
-          variable_tip_distance = 3; # Distance between tip of filament and nozzle before purge. Should be similar to PRINT_END final retract amount.
+          variable_tip_distance = 10; # Distance between tip of filament and nozzle before purge. Should be similar to PRINT_END final retract amount.
           variable_purge_margin = 10; # Distance the purge will be in front of the print area, default is 10.
           variable_purge_amount = 30; # Amount of filament to be purged prior to printing.
           variable_flow_rate = 12; # Flow rate of purge in mm3/s. Default is 12.
