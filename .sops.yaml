@@ -1,6 +1,7 @@
 keys:
   - &tguimbert 84C6034EC4BA4925!
   - &leshen age1z9sg234z37jz5gcudesqvxyq6cfxag6c3t9ws65edc9zevhlguwqz6dttq
+  - &wyvern age1rds0gutzcrn45zl4ryvyn4hkmqf9p287mhzrmm2ye2fvflfvpczqtkr55a
 creation_rules:
   - path_regex: secrets/common\.yaml$
     key_groups:
@@ -8,6 +9,7 @@ creation_rules:
           - *tguimbert
         age:
           - *leshen
+          - *wyvern
   - path_regex: secrets/leshen/[^/]+\.(yaml|json|env|ini)$
     key_groups:
       - pgp:
