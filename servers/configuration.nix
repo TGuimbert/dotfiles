@@ -99,6 +99,7 @@ in
     };
     klipper = {
       enable = true;
+      mutableConfig = false;
       # configFile = ./printer.cfg;
       settings = {
         stepper_x = {
@@ -159,7 +160,7 @@ in
           control_pin = "PA1";
           x_offset = -45.8;
           y_offset = -7.2;
-          z_offset = 1.250;
+          z_offset = 1.000;
         };
         safe_z_home = {
           home_xy_position = "115,115";
@@ -279,75 +280,128 @@ in
         };
         "gcode_macro PAUSE" = {
           description = "Pause the actual running print";
-          rename_existing = "PAUSE_BASE";
+          rename_existing = "BASE_PAUSE";
           # change this if you need more or less extrusion
           variable_extrude = 1.0;
           gcode = ''
 
             ##### PAUSE #####
-              ##### read E from pause macro #####
-              {% set E = printer["gcode_macro PAUSE"].extrude|float %}
-              ##### set park position for x and y #####
-              # default is your max position from your printer.cfg
-              {% set x_park = printer.toolhead.axis_maximum.x|float - 5.0 %}
-              {% set y_park = printer.toolhead.axis_maximum.y|float - 5.0 %}
-              ##### calculate save lift position #####
-              {% set max_z = printer.toolhead.axis_maximum.z|float %}
-              {% set act_z = printer.toolhead.position.z|float %}
-              {% if act_z < (max_z - 2.0) %}
-                  {% set z_safe = 2.0 %}
-              {% else %}
-                  {% set z_safe = max_z - act_z %}
-              {% endif %}
-              ##### end of definitions #####
-              PAUSE_BASE
-              G91
-              {% if printer.extruder.can_extrude|lower == 'true' %}
-                G1 E-{E} F2100
-              {% else %}
-                {action_respond_info("Extruder not hot enough")}
-              {% endif %}
-              {% if "xyz" in printer.toolhead.homed_axes %}
-                G1 Z{z_safe} F900
-                G90
-                G1 X{x_park} Y{y_park} F6000
-              {% else %}
-                {action_respond_info("Printer not homed")}
+              # Parameters
+              {% set z = params.Z|default(10)|int %}                                                   ; z hop amount
+
+              {% if printer['pause_resume'].is_paused|int == 0 %}
+                  SET_GCODE_VARIABLE MACRO=RESUME VARIABLE=zhop VALUE={z}                              ; set z hop variable for reference in resume macro
+                  SET_GCODE_VARIABLE MACRO=RESUME VARIABLE=etemp VALUE={printer['extruder'].target}    ; set hotend temp variable for reference in resume macro
+
+                  # SET_FILAMENT_SENSOR SENSOR=filament_sensor ENABLE=0                                  ; disable filament sensor
+                  SAVE_GCODE_STATE NAME=PAUSE                                                          ; save current print position for resume
+                  BASE_PAUSE                                                                           ; pause print
+                  {% if (printer.gcode_move.position.z + z) < printer.toolhead.axis_maximum.z %}       ; check that zhop doesn't exceed z max
+                      G91                                                                              ; relative positioning
+                      G1 Z{z} F900                                                                     ; raise Z up by z hop amount
+                  {% else %}
+                      { action_respond_info("Pause zhop exceeds maximum Z height.") }                  ; if z max is exceeded, show message and set zhop value for resume to 0
+                      SET_GCODE_VARIABLE MACRO=RESUME VARIABLE=zhop VALUE=0
+                  {% endif %}
+                  G90                                                                                  ; absolute positioning
+                  G1 X{printer.toolhead.axis_maximum.x/2} Y{printer.toolhead.axis_minimum.y+5} F6000   ; park toolhead at front center
+                  SAVE_GCODE_STATE NAME=PAUSEPARK                                                      ; save parked position in case toolhead is moved during the pause (otherwise the return zhop can error)
+                  M104 S0                                                                              ; turn off hotend
+                  SET_IDLE_TIMEOUT TIMEOUT=43200                                                       ; set timeout to 12 hours
               {% endif %}
           '';
         };
         "gcode_macro RESUME" = {
           description = "Resume the actual running print";
-          rename_existing = "RESUME_BASE";
+          rename_existing = "BASE_RESUME";
+          variable_zhop = 0;
+          variable_etemp = 0;
           gcode = ''
 
             ##### RESUME #####
-              ##### read E from pause macro #####
-              {% set E = printer["gcode_macro PAUSE"].extrude|float %}
-              #### get VELOCITY parameter if specified ####
-              {% if 'VELOCITY' in params|upper %}
-                {% set get_params = ('VELOCITY=' + params.VELOCITY)  %}
-              {%else %}
-                {% set get_params = "" %}
+              # Parameters
+              {% set e = params.E|default(2.5)|int %}                                          ; hotend prime amount (in mm)
+
+              {% if printer['pause_resume'].is_paused|int == 1 %}
+                  # SET_FILAMENT_SENSOR SENSOR=filament_sensor ENABLE=1                          ; enable filament sensor
+                  #INITIAL_RGB                                                                    ; reset LCD color
+                  SET_IDLE_TIMEOUT TIMEOUT={printer.configfile.settings.idle_timeout.timeout}  ; set timeout back to configured value
+                  {% if etemp > 0 %}
+                      M109 S{etemp|int}                                                        ; wait for hotend to heat back up
+                  {% endif %}
+                  RESTORE_GCODE_STATE NAME=PAUSEPARK MOVE=1 MOVE_SPEED=100                     ; go back to parked position in case toolhead was moved during pause (otherwise the return zhop can error)
+                  G91                                                                          ; relative positioning
+                  M83                                                                          ; relative extruder positioning
+                  {% if printer[printer.toolhead.extruder].temperature >= printer.configfile.settings.extruder.min_extrude_temp %}
+                      G1 Z{zhop * -1} E{e} F900                                                ; prime nozzle by E, lower Z back down
+                  {% else %}
+                      G1 Z{zhop * -1} F900                                                     ; lower Z back down without priming (just in case we are testing the macro with cold hotend)
+                  {% endif %}
+                  RESTORE_GCODE_STATE NAME=PAUSE MOVE=1 MOVE_SPEED=60                          ; restore position
+                  BASE_RESUME                                                                  ; resume print
               {% endif %}
-              ##### end of definitions #####
-              {% if printer.extruder.can_extrude|lower == 'true' %}
-                G91
-                G1 E{E} F2100
-              {% else %}
-                {action_respond_info("Extruder not hot enough")}
-              {% endif %}  
-              RESUME_BASE {get_params}
           '';
         };
         "gcode_macro CANCEL_PRINT" = {
           description = "Cancel the actual running print";
-          rename_existing = "CANCEL_PRINT_BASE";
+          rename_existing = "BASE_CANCEL_PRINT";
           gcode = ''
 
             ##### CANCEL_PRINT #####
-              TURN_OFF_HEATERS
-              CANCEL_PRINT_BASE
+              SET_IDLE_TIMEOUT TIMEOUT={printer.configfile.settings.idle_timeout.timeout} ; set timeout back to configured value
+              CLEAR_PAUSE
+              SDCARD_RESET_FILE
+              PRINT_END
+              BASE_CANCEL_PRINT
+          '';
+        };
+        "gcode_macro M600" = {
+          description = "Filament change";
+          gcode = ''
+
+            ##### M600 #####
+              #LCDRGB R=0 G=1 B=0  ; Turn LCD green
+              PAUSE                ; Pause
+          '';
+        };
+        "gcode_macro M109" = {
+          description = "Wait for hotend temperature without stabilizing";
+          rename_existing = "M99109";
+          gcode = ''
+
+            ##### M109 #####
+              #Parameters
+              {% set s = params.S|float %}
+
+              M104 {% for p in params %}{'%s%s' % (p, params[p])}{% endfor %}  ; Set hotend temp
+              {% if s != 0 %}
+                  TEMPERATURE_WAIT SENSOR=extruder MINIMUM={s} MAXIMUM={s+1}   ; Wait for hotend temp (within 1 degree)
+              {% endif %}
+          '';
+        };
+        "gcode_macro M190" = {
+          description = "Wait for bed temperature without stabilizing";
+          rename_existing = "M99190";
+          gcode = ''
+
+            ##### M190 #####
+              #Parameters
+              {% set s = params.S|float %}
+
+              M140 {% for p in params %}{'%s%s' % (p, params[p])}{% endfor %}   ; Set bed temp
+              {% if s != 0 %}
+                  TEMPERATURE_WAIT SENSOR=heater_bed MINIMUM={s} MAXIMUM={s+1}  ; Wait for bed temp (within 1 degree)
+              {% endif %}
+          '';
+        };
+        "gcode_macro _CG28" = {
+          description = "Conditional homing";
+          gcode = ''
+
+            ##### _CG28 #####
+              {% if "xyz" not in printer.toolhead.homed_axes %}
+                  G28
+              {% endif %}
           '';
         };
         "gcode_macro PRINT_START" = {
@@ -365,14 +419,11 @@ in
               # Reset the G-Code Z offset (adjust Z offset if needed)
               SET_GCODE_OFFSET Z=0.0
               # Home the printer
-              G28
+              _CG28
               # Wait for bed to reach temperature
               M190 S{BED_TEMP}
               BED_MESH_CALIBRATE
-              # Move the nozzle near the bed
-              G1 Z5 F3000
-              # Move the nozzle very close to the bed
-              G1 Z0.15 F300
+              SMART_PARK
               # Set and wait for nozzle to reach temperature
               M109 S{EXTRUDER_TEMP}
               LINE_PURGE
@@ -400,8 +451,8 @@ in
         "include ${builtins.unsafeDiscardStringContext klamp}/bin/configuration/Adaptive_Meshing.cfg" =
           { }; # Include to enable adaptive meshing configuration.
         "include ${builtins.unsafeDiscardStringContext klamp}/bin/configuration/Line_Purge.cfg" = { }; # Include to enable adaptive line purging configuration.
-        # "include ${builtins.unsafeDiscardStringContext klamp}/configuration/Voron_Purge.cfg" = { }; # Include to enable adaptive Voron logo purging configuration.
-        # "include ${builtins.unsafeDiscardStringContext klamp}/configuration/Smart_Park.cfg" = { }; # Include to enable the Smart Park function, which parks the printhead near the print area for final heating.
+        # "include ${builtins.unsafeDiscardStringContext klamp}/bin/configuration/Voron_Purge.cfg" = { }; # Include to enable adaptive Voron logo purging configuration.
+        "include ${builtins.unsafeDiscardStringContext klamp}/bin/configuration/Smart_Park.cfg" = { }; # Include to enable the Smart Park function, which parks the printhead near the print area for final heating.
         "gcode_macro _KAMP_Settings" = {
           description = "This macro contains all adjustable settings for KAMP";
 
