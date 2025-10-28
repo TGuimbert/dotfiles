@@ -1,28 +1,29 @@
-{ pkgs, lib, ... }:
+{ pkgs, ... }:
 let
   private_config_path = ".config/nushell/private.nu";
-  pluginNamesNixpkgs = [ "formats" ];
-  activateNushellPluginsNuScript = pkgs.writeTextFile {
-    name = "activateNushellPlugins";
-    destination = "/bin/activateNushellPlugins.nu";
-    text = ''
-      #!/usr/bin/env nu
-      ${lib.concatStringsSep "\n" (
-        map (x: "plugin add ${pkgs.nushellPlugins.${x}}/bin/nu_plugin_${x}") pluginNamesNixpkgs
-      )}
-    '';
-  };
+  # pluginNamesNixpkgs = [ "formats" ];
+  # activateNushellPluginsNuScript = pkgs.writeTextFile {
+  #   name = "activateNushellPlugins";
+  #   destination = "/bin/activateNushellPlugins.nu";
+  #   text = ''
+  #     #!/usr/bin/env nu
+  #     ${lib.concatStringsSep "\n" (
+  #       map (x: "plugin add ${pkgs.nushellPlugins.${x}}/bin/nu_plugin_${x}") pluginNamesNixpkgs
+  #     )}
+  #   '';
+  # };
 
-  msgPackz = pkgs.runCommand "nushellMsgPackz" { } ''
-    mkdir -p "$out"
-    # After some experimentation, I determined that this only works if --plugin-config is FIRST
-    ${pkgs.nushell}/bin/nu --plugin-config "$out/plugin.msgpackz" ${activateNushellPluginsNuScript}/bin/activateNushellPlugins.nu
-  '';
+  # msgPackz = pkgs.runCommand "nushellMsgPackz" { } ''
+  #   mkdir -p "$out"
+  #   # After some experimentation, I determined that this only works if --plugin-config is FIRST
+  #   ${pkgs.nushell}/bin/nu --plugin-config "$out/plugin.msgpackz" ${activateNushellPluginsNuScript}/bin/activateNushellPlugins.nu
+  # '';
 in
 {
   programs = {
     nushell = {
       enable = true;
+      plugins = [ pkgs.nushellPlugins.formats ];
       configFile.source = ./config.nu;
       environmentVariables = {
         TERM = "foot";
@@ -48,7 +49,7 @@ in
   };
 
   # See https://github.com/nushell/nushell/discussions/12997#discussioncomment-9638977
-  xdg.configFile."nushell/plugin.msgpackz".source = "${msgPackz}/plugin.msgpackz";
+  # xdg.configFile."nushell/plugin.msgpackz".source = "${msgPackz}/plugin.msgpackz";
 
   home = {
     persistence."/persistent/home/tguimbert" = {
