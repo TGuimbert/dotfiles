@@ -6,6 +6,7 @@
       starship.enable = true;
       firefox.profileNames = [ "default" ];
       qt.platform = "qtct";
+      qt.enable = false;
     };
   };
 }

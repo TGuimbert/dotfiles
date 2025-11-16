@@ -65,6 +65,27 @@
           ];
           auto-format = true;
         }
+        {
+          name = "hcl";
+          language-id = "opentofu";
+          scope = "source.hcl";
+          file-types = [
+            "tf"
+            "tofu"
+            "tfvars"
+          ];
+          auto-format = true;
+          comment-token = "#";
+          block-comment-tokens = {
+            start = "/*";
+            end = "*/";
+          };
+          indent = {
+            tab-width = 2;
+            unit = "  ";
+          };
+          language-servers = [ "tofu-ls" ];
+        }
       ];
       language-server = {
         yaml-language-server.config.yaml = {
@@ -98,6 +119,10 @@
         ruff = {
           command = "ruff";
           arg = [ "server" ];
+        };
+        tofu-ls = {
+          command = "tofu-ls";
+          args = [ "serve" ];
         };
       };
     };

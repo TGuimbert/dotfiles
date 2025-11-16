@@ -27,11 +27,16 @@ in
 {
   boot.initrd.availableKernelModules = [ "usbhid" ];
   boot.kernelPackages = pkgs.linuxPackages;
-
+  boot = {
+    extraModprobeConfig = ''
+      options cfg80211 ieee80211_regdom="FR"
+    '';
+  };
   networking = {
     hostName = "klipper";
     networkmanager = {
       enable = true;
+      wifi.scanRandMacAddress = false;
       ensureProfiles = {
         environmentFiles = [ config.sops.secrets."wireless.env".path ];
         profiles = {
@@ -99,8 +104,6 @@ in
     };
     klipper = {
       enable = true;
-      mutableConfig = false;
-      # configFile = ./printer.cfg;
       settings = {
         stepper_x = {
           step_pin = "PB13";
@@ -500,6 +503,7 @@ in
       settings = {
         file_manager = {
           enable_object_processing = true;
+          check_klipper_config_path = false;
         };
         data_store = {
           temperature_store_size = 600;

@@ -29,6 +29,7 @@
         name = "IosevkaTerm Nerd Font";
       };
     };
+    targets.qt.enable = false;
   };
   boot = {
     plymouth.enable = true;
