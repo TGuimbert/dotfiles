@@ -1,6 +1,6 @@
-{ pkgs, channels, ... }:
+{ pkgs, unstable, ... }:
 pkgs.mkShell {
-  packages = with channels.unstable; [
+  packages = with unstable; [
     uv
     fnm
     # Language Server Protocol

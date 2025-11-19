@@ -1,53 +1,37 @@
 {
   description = "System Config";
 
-  # Flake inputs
   inputs = {
-    # Nixpkgs Stable
     nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05";
-
-    # Nixpkgs Unstable
     unstable.url = "github:nixos/nixpkgs/nixos-unstable";
 
-    # Unified configuration for systems, packages, modules, shells, templates,
-    # and more with Nix Flakes
-    snowfall-lib = {
-      url = "github:snowfallorg/lib/v3.0.3";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    # Collection of NixOS modules covering hardware quirks
-    nixos-hardware = {
-      url = "github:NixOS/nixos-hardware/master";
-    };
-
-    # Modules to help handle persistent state on systems with ephemeral root
-    # storage
-    impermanence = {
-      url = "github:nix-community/impermanence/master";
-    };
-
-    # Secure Boot for NixOS
-    lanzaboote = {
-      url = "github:nix-community/lanzaboote/v0.4.2";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    # Manage a user environment using Nix
     home-manager = {
       url = "github:nix-community/home-manager/release-25.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # Declarative disk partitioning
     disko = {
       url = "github:nix-community/disko/master";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    impermanence.url = "github:nix-community/impermanence/master";
+
+    lanzaboote = {
+      url = "github:nix-community/lanzaboote/v0.4.2";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    nixos-hardware.url = "github:NixOS/nixos-hardware/master";
+
     sops-nix = {
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    stylix = {
+      url = "github:danth/stylix/release-25.05";
+      inputs.nixpkgs.follows = "unstable";
     };
 
     arkenfox-nixos = {
@@ -60,11 +44,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    stylix = {
-      url = "github:danth/stylix/release-25.05";
-      inputs.nixpkgs.follows = "unstable";
-    };
-
     # Seamless integration of https://pre-commit.com git hooks with Nix.
     pre-commit-hooks = {
       url = "github:cachix/pre-commit-hooks.nix";
@@ -73,42 +52,119 @@
   };
 
   outputs =
-    inputs:
-    # This is an example and in your actual flake you can use `snowfall-lib.mkFlake`
-    # directly unless you explicitly need a feature of `lib`.
+    { self
+    , nixpkgs
+    , unstable
+    , home-manager
+    , ...
+    }@inputs:
     let
-      lib = inputs.snowfall-lib.mkLib {
-        # You must pass in both your flake's inputs and the root directory of
-        # your flake.
-        inherit inputs;
-        src = ./.;
+      system = "x86_64-linux";
+
+      unstablePkgs = import unstable {
+        inherit system;
+        config.allowUnfree = true;
       };
+
+      overlays = [
+        (import ./overlays { unstable = unstablePkgs; })
+      ];
+
+      pkgsFor =
+        system:
+        import nixpkgs {
+          inherit system overlays;
+          config.allowUnfree = true;
+        };
+
+      mkSystem =
+        hostname: modules:
+        nixpkgs.lib.nixosSystem {
+          inherit system;
+          specialArgs = { inherit inputs; };
+          pkgs = pkgsFor system;
+          modules = [
+            # Global modules
+            ./modules/nixos/core.nix
+            inputs.disko.nixosModules.disko
+            inputs.lanzaboote.nixosModules.lanzaboote
+            inputs.impermanence.nixosModules.impermanence
+            inputs.sops-nix.nixosModules.sops
+            inputs.stylix.nixosModules.stylix
+
+            # Home Manager
+            inputs.home-manager.nixosModules.home-manager
+            {
+              home-manager = {
+                useGlobalPkgs = true;
+                useUserPackages = true;
+                users.tguimbert =
+                  { ... }:
+                  {
+                    imports = [
+                      inputs.arkenfox-nixos.hmModules.arkenfox
+                      inputs.impermanence.homeManagerModules.impermanence
+                      ./home
+                    ];
+                  };
+                extraSpecialArgs = { inherit inputs; };
+              };
+            }
+
+          ]
+          ++ modules;
+        };
     in
-    lib.mkFlake {
+    {
+      nixosConfigurations = {
+        leshen = mkSystem "leshen" [
+          ./hosts/leshen/hardware.nix
+          ./hosts/leshen/disks.nix
+          ./modules/nixos/impermanence.nix
+          ./modules/nixos/gnome.nix
+          ./modules/nixos/games.nix
+          ./modules/nixos/podman.nix
 
-      channels-config = {
-        allowUnfree = true;
+          {
+            networking.hostName = "leshen";
+            system.stateVersion = "22.11";
+          }
+        ];
       };
 
-      # Add modules to all systems.
-      systems.modules.nixos = with inputs; [
-        home-manager.nixosModules.home-manager
-        lanzaboote.nixosModules.lanzaboote
-        impermanence.nixosModules.impermanence
-        disko.nixosModules.disko
-        sops-nix.nixosModules.sops
-        stylix.nixosModules.stylix
-      ];
-
-      homes.modules = with inputs; [
-        arkenfox-nixos.hmModules.arkenfox
-      ];
-
-      systems.hosts = {
-        griffin.modules = with inputs; [ nixos-hardware.nixosModules.lenovo-thinkpad-t490 ];
-        wyvern.modules = with inputs; [ nixos-hardware.nixosModules.dell-xps-13-9380 ];
+      devShells.${system} = {
+        default = import ./shells/default/default.nix {
+          pkgs = pkgsFor system;
+          inherit inputs system;
+        };
+        python = import ./shells/python/default.nix {
+          pkgs = pkgsFor system;
+          unstable = unstablePkgs;
+          inherit inputs system;
+        };
+        rust = import ./shells/rust/default.nix {
+          pkgs = pkgsFor system;
+          inherit inputs system;
+        };
+        go = import ./shells/go/default.nix {
+          pkgs = pkgsFor system;
+          inherit inputs system;
+        };
+        ops = import ./shells/ops/default.nix {
+          pkgs = pkgsFor system;
+          inherit inputs system;
+        };
+        markdown = import ./shells/markdown/default.nix {
+          pkgs = pkgsFor system;
+          inherit inputs system;
+        };
       };
 
-      formatter.x86_64-linux = inputs.nixpkgs.legacyPackages.x86_64-linux.nixfmt-rfc-style;
+      formatter.${system} = (pkgsFor system).nixfmt-rfc-style;
     };
 }
+
+# systems.hosts = {
+#   griffin.modules = with inputs; [ nixos-hardware.nixosModules.lenovo-thinkpad-t490 ];
+#   wyvern.modules = with inputs; [ nixos-hardware.nixosModules.dell-xps-13-9380 ];
+# };
