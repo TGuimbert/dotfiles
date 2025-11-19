@@ -17,10 +17,6 @@
     ];
     auto-optimise-store = true;
   };
-  nix.gc = {
-    automatic = true;
-    dates = "weekly";
-  };
   programs = {
     nh = {
       enable = true;

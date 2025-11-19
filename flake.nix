@@ -52,11 +52,11 @@
   };
 
   outputs =
-    { self
-    , nixpkgs
-    , unstable
-    , home-manager
-    , ...
+    {
+      nixpkgs,
+      unstable,
+      home-manager,
+      ...
     }@inputs:
     let
       system = "x86_64-linux";
@@ -77,8 +77,10 @@
           config.allowUnfree = true;
         };
 
+      pkgs = pkgsFor system;
+
       mkSystem =
-        hostname: modules:
+        modules:
         nixpkgs.lib.nixosSystem {
           inherit system;
           specialArgs = { inherit inputs; };
@@ -117,7 +119,7 @@
     in
     {
       nixosConfigurations = {
-        leshen = mkSystem "leshen" [
+        leshen = mkSystem [
           ./hosts/leshen/hardware.nix
           ./hosts/leshen/disks.nix
           ./modules/nixos/impermanence.nix
@@ -133,30 +135,26 @@
       };
 
       devShells.${system} = {
-        default = import ./shells/default/default.nix {
-          pkgs = pkgsFor system;
-          inherit inputs system;
+        nixos = import ./shells/nixos { inherit pkgs; };
+        python = import ./shells/python { pkgs = unstablePkgs; };
+        rust = import ./shells/rust { inherit pkgs; };
+        go = import ./shells/go { inherit pkgs; };
+        ops = import ./shells/ops { inherit pkgs; };
+        markdown = import ./shells/markdown { inherit pkgs; };
+        nodejs = import ./shells/nodejs { inherit pkgs; };
+        protobuf = import ./shells/protobuf { inherit pkgs; };
+
+        python-nodejs = pkgs.mkShell {
+          inputsFrom = [
+            (import ./shells/python { pkgs = unstablePkgs; })
+            (import ./shells/nodejs { inherit pkgs; })
+          ];
         };
-        python = import ./shells/python/default.nix {
-          pkgs = pkgsFor system;
-          unstable = unstablePkgs;
-          inherit inputs system;
-        };
-        rust = import ./shells/rust/default.nix {
-          pkgs = pkgsFor system;
-          inherit inputs system;
-        };
-        go = import ./shells/go/default.nix {
-          pkgs = pkgsFor system;
-          inherit inputs system;
-        };
-        ops = import ./shells/ops/default.nix {
-          pkgs = pkgsFor system;
-          inherit inputs system;
-        };
-        markdown = import ./shells/markdown/default.nix {
-          pkgs = pkgsFor system;
-          inherit inputs system;
+        python-protobuf = pkgs.mkShell {
+          inputsFrom = [
+            (import ./shells/python { pkgs = unstablePkgs; })
+            (import ./shells/protobuf { inherit pkgs; })
+          ];
         };
       };
 

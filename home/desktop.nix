@@ -1,8 +1,7 @@
-{ pkgs
-, input
-, lib
-, inputs
-, ...
+{
+  lib,
+  inputs,
+  ...
 }:
 let
   gv = lib.hm.gvariant;
