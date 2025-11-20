@@ -20,11 +20,12 @@ jobs:
       - name: Check flake
         run: nix flake check --all-systems
 
-  build:
+  build-systems:
     name: Build Systems
     runs-on: ubuntu-latest
     needs: check
     strategy:
+      fail-fast: false
       matrix:
         system: [leshen]
     steps:
@@ -56,54 +57,29 @@ jobs:
       - name: Build ${{ matrix.system }}
         run: nix build .#nixosConfigurations.${{ matrix.system }}.config.system.build.toplevel
 
-  linting:
-    name: Check Linting
+  build-shells:
+    name: Build Shells
     runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      - name: Check Nix flake inputs
-        uses: DeterminateSystems/flake-checker-action@3164002371bc90729c68af0e24d5aacf20d7c9f6 # v12
-        with:
-          nixpkgs-keys: nixpkgs,unstable
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@786fff0690178f1234e4e1fe9b536e94f5433196 # v20
-      - name: Check pre-commit
-        run: nix develop . --command pre-commit run --all-files
-
-  define-overlays-matrix:
-    name: Define overlays matrix
-    runs-on: ubuntu-latest
-    outputs:
-      overlays: ${{ steps.overlays.outputs.overlays }}
-
-    steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      - name: Find and export overlays
-        id: overlays
-        working-directory: overlays
-        run: |
-          overlays=$(find . -maxdepth 1 -type d -not -path '*/\.*' -not -path . | sed 's|^\./||')
-          echo "Overlays found: $overlays"
-          overlays_json=$(printf '%s\n' "$overlays" | jq -R . | jq -s -c .)
-          echo "overlays=$overlays_json" >> "$GITHUB_OUTPUT"
-
-  cache-overlays:
-    name: Cache Overlays
-    runs-on: ubuntu-latest
-    needs: define-overlays-matrix
+    needs: check
     strategy:
+      fail-fast: false
       matrix:
-        overlay: ${{ fromJSON(needs.define-overlays-matrix.outputs.overlays) }}
-
+        shell:
+          - go
+          - markdown
+          - nixos
+          - nodejs
+          - ops
+          - protobuf
+          - python
+          - rust
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@786fff0690178f1234e4e1fe9b536e94f5433196 # v20
-      - name: Add personal cachix configuration
-        uses: cachix/cachix-action@0fc020193b5a1fa3ac4575aa3a7d3aa6a35435ad # v16
+      - uses: actions/checkout@v5
+      - uses: cachix/install-nix-action@v31
+      - uses: cachix/cachix-action@v15
         with:
           name: tguimbert
           authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
-      - name: Build overlay package
-        run: nix build .#pkgs.x86_64-linux.nixpkgs.${{ matrix.overlay }}
+
+      - name: Build ${{ matrix.shell }} shell
+        run: nix build .#devShells.x86_64-linux.${{ matrix.shell }}
