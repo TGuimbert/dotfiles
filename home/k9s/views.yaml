@@ -1,0 +1,53 @@
+views:
+  helm.toolkit.fluxcd.io/v2/helmreleases:
+    columns:
+    - NAME
+    - READY
+    - SUSPENDED:.spec.suspend
+    - STATUS
+    - STATUS TIME:status.conditions[0].lastTransitionTime|T
+    - AGE
+  kustomize.toolkit.fluxcd.io/v1/kustomizations:
+    columns:
+    - NAME
+    - READY
+    - SUSPENDED:.spec.suspend
+    - STATUS
+    - STATUS TIME:status.conditions[0].lastTransitionTime|T
+    - AGE
+  source.toolkit.fluxcd.io/v1/gitrepositories:
+    columns:
+    - NAME
+    - URL
+    - READY
+    - SUSPENDED:.spec.suspend
+    - STATUS
+    - STATUS TIME:status.conditions[0].lastTransitionTime|T
+    - AGE
+  source.toolkit.fluxcd.io/v1/helmcharts:
+    columns:
+    - NAME
+    - URL
+    - READY
+    - SUSPENDED:.spec.suspend
+    - STATUS
+    - STATUS TIME:status.conditions[0].lastTransitionTime|T
+    - AGE
+  source.toolkit.fluxcd.io/v1/helmrepositories:
+    columns:
+    - NAME
+    - URL
+    - READY
+    - SUSPENDED:.spec.suspend
+    - STATUS
+    - STATUS TIME:status.conditions[0].lastTransitionTime|T
+    - AGE
+  source.toolkit.fluxcd.io/v1beta2/ocirepositories:
+    columns:
+    - NAME
+    - URL
+    - READY
+    - SUSPENDED:.spec.suspend
+    - STATUS
+    - STATUS TIME:status.conditions[0].lastTransitionTime|T
+    - AGE
