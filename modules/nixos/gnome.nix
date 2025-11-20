@@ -14,7 +14,7 @@
   stylix = {
     enable = true;
     image = pkgs.fetchurl {
-      url = "https://gruvbox-wallpapers.pages.dev/wallpapers/irl/stairs.jpg";
+      url = "https://gruvbox-wallpapers.pages.dev/wallpapers/photography/stairs.jpg";
       sha256 = "xNL1L/5BguNqapoaEqNKj8sNPsbQxOltsikYjVrBons=";
     };
     polarity = "dark";
