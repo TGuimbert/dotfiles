@@ -6,6 +6,45 @@ on:
       - main
 
 jobs:
+  check:
+    name: Check Flake
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: cachix/install-nix-action@v31
+      - uses: cachix/cachix-action@v15
+        with:
+          name: tguimbert
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+
+      - name: Check flake
+        run: nix flake check --all-systems
+
+  build:
+    name: Build Systems
+    runs-on: ubuntu-latest
+    needs: check
+    strategy:
+      matrix:
+        system: [leshen]
+    steps:
+      - uses: actions/checkout@v5
+      - name: Free Disk Space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo docker image prune --all --force
+          df -h
+      - uses: cachix/install-nix-action@v31
+      - uses: cachix/cachix-action@v15
+        with:
+          name: tguimbert
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+
+      - name: Build ${{ matrix.system }}
+        run: nix build .#nixosConfigurations.${{ matrix.system }}.config.system.build.toplevel
+
   linting:
     name: Check Linting
     runs-on: ubuntu-latest
