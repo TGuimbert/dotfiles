@@ -10,9 +10,9 @@ jobs:
     name: Check Flake
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: cachix/install-nix-action@v31
-      - uses: cachix/cachix-action@v15
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+      - uses: cachix/install-nix-action@0b0e072294b088b73964f1d72dfdac0951439dbd # v31
+      - uses: cachix/cachix-action@ad2ddac53f961de1989924296a1f236fcfbaa4fc # v15
         with:
           name: tguimbert
           authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
@@ -32,7 +32,7 @@ jobs:
           - griffin
           - wyvern
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
       - name: Free Disk Space
         run: |
           sudo rm -rf /usr/lib/jvm
@@ -51,8 +51,8 @@ jobs:
           docker system prune -af || true
           docker builder prune -af || true
           df -h
-      - uses: cachix/install-nix-action@v31
-      - uses: cachix/cachix-action@v15
+      - uses: cachix/install-nix-action@0b0e072294b088b73964f1d72dfdac0951439dbd # v31
+      - uses: cachix/cachix-action@ad2ddac53f961de1989924296a1f236fcfbaa4fc # v15
         with:
           name: tguimbert
           authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
@@ -77,9 +77,9 @@ jobs:
           - python
           - rust
     steps:
-      - uses: actions/checkout@v5
-      - uses: cachix/install-nix-action@v31
-      - uses: cachix/cachix-action@v15
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+      - uses: cachix/install-nix-action@0b0e072294b088b73964f1d72dfdac0951439dbd # v31
+      - uses: cachix/cachix-action@ad2ddac53f961de1989924296a1f236fcfbaa4fc # v15
         with:
           name: tguimbert
           authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
