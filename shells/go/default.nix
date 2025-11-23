@@ -10,4 +10,3 @@ pkgs.mkShell {
     errcheck # Checks for unchecked errors in go programs
   ];
 }
-

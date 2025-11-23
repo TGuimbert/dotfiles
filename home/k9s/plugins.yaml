@@ -1,0 +1,138 @@
+reconcile-chart:
+  args:
+  - -c
+  - flux reconcile source chart --context $CONTEXT -n $NAMESPACE $NAME
+  background: true
+  command: bash
+  confirm: false
+  description: Flux reconcile
+  scopes:
+  - helmcharts
+  shortCut: Shift-R
+reconcile-git:
+  args:
+  - -c
+  - flux reconcile source git --context $CONTEXT -n $NAMESPACE $NAME
+  background: true
+  command: bash
+  confirm: false
+  description: Flux reconcile
+  scopes:
+  - gitrepositories
+  shortCut: Shift-R
+reconcile-helm:
+  args:
+  - -c
+  - flux reconcile source helm --context $CONTEXT -n $NAMESPACE $NAME
+  background: true
+  command: bash
+  confirm: false
+  description: Flux reconcile
+  scopes:
+  - helmrepositories
+  shortCut: Shift-R
+reconcile-helmrelease:
+  args:
+  - -c
+  - flux reconcile  helmrelease --context $CONTEXT -n $NAMESPACE $NAME
+  background: true
+  command: bash
+  confirm: false
+  description: Flux reconcile
+  scopes:
+  - helmreleases
+  shortCut: Shift-R
+reconcile-kustomization:
+  args:
+  - -c
+  - flux reconcile  kustomization --context $CONTEXT -n $NAMESPACE $NAME
+  background: true
+  command: bash
+  confirm: false
+  description: Flux reconcile
+  scopes:
+  - kustomizations
+  shortCut: Shift-R
+reconcile-oci:
+  args:
+  - -c
+  - flux reconcile source oci --context $CONTEXT -n $NAMESPACE $NAME
+  background: true
+  command: bash
+  confirm: false
+  description: Flux reconcile
+  scopes:
+  - ocirepositories
+  shortCut: Shift-R
+toggle-suspend-chart:
+  args:
+  - -c
+  - verb=$([ $COL-SUSPENDED ] && echo "resume" || echo "suspend"); flux $verb source
+    chart --context $CONTEXT -n $NAMESPACE $NAME
+  background: true
+  command: bash
+  confirm: true
+  description: Toggle suspend
+  scopes:
+  - helmcharts
+  shortCut: Shift-T
+toggle-suspend-git:
+  args:
+  - -c
+  - verb=$([ $COL-SUSPENDED ] && echo "resume" || echo "suspend"); flux $verb source
+    git --context $CONTEXT -n $NAMESPACE $NAME
+  background: true
+  command: bash
+  confirm: true
+  description: Toggle suspend
+  scopes:
+  - gitrepositories
+  shortCut: Shift-T
+toggle-suspend-helm:
+  args:
+  - -c
+  - verb=$([ $COL-SUSPENDED ] && echo "resume" || echo "suspend"); flux $verb source
+    helm --context $CONTEXT -n $NAMESPACE $NAME
+  background: true
+  command: bash
+  confirm: true
+  description: Toggle suspend
+  scopes:
+  - helmrepositories
+  shortCut: Shift-T
+toggle-suspend-helmrelease:
+  args:
+  - -c
+  - verb=$([ $COL-SUSPENDED ] && echo "resume" || echo "suspend"); flux $verb  helmrelease
+    --context $CONTEXT -n $NAMESPACE $NAME
+  background: true
+  command: bash
+  confirm: true
+  description: Toggle suspend
+  scopes:
+  - helmreleases
+  shortCut: Shift-T
+toggle-suspend-kustomization:
+  args:
+  - -c
+  - verb=$([ $COL-SUSPENDED ] && echo "resume" || echo "suspend"); flux $verb  kustomization
+    --context $CONTEXT -n $NAMESPACE $NAME
+  background: true
+  command: bash
+  confirm: true
+  description: Toggle suspend
+  scopes:
+  - kustomizations
+  shortCut: Shift-T
+toggle-suspend-oci:
+  args:
+  - -c
+  - verb=$([ $COL-SUSPENDED ] && echo "resume" || echo "suspend"); flux $verb source
+    oci --context $CONTEXT -n $NAMESPACE $NAME
+  background: true
+  command: bash
+  confirm: true
+  description: Toggle suspend
+  scopes:
+  - ocirepositories
+  shortCut: Shift-T
