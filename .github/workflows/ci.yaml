@@ -86,3 +86,19 @@ jobs:
 
       - name: Build ${{ matrix.shell }} shell
         run: nix build .#devShells.x86_64-linux.${{ matrix.shell }}
+
+  all-checks:
+    name: All Checks Passed
+    runs-on: ubuntu-latest
+    needs: [check, build-systems, build-shells]
+    if: always()
+    steps:
+      - name: Check job results
+        run: |
+          if [[ "${{ needs.check.result }}" != "success" ]] || \
+             [[ "${{ needs.build-systems.result }}" != "success" ]] || \
+             [[ "${{ needs.build-shells.result }}" != "success" ]]; then
+            echo "One or more jobs failed"
+            exit 1
+          fi
+          echo "All checks passed!"
