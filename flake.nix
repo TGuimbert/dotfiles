@@ -138,6 +138,22 @@
             system.stateVersion = "22.11";
           }
         ];
+        wyvern = mkSystem "wyvern" [
+          inputs.nixos-hardware.nixosModules.dell-xps-13-9380
+          ./hosts/wyvern/hardware.nix
+          ./hosts/wyvern/disks.nix
+          ./modules/nixos/impermanence.nix
+          ./modules/nixos/gnome.nix
+          ./modules/nixos/games.nix
+          ./modules/nixos/docker.nix
+
+          {
+            home-manager.users.tguimbert = {
+              imports = [ ./home/work.nix ];
+            };
+            system.stateVersion = "23.11";
+          }
+        ];
       };
 
       devShells.${system} = {
@@ -167,7 +183,3 @@
       formatter.${system} = (pkgsFor system).nixfmt-rfc-style;
     };
 }
-
-# systems.hosts = {
-#   wyvern.modules = with inputs; [ nixos-hardware.nixosModules.dell-xps-13-9380 ];
-# };
