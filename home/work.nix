@@ -15,11 +15,13 @@
             sed -i'.backup' -e 's/,"WebRTCPipeWireCapturer"/,"LebRTCPipeWireCapturer"/' $out/lib/slack/resources/app.asar
         '';
       }))
+      pkgs.azure-cli
     ];
 
     persistence."/persistent/home/tguimbert" = {
       directories = [
         ".config/Slack"
+        ".azure"
       ];
     };
   };

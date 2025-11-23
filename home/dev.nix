@@ -165,16 +165,9 @@
     pinentry.package = pkgs.pinentry-gnome3;
   };
 
-  home = {
-    packages = with pkgs; [
-      azure-cli
+  home.persistence."/persistent/home/tguimbert" = {
+    directories = [
+      ".ssh"
     ];
-
-    persistence."/persistent/home/tguimbert" = {
-      directories = [
-        ".azure"
-        ".ssh"
-      ];
-    };
   };
 }

@@ -74,7 +74,7 @@
       pkgs = pkgsFor system;
 
       mkSystem =
-        modules:
+        hostname: modules:
         nixpkgs.lib.nixosSystem {
           inherit system;
           specialArgs = { inherit inputs; };
@@ -106,14 +106,14 @@
                 extraSpecialArgs = { inherit inputs; };
               };
             }
-
+            { networking.hostName = hostname; }
           ]
           ++ modules;
         };
     in
     {
       nixosConfigurations = {
-        leshen = mkSystem [
+        leshen = mkSystem "leshen" [
           ./hosts/leshen/hardware.nix
           ./hosts/leshen/disks.nix
           ./modules/nixos/impermanence.nix
@@ -122,11 +122,10 @@
           ./modules/nixos/podman.nix
 
           {
-            networking.hostName = "leshen";
             system.stateVersion = "22.11";
           }
         ];
-        griffin = mkSystem [
+        griffin = mkSystem "griffin" [
           inputs.nixos-hardware.nixosModules.lenovo-thinkpad-t490
           ./hosts/griffin/hardware.nix
           ./hosts/griffin/disks.nix
@@ -136,7 +135,6 @@
           ./modules/nixos/podman.nix
 
           {
-            networking.hostName = "griffin";
             system.stateVersion = "22.11";
           }
         ];

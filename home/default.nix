@@ -62,7 +62,6 @@
         "Videos"
         "Workspace"
         ".dotfiles"
-        ".config/Slack"
         ".config/discord"
         ".config/Signal"
         ".config/OrcaSlicer"
