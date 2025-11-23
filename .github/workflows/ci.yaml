@@ -10,8 +10,8 @@ jobs:
     name: Check Flake
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: cachix/install-nix-action@v31
+      - uses: actions/checkout@v5.0.0
+      - uses: cachix/install-nix-action@v31.0.0
       - uses: cachix/cachix-action@v15
         with:
           name: tguimbert
@@ -32,7 +32,7 @@ jobs:
           - griffin
           - wyvern
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v5.0.0
       - name: Free Disk Space
         run: |
           sudo rm -rf /usr/lib/jvm
@@ -51,7 +51,7 @@ jobs:
           docker system prune -af || true
           docker builder prune -af || true
           df -h
-      - uses: cachix/install-nix-action@v31
+      - uses: cachix/install-nix-action@v31.0.0
       - uses: cachix/cachix-action@v15
         with:
           name: tguimbert
@@ -77,8 +77,8 @@ jobs:
           - python
           - rust
     steps:
-      - uses: actions/checkout@v5
-      - uses: cachix/install-nix-action@v31
+      - uses: actions/checkout@v5.0.0
+      - uses: cachix/install-nix-action@v31.0.0
       - uses: cachix/cachix-action@v15
         with:
           name: tguimbert
