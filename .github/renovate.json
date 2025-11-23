@@ -4,7 +4,9 @@
     "config:best-practices",
     ":maintainLockFilesWeekly",
     ":timezone(Europe/Paris)",
-    ":reviewer(TGuimbert)"
+    ":reviewer(TGuimbert)",
+    ":automergeMinor",
+    ":automergeRequireAllStatusChecks"
   ],
 
   "nix" : {
