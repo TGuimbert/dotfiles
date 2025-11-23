@@ -27,7 +27,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        system: [leshen]
+        system:
+          - leshen
+          - griffin
     steps:
       - uses: actions/checkout@v5
       - name: Free Disk Space

@@ -132,6 +132,20 @@
             system.stateVersion = "22.11";
           }
         ];
+        griffin = mkSystem [
+          inputs.nixos-hardware.nixosModules.lenovo-thinkpad-t490
+          ./hosts/griffin/hardware.nix
+          ./hosts/griffin/disks.nix
+          ./modules/nixos/impermanence.nix
+          ./modules/nixos/gnome.nix
+          ./modules/nixos/games.nix
+          ./modules/nixos/podman.nix
+
+          {
+            networking.hostName = "griffin";
+            system.stateVersion = "22.11";
+          }
+        ];
       };
 
       devShells.${system} = {
@@ -163,6 +177,5 @@
 }
 
 # systems.hosts = {
-#   griffin.modules = with inputs; [ nixos-hardware.nixosModules.lenovo-thinkpad-t490 ];
 #   wyvern.modules = with inputs; [ nixos-hardware.nixosModules.dell-xps-13-9380 ];
 # };
