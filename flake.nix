@@ -144,7 +144,6 @@
           ./hosts/wyvern/disks.nix
           ./modules/nixos/impermanence.nix
           ./modules/nixos/gnome.nix
-          ./modules/nixos/games.nix
           ./modules/nixos/docker.nix
 
           {

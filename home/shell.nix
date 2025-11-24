@@ -4,6 +4,25 @@
   config,
   ...
 }:
+let
+
+  pluginNamesNixpkgs = [ "formats" ];
+  activateNushellPluginsNuScript = pkgs.writeTextFile {
+    name = "activateNushellPlugins";
+    destination = "/bin/activateNushellPlugins.nu";
+    text = ''
+      #!/usr/bin/env nu
+      ${lib.concatStringsSep "\n" (
+        map (x: "plugin add ${pkgs.nushellPlugins.${x}}/bin/nu_plugin_${x}") pluginNamesNixpkgs
+      )}
+    '';
+  };
+  msgPackz = pkgs.runCommand "nushellMsgPackz" { } ''
+    mkdir -p "$out"
+    # After some experimentation, I determined that this only works if --plugin-config is FIRST
+    ${pkgs.nushell}/bin/nu --plugin-config "$out/plugin.msgpackz" ${activateNushellPluginsNuScript}/bin/activateNushellPlugins.nu
+  '';
+in
 {
   programs = {
     # Terminal
@@ -188,7 +207,7 @@
     # Shell
     nushell = {
       enable = true;
-      plugins = [ pkgs.nushellPlugins.formats ];
+      # plugins = [ pkgs.nushellPlugins.formats ];
       configFile.source = ./nushell/config.nu;
       environmentVariables = {
         TERM = "foot";
@@ -475,6 +494,7 @@
   };
 
   xdg.configFile = {
+    "nushell/plugin.msgpackz".source = "${msgPackz}/plugin.msgpackz";
     "zellij/layouts/rust.kdl".source = ./zellij/layouts/rust.kdl;
     "k9s/plugins.yaml".source = ./k9s/plugins.yaml;
     "k9s/views.yaml".source = ./k9s/views.yaml;
