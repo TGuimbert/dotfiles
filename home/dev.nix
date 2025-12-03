@@ -3,8 +3,6 @@
   programs = {
     git = {
       enable = true;
-      userName = "TGuimbert";
-      userEmail = "33598842+TGuimbert@users.noreply.github.com";
       signing = {
         signByDefault = true;
         key = null;
@@ -22,13 +20,16 @@
         }
       ];
 
-      aliases = {
-        co = "checkout";
-        up = "pull --prune --progress";
-        lol = "log --oneline --graph --all";
-      };
-
-      extraConfig = {
+      settings = {
+        user = {
+          name = "TGuimbert";
+          email = "33598842+TGuimbert@users.noreply.github.com";
+        };
+        alias = {
+          co = "checkout";
+          up = "pull --prune --progress";
+          lol = "log --oneline --graph --all";
+        };
         core = {
           compression = 9;
           whitespace = "error";
@@ -82,16 +83,17 @@
         };
       };
 
-      difftastic = {
-        enable = true;
-        background = "dark";
-      };
-
       ignores = [
         ".devenv/"
         ".direnv/"
         ".envrc"
       ];
+    };
+
+    difftastic = {
+      enable = true;
+      options.background = "dark";
+      git.enable = true;
     };
 
     nushell.shellAliases = {
@@ -152,10 +154,21 @@
 
     ssh = {
       enable = true;
-      compression = true;
-      extraConfig = ''
-        SetEnv TERM=xterm-256color
-      '';
+      enableDefaultConfig = false;
+      matchBlocks."*" = {
+        forwardAgent = false;
+        addKeysToAgent = "no";
+        serverAliveInterval = 0;
+        serverAliveCountMax = 3;
+        hashKnownHosts = false;
+        userKnownHostsFile = "~/.ssh/known_hosts";
+        controlMaster = "no";
+        controlPath = "~/.ssh/master-%r@%n:%p";
+        controlPersist = "no";
+
+        compression = true;
+        setEnv.TERM = "xterm-256color";
+      };
       includes = [ "private-config" ];
     };
   };

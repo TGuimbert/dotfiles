@@ -505,8 +505,9 @@ in
       fd
       procs
       sd
-      du-dust
+      dust
       ripgrep
+      bitwarden-cli
     ];
 
     sessionVariables = {
@@ -518,6 +519,7 @@ in
       files = [
         ".config/nushell/history.txt"
         ".config/nushell/private.nu"
+        ".config/Bitwarden CLI/data.json"
       ];
     };
   };
