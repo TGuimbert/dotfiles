@@ -3,7 +3,7 @@ pkgs.mkShell {
   packages = with pkgs; [
     actionlint
     ansible
-    ansible-language-server
+    ansible-lint
     restic
     tenv
     terraform-ls
