@@ -233,11 +233,6 @@
                 | load-env
             }
         )
-        if ("~/.gnupg/S.gpg-agent.ssh" | path exists) {
-          $env.SSH_AUTH_SOCK = "~/.gnupg/S.gpg-agent.ssh"
-          $env.GPG_TTY = ^tty
-          ^gpg-connect-agent updatestartuptty /bye
-        }
       '';
     };
 
