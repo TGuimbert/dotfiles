@@ -153,6 +153,21 @@
             system.stateVersion = "23.11";
           }
         ];
+        tuxedo = mkSystem "tuxedo" [
+          inputs.nixos-hardware.nixosModules.tuxedo-infinitybook-pro14-gen9-intel
+          ./hosts/tuxedo/hardware.nix
+          ./hosts/tuxedo/disks.nix
+          ./modules/nixos/impermanence.nix
+          ./modules/nixos/gnome.nix
+          ./modules/nixos/docker.nix
+
+          {
+            home-manager.users.tguimbert = {
+              imports = [ ./home/work.nix ];
+            };
+            system.stateVersion = "25.11";
+          }
+        ];
       };
 
       devShells.${system} = {
