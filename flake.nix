@@ -43,6 +43,10 @@
       url = "gitlab:rycee/nur-expressions?dir=pkgs/firefox-addons";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    tuxedo-nixos = {
+      url = "github:sund3RRR/tuxedo-nixos";
+    };
   };
 
   outputs =
@@ -155,6 +159,7 @@
         ];
         tuxedo = mkSystem "tuxedo" [
           inputs.nixos-hardware.nixosModules.tuxedo-infinitybook-pro14-gen9-intel
+          inputs.tuxedo-nixos.nixosModules.default
           ./hosts/tuxedo/hardware.nix
           ./hosts/tuxedo/disks.nix
           ./modules/nixos/impermanence.nix
