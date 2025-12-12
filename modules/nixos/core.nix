@@ -136,6 +136,13 @@
     fwupd.enable = true;
     pcscd.enable = true;
     btrfs.autoScrub.enable = true;
+    tailscale = {
+      enable = true;
+      useRoutingFeatures = "client";
+      extraSetFlags = [
+        "--operator=tguimbert"
+      ];
+    };
   };
 
   # Secrets
