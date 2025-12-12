@@ -142,21 +142,6 @@
             system.stateVersion = "22.11";
           }
         ];
-        wyvern = mkSystem "wyvern" [
-          inputs.nixos-hardware.nixosModules.dell-xps-13-9380
-          ./hosts/wyvern/hardware.nix
-          ./hosts/wyvern/disks.nix
-          ./modules/nixos/impermanence.nix
-          ./modules/nixos/gnome.nix
-          ./modules/nixos/docker.nix
-
-          {
-            home-manager.users.tguimbert = {
-              imports = [ ./home/work.nix ];
-            };
-            system.stateVersion = "23.11";
-          }
-        ];
         tuxedo = mkSystem "tuxedo" [
           inputs.nixos-hardware.nixosModules.tuxedo-infinitybook-pro14-gen9-intel
           inputs.tuxedo-nixos.nixosModules.default
