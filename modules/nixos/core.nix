@@ -1,4 +1,9 @@
-{ pkgs, lib, ... }:
+{
+  pkgs,
+  lib,
+  config,
+  ...
+}:
 {
   # Nix settings
   nix.settings = {
@@ -153,18 +158,33 @@
   };
 
   # Shares
-  fileSystems."/mnt/share" = {
-    device = "//192.168.1.100/Home";
-    fsType = "cifs";
-    options =
-      let
-        # this line prevents hanging on network split
-        automount_opts = "x-systemd.automount,noauto,x-systemd.idle-timeout=60,x-systemd.device-timeout=5s,x-systemd.mount-timeout=5s";
-      in
-      [
-        "${automount_opts},credentials=/run/secrets/smb-secrets,uid=1000,gid=100"
-      ];
-  };
+  fileSystems =
+    let
+      automount_opts = "x-systemd.automount,noauto,x-systemd.idle-timeout=60,x-systemd.device-timeout=5s,x-systemd.mount-timeout=5s";
+    in
+    {
+      "/mnt/private" = {
+        device = "//nas.lan/private";
+        fsType = "cifs";
+        options = [
+          "${automount_opts},credentials=${config.sops.secrets.smb-secrets.path},uid=1000,gid=100"
+        ];
+      };
+      "/mnt/documents" = {
+        device = "//nas.lan/documents";
+        fsType = "cifs";
+        options = [
+          "${automount_opts},credentials=${config.sops.secrets.smb-secrets.path},uid=1000,gid=100"
+        ];
+      };
+      "/mnt/shared" = {
+        device = "//nas.lan/shared";
+        fsType = "cifs";
+        options = [
+          "${automount_opts},credentials=${config.sops.secrets.smb-secrets.path},uid=1000,gid=100"
+        ];
+      };
+    };
 
   xdg.portal = {
     enable = true;
