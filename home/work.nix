@@ -18,7 +18,7 @@
       pkgs.azure-cli
     ];
 
-    persistence."/persistent/home/tguimbert" = {
+    persistence."/persistent" = {
       directories = [
         ".config/Slack"
         ".azure"

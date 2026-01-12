@@ -103,7 +103,6 @@
                   {
                     imports = [
                       inputs.arkenfox-nixos.hmModules.arkenfox
-                      inputs.impermanence.homeManagerModules.impermanence
                       ./home
                     ];
                   };

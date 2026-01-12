@@ -178,7 +178,7 @@
     pinentry.package = pkgs.pinentry-gnome3;
   };
 
-  home.persistence."/persistent/home/tguimbert" = {
+  home.persistence."/persistent" = {
     directories = [
       ".ssh"
     ];
