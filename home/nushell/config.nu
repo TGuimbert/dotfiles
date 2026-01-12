@@ -29,9 +29,3 @@ def replace-with-layout [layout: string@available-layouts] {
 def open-rust-doc [] {
   xdg-open (nix build fenix#latest.rust-docs --json --no-link | from json | first | get outputs.out | path join share/doc/rust/html/index.html)
 }
-
-if ("~/.gnupg/S.gpg-agent.ssh" | path exists) {
-  $env.SSH_AUTH_SOCK = "~/.gnupg/S.gpg-agent.ssh"
-  $env.GPG_TTY = ^tty
-  ^gpg-connect-agent updatestartuptty /bye o> (std null-device)
-}

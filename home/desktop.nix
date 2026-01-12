@@ -156,6 +156,7 @@ in
         ];
       };
       "org/gnome/mutter".workspaces-only-on-primary = gv.mkValue false;
+      "org.gnome.settings-daemon.plugins.housekeeping".donation-reminder-enabled = gv.mkValue false;
     };
   };
 
