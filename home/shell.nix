@@ -495,7 +495,7 @@
       ZELLIJ_AUTO_EXIT = "true";
     };
 
-    persistence."/persistent/home/tguimbert" = {
+    persistence."/persistent" = {
       files = [
         ".config/nushell/history.txt"
         ".config/nushell/private.nu"

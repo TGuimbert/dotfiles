@@ -53,7 +53,7 @@
     };
 
     # Persistence
-    persistence."/persistent/home/tguimbert" = {
+    persistence."/persistent" = {
       directories = [
         "Documents"
         "Downloads"
@@ -83,14 +83,8 @@
         ".local/state/wireplumber"
         ".local/share/fish"
         ".local/share/FreeCAD"
-        {
-          directory = ".local/share/Steam";
-          method = "symlink";
-        }
-        {
-          directory = ".steam";
-          method = "symlink";
-        }
+        ".local/share/Steam"
+        ".steam"
         ".clonehero"
         ".config/unity3d/srylain Inc_/Clone Hero"
       ];
@@ -103,7 +97,6 @@
         ".pip/pip.conf"
         ".config/uv/uv.toml"
       ];
-      allowOther = true;
     };
   };
 
