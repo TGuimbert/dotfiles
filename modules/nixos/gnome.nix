@@ -4,6 +4,7 @@
     xserver.enable = true;
     displayManager.gdm.enable = true;
     desktopManager.gnome.enable = true;
+    gnome.gcr-ssh-agent.enable = false;
   };
 
   environment = {

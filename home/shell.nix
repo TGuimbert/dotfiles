@@ -196,6 +196,7 @@
         VISUAL = "hx";
         BWS_SERVER_URL = "https://vault.bitwarden.eu";
         CARAPACE_BRIDGES = "zsh,fish,bash,inshellisense";
+        SSH_ASKPASS = "";
       };
       extraEnv = ''
         if (not ("~/.config/nushell/private.nu" | path exists)) {

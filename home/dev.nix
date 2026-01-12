@@ -173,9 +173,12 @@
     };
   };
 
-  services.gpg-agent = {
-    enable = true;
-    pinentry.package = pkgs.pinentry-gnome3;
+  services = {
+    gpg-agent = {
+      enable = true;
+      enableSshSupport = false;
+      pinentry.package = pkgs.pinentry-gnome3;
+    };
   };
 
   home.persistence."/persistent" = {
