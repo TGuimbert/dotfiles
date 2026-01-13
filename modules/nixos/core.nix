@@ -141,6 +141,7 @@
     fwupd.enable = true;
     pcscd.enable = true;
     btrfs.autoScrub.enable = true;
+    avahi.nssmdns4 = true;
     tailscale = {
       enable = true;
       useRoutingFeatures = "client";

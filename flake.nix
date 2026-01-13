@@ -113,6 +113,22 @@
           ]
           ++ modules;
         };
+      mkServer =
+        hostname: modules:
+        nixpkgs.lib.nixosSystem {
+          inherit system;
+          specialArgs = { inherit inputs; };
+          pkgs = pkgsFor system;
+          modules = [
+            # Global modules
+            inputs.disko.nixosModules.disko
+            inputs.impermanence.nixosModules.impermanence
+            inputs.sops-nix.nixosModules.sops
+
+            { networking.hostName = hostname; }
+          ]
+          ++ modules;
+        };
     in
     {
       nixosConfigurations = {
@@ -154,6 +170,16 @@
             home-manager.users.tguimbert = {
               imports = [ ./home/work.nix ];
             };
+            system.stateVersion = "25.11";
+          }
+        ];
+        srv-01 = mkServer "srv-01" [
+          ./hosts/srv-01/hardware.nix
+          ./hosts/srv-01/disks.nix
+          ./hosts/srv-01/default.nix
+          ./hosts/srv-01/printing.nix
+
+          {
             system.stateVersion = "25.11";
           }
         ];
