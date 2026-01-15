@@ -1,15 +1,6 @@
 use std
 
-$env.config = {
-  show_banner: false
-  buffer_editor: 'hx'
-}
-
 $env.path ++= ["~/.local/bin"]
-
-alias ll = ls -la
-alias k = kubectl
-alias cat = bat
 
 # List existing Zellij layouts (excluding homepage)
 def available-layouts [] {
