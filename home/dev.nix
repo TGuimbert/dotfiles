@@ -174,6 +174,7 @@
   };
 
   services = {
+    ssh-agent.enable = true;
     gpg-agent = {
       enable = true;
       enableSshSupport = false;
@@ -184,6 +185,7 @@
   home.persistence."/persistent" = {
     directories = [
       ".ssh"
+      ".aws"
     ];
   };
 }
