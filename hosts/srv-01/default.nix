@@ -1,4 +1,9 @@
-{ pkgs, lib, ... }:
+{
+  pkgs,
+  lib,
+  config,
+  ...
+}:
 {
   boot.loader.grub = {
     enable = true;
@@ -17,9 +22,21 @@
     ];
   };
 
+  sops = {
+    defaultSopsFile = ../../secrets/srv-01.yaml;
+    age.sshKeyPaths = [ "/persistent/etc/ssh/ssh_host_ed25519_key" ];
+    secrets.hashed-password.neededForUsers = true;
+  };
+
   services = {
     openssh = {
       enable = true;
+      hostKeys = [
+        {
+          path = "/etc/ssh/ssh_host_ed25519_key";
+          type = "ed25519";
+        }
+      ];
       settings = {
         PasswordAuthentication = false;
         PermitRootLogin = "no";
@@ -52,7 +69,7 @@
     mutableUsers = false;
     users.tguimbert = {
       isNormalUser = true;
-      hashedPasswordFile = "/persistent/tguimbert-password";
+      hashedPasswordFile = config.sops.secrets.hashed-password.path;
       extraGroups = [ "wheel" ];
       openssh.authorizedKeys.keys = [
         "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAIA8ELMPZWIVpqfdLifNdzuMMEDdZFzqRKuExaFISizYrAAAAC3NzaDpob21lbGFi ssh:homelab"
@@ -68,8 +85,6 @@
     ];
     files = [
       "/etc/machine-id"
-      "/etc/ssh/ssh_host_rsa_key"
-      "/etc/ssh/ssh_host_rsa_key.pub"
       "/etc/ssh/ssh_host_ed25519_key"
       "/etc/ssh/ssh_host_ed25519_key.pub"
     ];
