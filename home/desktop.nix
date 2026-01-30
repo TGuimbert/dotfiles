@@ -1,6 +1,7 @@
 {
   lib,
   inputs,
+  pkgs,
   ...
 }:
 let
@@ -156,9 +157,19 @@ in
         ];
       };
       "org/gnome/mutter".workspaces-only-on-primary = gv.mkValue false;
-      "org.gnome.settings-daemon.plugins.housekeeping".donation-reminder-enabled = gv.mkValue false;
+      "org/gnome/settings-daemon/plugins/housekeeping".donation-reminder-enabled = gv.mkValue false;
     };
   };
+
+  home.file.".local/share/applications/ssh-askpass.desktop".text = ''
+    [Desktop Entry]
+    Name=SSH Askpass
+    GenericName=ssh-askpass
+    Type=Application
+    Exec=${pkgs.seahorse}/libexec/seahorse/ssh-askpass
+    Icon=seahorse
+    NoDisplay=true
+  '';
 
   xdg.mimeApps = {
     enable = true;

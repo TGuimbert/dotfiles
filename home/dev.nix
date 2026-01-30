@@ -157,7 +157,7 @@
       enableDefaultConfig = false;
       matchBlocks."*" = {
         forwardAgent = false;
-        addKeysToAgent = "no";
+        addKeysToAgent = "30m";
         serverAliveInterval = 0;
         serverAliveCountMax = 3;
         hashKnownHosts = false;

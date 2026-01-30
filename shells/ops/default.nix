@@ -7,6 +7,7 @@ pkgs.mkShell {
     restic
     tenv
     terraform-ls
+    tofu-ls
   ];
 
   shellHook = ''
