@@ -178,6 +178,11 @@
           ./hosts/srv-01/disks.nix
           ./hosts/srv-01/default.nix
           ./hosts/srv-01/printing.nix
+          ./hosts/srv-01/traefik.nix
+          ./hosts/srv-01/lldap.nix
+          ./hosts/srv-01/authelia.nix
+          ./hosts/srv-01/homepage.nix
+          ./hosts/srv-01/restic.nix
 
           {
             system.stateVersion = "25.11";
