@@ -183,6 +183,7 @@
           ./hosts/srv-01/authelia.nix
           ./hosts/srv-01/homepage.nix
           ./hosts/srv-01/restic.nix
+          ./hosts/srv-01/calibre.nix
 
           {
             system.stateVersion = "25.11";

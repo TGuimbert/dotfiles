@@ -9,6 +9,7 @@ final: prev: {
     rustfinity
     base16-schemes
     nushell
+    calibre
     ;
 
   nushellPlugins.formats = unstable.nushellPlugins.formats;

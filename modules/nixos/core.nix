@@ -185,6 +185,14 @@
           "${automount_opts},credentials=${config.sops.secrets.smb-secrets.path},uid=1000,gid=100"
         ];
       };
+      "/mnt/books" = {
+        device = "//nas.lan/books";
+        fsType = "cifs";
+        options = [
+          "${automount_opts},credentials=${config.sops.secrets.smb-secrets.path},uid=1000,gid=100"
+          "nobrl"
+        ];
+      };
     };
 
   xdg.portal = {

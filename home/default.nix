@@ -35,6 +35,7 @@
       signal-desktop
       orca-slicer
       freecad
+      calibre
 
       # K8s tools
       kubectl
