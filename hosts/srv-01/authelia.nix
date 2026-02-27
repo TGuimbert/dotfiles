@@ -30,7 +30,13 @@ in
       settings = {
         theme = "auto";
         server = {
-          endpoints.authz.forward-auth.implementation = "ForwardAuth";
+          endpoints.authz.forward-auth = {
+            implementation = "ForwardAuth";
+            authn_strategies = [
+              { name = "HeaderAuthorization"; }
+              { name = "CookieSession"; }
+            ];
+          };
           address = "tcp4://:9091";
         };
         identity_validation.elevated_session.require_second_factor = true;

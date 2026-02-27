@@ -9,7 +9,6 @@ let
 in
 {
   programs = {
-
     firefox = {
       enable = true;
       languagePacks = [
