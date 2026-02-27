@@ -171,6 +171,28 @@
       };
       includes = [ "private-config" ];
     };
+
+    claude-code = {
+      enable = true;
+      settings = {
+        theme = "dark";
+        defaultModel = "sonnet";
+        respectGitignore = true;
+        autoContext = true;
+        confirmDestructiveActions = true;
+        statusLine = {
+          command = "input=$(cat); echo \"[$(echo \"$input\" | jq -r '.model.display_name')] 📁 $(basename \"$(echo \"$input\" | jq -r '.workspace.current_dir')\")\"";
+          padding = 0;
+          type = "command";
+        };
+        includeCoAuthoredBy = false;
+        enableTodoTracking = true;
+        enableCache = true;
+        env = {
+          CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = "1";
+        };
+      };
+    };
   };
 
   services = {
@@ -186,6 +208,8 @@
     directories = [
       ".ssh"
       ".aws"
+      ".claude"
+      ".local/share/claude-code"
     ];
   };
 }
