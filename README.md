@@ -1,112 +1,313 @@
 # dotfiles
 
-## NixOs installation
+Personal NixOS configuration using flakes, featuring an impermanence-based setup with encrypted BTRFS filesystem.
 
-1. Clone this repo and move in it:
-```shell
+## Features
+
+- **Impermanence**: Root and home directories are wiped on every boot for enhanced security
+- **Encryption**: Full disk encryption with LUKS, supporting Yubikey FIDO2 authentication
+- **Secure Boot**: Implemented via lanzaboote
+- **Declarative**: Everything managed through Nix flakes
+- **Multi-host**: Support for desktops, laptops, and servers
+
+## Quick Start
+
+### Development Environment
+
+```bash
+# Clone the repository
 git clone https://github.com/TGuimbert/dotfiles.git
 cd dotfiles
+
+# Enter the development shell (provides all necessary tools)
+nix develop
 ```
-1. Run disko command to format the disk(s)
-```shell
-NEW_HOSTNAME=<hostname>
-sudo nix --experimental-features "nix-command flakes" run github:nix-community/disko -- --mode disko ./systems/x86_64-linux/$NEW_HOSTNAME/disks.nix
+
+## Installation
+
+### Desktop/Laptop Installation
+
+This process is for physical machines where you have direct access (leshen, griffin, tuxedo).
+
+#### 1. Prepare the Installation
+
+```bash
+# Clone this repository
+git clone https://github.com/TGuimbert/dotfiles.git
+cd dotfiles
+
+# Set your target hostname
+export NEW_HOSTNAME=<hostname>  # e.g., griffin, leshen, tuxedo
 ```
-1. Add a password for the main user with:
-```shell
+
+#### 2. Format the Disk
+
+**⚠️ Warning**: This will erase all data on the target disk!
+
+```bash
+sudo nix --experimental-features "nix-command flakes" run github:nix-community/disko -- \
+  --mode disko ./hosts/$NEW_HOSTNAME/disks.nix
+```
+
+#### 3. Create User Password
+
+```bash
 sudo -s
 mkpasswd -s > /mnt/persistent/tguimbert-password
 exit
 ```
-1. Disable lanzaboote setup and enable systemd boot:
-```shell
-nano systems/x86_64-linux/$NEW_HOSTNAME/default.nix
+
+#### 4. Disable Secure Boot Temporarily
+
+Edit the host configuration to use systemd-boot instead of lanzaboote for the initial install:
+
+```bash
+nano hosts/$NEW_HOSTNAME/default.nix
 ```
-1. Install NixOS:
-```shell
+
+Comment out lanzaboote settings and ensure systemd-boot is enabled in the configuration.
+
+#### 5. Install NixOS
+
+```bash
 sudo nixos-install --no-root-password --flake ./#$NEW_HOSTNAME
 ```
 
-**After the reboot**
+Reboot when complete.
 
-1. Check that `UEFI` and `systemd-boot` are used and that `Secure Boot` is disabled:
-```shell
+#### 6. Post-Installation: Enable Secure Boot
+
+After the first boot, set up Secure Boot:
+
+```bash
+# Verify boot status
 bootctl status
-```
-1. Enable secure boot in the config and rebuild:
-```shell
-sudo nixos-rebuild switch --flake .
-```
-1. Create secure boot keys:
-```shell
+
+# Enable secure boot in your configuration and rebuild
+nh os switch
+
+# Create secure boot keys
 sudo sbctl create-keys
-```
-1. Sign the created keys by rebuilding:
-```shell
-sudo nixos-rebuild switch --flake .
-```
-1. Verify that everything is good (only bzImage.efi should not be signed):
-```shell
+
+# Sign the keys by rebuilding
+nh os switch
+
+# Verify everything is signed (only bzImage.efi should be unsigned)
 sudo sbctl verify
-```
-1. Reboot and enable Secure Boot and its setup in the BIOS menu
-1. Enroll the keys in the BIOS:
-```shell
+
+# Reboot and enable Secure Boot in BIOS
+# Then enroll the keys
 sudo sbctl enroll-keys --microsoft
-```
-1. Reboot
-1. Check the everything is good:
-```shell
+
+# Reboot and verify
 bootctl status
 ```
-1. Don't forget to put a password on the BIOS menu!
 
-**Use Yubikey to unlock LUKS partition**
+Don't forget to set a BIOS password!
 
-1. Backup LUKS header
-```shell
-sudo cryptsetup luksHeaderBackup /dev/nvme0n1p2 --header-backup-file /run/media/tguimbert/<usb-key-name>/luks_backup.bin
+### Server Installation (Remote)
+
+For headless servers (e.g., srv-01), use nixos-anywhere for remote installation.
+
+#### Option 1: Manual Installation
+
+```bash
+# Install directly to a remote host
+nix run github:nix-community/nixos-anywhere -- \
+  --flake .#srv-01 \
+  --target-host root@10.0.0.108
 ```
-1. Enroll Yubikey
-```shell
+
+Replace `10.0.0.108` with your server's IP address.
+
+#### Option 2: Using Bootstrap Script (Recommended)
+
+The repository includes a bootstrap script that automatically handles SSH key deployment:
+
+```bash
+# Edit the script with your server IP
+nano scripts/bootstrap-srv-01.nu
+
+# Run the bootstrap (requires Bitwarden CLI and nushell)
+./scripts/bootstrap-srv-01.nu
+```
+
+The bootstrap script will:
+1. Retrieve SSH host keys from Bitwarden
+2. Deploy them during installation
+3. Install NixOS using nixos-anywhere
+
+## Post-Installation Setup
+
+### Yubikey for LUKS Encryption (Desktop/Laptop)
+
+Enhance security by using your Yubikey to unlock the encrypted partition:
+
+#### 1. Backup LUKS Header
+
+```bash
+sudo cryptsetup luksHeaderBackup /dev/nvme0n1p2 \
+  --header-backup-file /run/media/tguimbert/<usb-key-name>/luks_backup.bin
+```
+
+#### 2. Enroll Yubikey
+
+```bash
 sudo systemd-cryptenroll /dev/nvme0n1p2 --fido2-device=auto
 ```
-1. Create a Recovery Key (don't forget to write it somewhere)
-```shell
+
+#### 3. Create Recovery Key
+
+```bash
 sudo systemd-cryptenroll /dev/nvme0n1p2 --recovery-key
 ```
-1. Create a new password if needed (don't forget that the keyboard if in QWERTY during boot)
-```shell
+
+**Important**: Write down the recovery key and store it safely!
+
+#### 4. Optional: Add Password
+
+Note: The boot keyboard is in QWERTY layout.
+
+```bash
 sudo systemd-cryptenroll /dev/nvme0n1p2 --password
 ```
-1. Remove first key if needed
-```shell
+
+#### 5. Remove Old Key (Optional)
+
+```bash
 sudo systemd-cryptenroll /dev/nvme0n1p2 --wipe-slot=0
 ```
-1. Test all the keys!
 
-**Other setups**
+#### 6. Test All Keys!
 
-1. Generate an SSH key and add it to Github:
-```shell
-ssh-keygen -t ed25519-sk -O verify-required
-mv ~/.ssh/id_ed25519_sk.pub ~/.ssh/id_ed25519_sk.pub.hidden
-cat ~/.ssh/id_ed25519_sk.pub.hidden
+Reboot and verify that all enrollment methods work before relying on them.
+
+## Filesystem Layout
+
+The system uses BTRFS with multiple subvolumes implementing different persistence levels:
+
+| Subvolume    | Mount Point | Persistence | Purpose                          |
+|--------------|-------------|-------------|----------------------------------|
+| `root`       | `/`         | Ephemeral   | System root, wiped on reboot     |
+| `nix`        | `/nix`      | Persistent  | Nix store                        |
+| `persistent` | `/persistent` | Persistent | Stateful data                   |
+| `log`        | `/var/log`  | Persistent  | System logs for debugging        |
+| `home`       | `/home`     | Ephemeral   | User home, wiped on reboot       |
+| `snapshot`   | `/.snapshot` | Persistent | Backup snapshots (15-30 days)   |
+| `swap`       | `/.swapvol` | Persistent  | Swap file                        |
+
+### Impermanence
+
+The system implements "impermanence" where most of the filesystem is reset on each boot:
+
+- **Root (`/`) and Home (`/home`)** are wiped clean on every reboot
+- Only explicitly configured paths in `/persistent` survive reboots
+- Snapshots are automatically created before each wipe
+- Old snapshots are cleaned up after 15 days (root) or 30 days (home)
+
+Benefits:
+- No accumulation of cruft over time
+- Better security (temporary files are truly temporary)
+- Reproducible system state
+- Forces explicit declaration of important data
+
+## Common Operations
+
+### Updating the System
+
+The repository uses CI to automatically update flake inputs. To update your system:
+
+```bash
+# Navigate to your dotfiles
+cd ~/.dotfiles
+
+# Pull the latest changes (flake.lock is updated by CI)
+git pull
+
+# Rebuild and switch to the new configuration
+nh os switch
 ```
 
-## Filesystem layout
+**Note**: Flake updates are managed by CI (Renovate), so you typically don't need to run `nix flake update` manually.
 
-The main idea on the filesystem are the following:
+### Managing Secrets
 
-- The /boot is not encrypted
-- The rest of the disk is encrypted with a single LUKS partition
-- BTRFS is used
-- Different subvolumes are used to differentiate the Impermanence lifecycles:
-  - `root` is backed up and wiped at every reboot
-  - `nix` is permanent to hold the Nix store
-  - `persistent` is permanent to hold the stateful files
-  - `log` is permanent to help debug things
-  - `home` is backed up and wiped at every reboot
-    - Separating it from `root` allows to have different backup lifecycles
-  - `snapshot` is permanent to hold the `root` and `home` backups
-  - `swap` is a swapfile
+Secrets are managed with SOPS (uses age encryption):
+
+```bash
+# Edit secrets (auto-decrypts/encrypts)
+sops secrets/common.yaml
+sops secrets/srv-01.yaml
+```
+
+### Development Shells
+
+```bash
+# Enter a development environment
+nix develop .#<shell-name>
+
+# Available shells:
+# - nixos, python, rust, go, ops, markdown, nodejs, protobuf
+# - python-nodejs, python-protobuf (combined shells)
+```
+
+### Formatting Code
+
+```bash
+# Format all Nix files
+nix fmt
+
+# Lint Nix files
+statix check
+```
+
+## Repository Structure
+
+```
+.
+├── flake.nix           # Main flake configuration
+├── hosts/              # Per-host configurations
+│   ├── leshen/         # Desktop system
+│   ├── griffin/        # Laptop (ThinkPad)
+│   ├── tuxedo/         # Laptop (work)
+│   └── srv-01/         # Server
+├── home/               # Home Manager configurations
+│   ├── default.nix     # Base user configuration
+│   ├── shell.nix       # Shell environment (nushell, helix, zellij)
+│   ├── dev.nix         # Development tools
+│   └── desktop.nix     # Desktop applications
+├── modules/nixos/      # NixOS modules
+│   ├── core.nix        # Core system configuration
+│   ├── impermanence.nix # Impermanence setup
+│   ├── gnome.nix       # GNOME desktop
+│   └── ...             # Other modules
+├── shells/             # Development shell environments
+├── secrets/            # SOPS encrypted secrets
+└── scripts/            # Helper scripts
+```
+
+## Troubleshooting
+
+### Boot Issues
+
+If the system fails to boot after changes:
+1. Select an older generation from the boot menu
+2. Roll back: `sudo nixos-rebuild switch --rollback`
+
+### Persistence Issues
+
+If you need to persist a new directory or file:
+- System-level: Add to `environment.persistence."/persistent"` in the host config
+- User-level: Add to `home.persistence."/persistent"` in home configuration
+
+### Recovery
+
+If you lose access:
+1. Boot from NixOS installer
+2. Decrypt LUKS: `cryptsetup open /dev/nvme0n1p2 encrypted`
+3. Mount BTRFS: `mount /dev/mapper/encrypted /mnt`
+4. Access your data in `/mnt/persistent`
+
+## License
+
+Apache 2.0 - See LICENSE file for details
