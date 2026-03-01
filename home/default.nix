@@ -36,6 +36,7 @@
       orca-slicer
       freecad
       calibre
+      tidal-hifi
 
       # K8s tools
       kubectl
@@ -88,6 +89,7 @@
         ".steam"
         ".clonehero"
         ".config/unity3d/srylain Inc_/Clone Hero"
+        ".config/tidal-hifi"
       ];
       files = [
         ".config/monitors.xml"

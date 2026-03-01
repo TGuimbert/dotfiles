@@ -10,6 +10,7 @@ final: prev: {
     base16-schemes
     nushell
     calibre
+    tidal-hifi
     ;
 
   nushellPlugins.formats = unstable.nushellPlugins.formats;
