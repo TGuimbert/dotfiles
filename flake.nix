@@ -2,9 +2,15 @@
   description = "System Config";
 
   inputs = {
+    # Core nixpkgs
     nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
     unstable.url = "github:nixos/nixpkgs/nixos-unstable";
 
+    # Flake infrastructure (dendritic pattern)
+    flake-parts.url = "github:hercules-ci/flake-parts";
+    import-tree.url = "github:vic/import-tree";
+
+    # NixOS core modules
     home-manager = {
       url = "github:nix-community/home-manager/release-25.11";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -15,20 +21,30 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    impermanence.url = "github:nix-community/impermanence/master";
+    impermanence = {
+      url = "github:nix-community/impermanence/master";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     lanzaboote = {
       url = "github:nix-community/lanzaboote/v0.4.3";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    nixos-hardware.url = "github:NixOS/nixos-hardware/master";
-
+    # Security & secrets
     sops-nix = {
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Hardware
+    nixos-hardware.url = "github:NixOS/nixos-hardware/master";
+
+    # Note: tuxedo-nixos requires its pinned nixpkgs (22.11) for nodejs-14_x and electron-13
+    # Do not add nixpkgs.follows here as it would break the package
+    tuxedo-nixos.url = "github:sund3RRR/tuxedo-nixos";
+
+    # Desktop & theming
     stylix = {
       url = "github:danth/stylix/release-25.11";
       inputs.nixpkgs.follows = "unstable";
@@ -44,8 +60,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    tuxedo-nixos = {
-      url = "github:sund3RRR/tuxedo-nixos";
+    # Package wrapping
+    nix-wrapper-modules = {
+      url = "github:BirdeeHub/nix-wrapper-modules";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
