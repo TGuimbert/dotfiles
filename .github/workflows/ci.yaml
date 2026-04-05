@@ -1,9 +1,14 @@
 name: "CI"
 on:
   pull_request:
+    paths-ignore:
+      - "**/*.md"
+      - ".github/renovate.json"
   push:
     branches:
       - main
+    paths-ignore:
+      - "**/*.md"
 
 jobs:
   check:
@@ -11,7 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: cachix/install-nix-action@96951a368ba55167b55f1c916f7d416bac6505fe # v31.10.3
+      - uses: DeterminateSystems/nix-installer-action@e50d5f73bfe71c6f1f67f35ad225a01d58c48e00 # v16
+      - uses: DeterminateSystems/magic-nix-cache-action@6321c4a1b46814e648f6a3b52d4d8d9d7af30755 # v8
       - uses: cachix/cachix-action@1eb2ef646ac0255473d23a5907ad7b04ce94065c # v17
         with:
           name: tguimbert
@@ -51,7 +57,8 @@ jobs:
           docker system prune -af || true
           docker builder prune -af || true
           df -h
-      - uses: cachix/install-nix-action@96951a368ba55167b55f1c916f7d416bac6505fe # v31.10.3
+      - uses: DeterminateSystems/nix-installer-action@e50d5f73bfe71c6f1f67f35ad225a01d58c48e00 # v16
+      - uses: DeterminateSystems/magic-nix-cache-action@6321c4a1b46814e648f6a3b52d4d8d9d7af30755 # v8
       - uses: cachix/cachix-action@1eb2ef646ac0255473d23a5907ad7b04ce94065c # v17
         with:
           name: tguimbert
@@ -78,7 +85,8 @@ jobs:
           - rust
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: cachix/install-nix-action@96951a368ba55167b55f1c916f7d416bac6505fe # v31.10.3
+      - uses: DeterminateSystems/nix-installer-action@e50d5f73bfe71c6f1f67f35ad225a01d58c48e00 # v16
+      - uses: DeterminateSystems/magic-nix-cache-action@6321c4a1b46814e648f6a3b52d4d8d9d7af30755 # v8
       - uses: cachix/cachix-action@1eb2ef646ac0255473d23a5907ad7b04ce94065c # v17
         with:
           name: tguimbert
