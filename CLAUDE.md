@@ -235,3 +235,229 @@ The default editor is Helix (`hx`), configured in `home/shell.nix` with:
 - All desktop hosts use LUKS encryption with systemd-cryptenroll support (FIDO2/password/recovery)
 - Network shares auto-mount from `//nas.lan/` via CIFS with SOPS credentials
 - Tailscale enabled on desktop systems for remote access
+
+## Migration: Dendritic Pattern
+
+This repository is being migrated to the **dendritic pattern** using flake-parts, import-tree, and nix-wrapper-modules. Each step below is a separate PR that must pass CI before merging.
+
+### Migration Goals
+
+- **Dendritic pattern**: Every `.nix` file (except entry points) becomes a flake-parts module
+- **import-tree**: Automatic module discovery (no manual import lists)
+- **nix-wrapper-modules**: Portable wrapped packages for shell tools
+- **Feature-based organization**: NixOS + home-manager config together per feature
+
+### Target Directory Structure
+
+```
+.dotfiles/
+├── flake.nix                    # flake-parts + import-tree entry point
+├── modules/                     # All modules auto-imported
+│   ├── _lib/                   # Excluded: library functions
+│   ├── flake/                  # overlays, formatter, shells/
+│   ├── machines/               # leshen/, griffin/, tuxedo/, srv-01/
+│   ├── features/               # core/, desktop/, shell/, dev/, security/, etc.
+│   └── profiles/               # desktop.nix, server.nix
+├── config/                     # Static config files (nushell, zellij, k9s)
+└── secrets/                    # Unchanged
+```
+
+### Migration Steps
+
+#### Step 1: Add flake-parts and import-tree inputs
+**Branch**: `feat/dendritic-step-1-inputs`
+**Files**: `flake.nix`
+- Add `flake-parts`, `import-tree`, `nix-wrapper-modules` to flake inputs
+- Keep existing outputs structure (non-breaking change)
+- **Verify**: `nix flake check`
+
+#### Step 2: Create directory structure and move static configs
+**Branch**: `feat/dendritic-step-2-structure`
+**Files**: Create directories, move config files
+- Create `modules/`, `modules/_lib/`, `modules/flake/`, `modules/machines/`, `modules/features/`, `modules/profiles/`
+- Create `config/` and move `home/nushell/`, `home/zellij/`, `home/k9s/` there
+- Create `modules/_lib/default.nix` with empty module
+- **Verify**: `nix flake check`
+
+#### Step 3: Convert overlays to flake-parts module
+**Branch**: `feat/dendritic-step-3-overlays`
+**Files**: `modules/flake/overlays.nix`, remove `overlays/default.nix`
+- Convert `overlays/default.nix` → `modules/flake/overlays.nix` as perSystem module
+- **Verify**: `nix flake check`, packages from unstable still available
+
+#### Step 4: Convert formatter to flake-parts module
+**Branch**: `feat/dendritic-step-4-formatter`
+**Files**: `modules/flake/formatter.nix`, update `flake.nix`
+- Move formatter config to `modules/flake/formatter.nix`
+- **Verify**: `nix fmt` still works
+
+#### Step 5: Convert development shells to flake-parts modules
+**Branch**: `feat/dendritic-step-5-shells`
+**Files**: `modules/flake/shells/*.nix`, remove `shells/`
+- Convert each shell in `shells/` to `modules/flake/shells/<name>.nix`
+- Each shell as perSystem module
+- **Verify**: `nix develop .#python`, `nix develop .#rust`, etc.
+
+#### Step 6: Split core.nix into feature modules
+**Branch**: `feat/dendritic-step-6-core-features`
+**Files**: `modules/features/core/*.nix`
+- Split `modules/nixos/core.nix` into:
+  - `modules/features/core/nix-settings.nix`
+  - `modules/features/core/locale.nix`
+  - `modules/features/core/user.nix`
+  - `modules/features/core/networking.nix`
+  - `modules/features/core/audio.nix`
+  - `modules/features/core/services.nix`
+- Each module uses `options.features.<name>.enable` pattern
+- **Verify**: `nix flake check`, build all configurations
+
+#### Step 7: Convert shell tools to wrapper-modules
+**Branch**: `feat/dendritic-step-7-shell-wrappers`
+**Files**: `modules/features/shell/*.nix`
+- Create feature modules using nix-wrapper-modules:
+  - `modules/features/shell/terminal.nix` (foot wrapper)
+  - `modules/features/shell/helix.nix` (helix wrapper)
+  - `modules/features/shell/nushell.nix` (nushell wrapper)
+- Create home-manager feature modules:
+  - `modules/features/shell/zellij.nix`
+  - `modules/features/shell/starship.nix`
+  - `modules/features/shell/cli-tools.nix`
+- **Verify**: `nix flake check`, shell tools work correctly
+
+#### Step 8: Convert dev tools to feature modules
+**Branch**: `feat/dendritic-step-8-dev-features`
+**Files**: `modules/features/dev/*.nix`
+- Create feature modules:
+  - `modules/features/dev/git.nix` (git wrapper)
+  - `modules/features/dev/gh.nix` (home-manager)
+  - `modules/features/dev/gpg.nix` (home-manager)
+  - `modules/features/dev/ssh.nix` (home-manager)
+  - `modules/features/dev/claude.nix` (claude-code wrapper)
+  - `modules/features/dev/direnv.nix` (home-manager)
+- **Verify**: `nix flake check`, git, gpg, ssh work correctly
+
+#### Step 9: Convert desktop features
+**Branch**: `feat/dendritic-step-9-desktop-features`
+**Files**: `modules/features/desktop/*.nix`
+- Convert `modules/nixos/gnome.nix` + `home/desktop.nix` into:
+  - `modules/features/desktop/gnome.nix`
+  - `modules/features/desktop/stylix.nix`
+  - `modules/features/desktop/firefox.nix`
+- **Verify**: `nix flake check`, GNOME session works
+
+#### Step 10: Convert security features
+**Branch**: `feat/dendritic-step-10-security-features`
+**Files**: `modules/features/security/*.nix`
+- Create:
+  - `modules/features/security/lanzaboote.nix`
+  - `modules/features/security/sops.nix`
+- **Verify**: `nix flake check`, secure boot still works
+
+#### Step 11: Convert impermanence features
+**Branch**: `feat/dendritic-step-11-impermanence-features`
+**Files**: `modules/features/impermanence/*.nix`
+- Split `modules/nixos/impermanence.nix` into:
+  - `modules/features/impermanence/btrfs-rollback.nix`
+  - `modules/features/impermanence/persistence.nix`
+- **Verify**: `nix flake check`, persistence still works after reboot
+
+#### Step 12: Convert virtualization features
+**Branch**: `feat/dendritic-step-12-virtualization-features`
+**Files**: `modules/features/virtualization/*.nix`
+- Convert:
+  - `modules/nixos/podman.nix` → `modules/features/virtualization/podman.nix`
+  - `modules/nixos/docker.nix` → `modules/features/virtualization/docker.nix`
+- **Verify**: `nix flake check`, podman/docker work
+
+#### Step 13: Convert gaming and work features
+**Branch**: `feat/dendritic-step-13-gaming-work-features`
+**Files**: `modules/features/gaming/*.nix`, `modules/features/work/*.nix`
+- Convert:
+  - `modules/nixos/games.nix` → `modules/features/gaming/steam.nix`
+  - `home/work.nix` → `modules/features/work/scortex.nix`
+- **Verify**: `nix flake check`, Steam launches on gaming hosts
+
+#### Step 14: Convert server features
+**Branch**: `feat/dendritic-step-14-server-features`
+**Files**: `modules/features/server/*.nix`
+- Convert `hosts/srv-01/*.nix` services into:
+  - `modules/features/server/traefik.nix`
+  - `modules/features/server/authelia.nix`
+  - `modules/features/server/lldap.nix`
+  - `modules/features/server/homepage.nix`
+  - `modules/features/server/restic.nix`
+  - `modules/features/server/calibre.nix`
+  - `modules/features/server/printing.nix`
+- **Verify**: `nix flake check`, server services accessible
+
+#### Step 15: Create profiles
+**Branch**: `feat/dendritic-step-15-profiles`
+**Files**: `modules/profiles/*.nix`
+- Create:
+  - `modules/profiles/desktop.nix` (bundles desktop features with enable flags)
+  - `modules/profiles/server.nix` (bundles server features)
+- **Verify**: `nix flake check`
+
+#### Step 16: Create machine definitions
+**Branch**: `feat/dendritic-step-16-machines`
+**Files**: `modules/machines/*/*.nix`
+- Create machine definitions:
+  - `modules/machines/leshen/` (default.nix, hardware.nix, disks.nix)
+  - `modules/machines/griffin/`
+  - `modules/machines/tuxedo/`
+  - `modules/machines/srv-01/`
+- Each machine uses profiles + specific feature overrides
+- **Verify**: `nix flake check`, build all configurations
+
+#### Step 17: Cutover to flake-parts
+**Branch**: `feat/dendritic-step-17-cutover`
+**Files**: `flake.nix`
+- Update `flake.nix` to use flake-parts + import-tree
+- Remove mkSystem/mkServer builders
+- **Verify**: `nix flake check`, build and test on griffin
+
+#### Step 18: Cleanup old structure
+**Branch**: `feat/dendritic-step-18-cleanup`
+**Files**: Remove old directories
+- Remove `home/`, `modules/nixos/`, `hosts/`, `shells/`, `overlays/`
+- Update this CLAUDE.md to reflect new structure
+- **Verify**: `nix flake check`, `nh os switch` on all hosts
+
+### Wrapper-Modules Reference
+
+Tools using `nix-wrapper-modules.wrappers.*`:
+| Tool | Wrapper |
+|------|---------|
+| Helix | `wrappers.helix.wrap` |
+| Foot | `wrappers.foot.wrap` |
+| Nushell | `wrappers.nushell.wrap` |
+| Git | `wrappers.git.wrap` |
+| Claude Code | `wrappers.claude-code.wrap` |
+
+### Sources
+
+- [The dendritic pattern](https://discourse.nixos.org/t/the-dendritic-pattern/61271)
+- [vic/import-tree](https://github.com/vic/import-tree)
+- [hercules-ci/flake-parts](https://github.com/hercules-ci/flake-parts)
+- [BirdeeHub/nix-wrapper-modules](https://github.com/BirdeeHub/nix-wrapper-modules)
+
+### Migration Progress
+
+- [x] **Step 1**: Add flake-parts, import-tree, nix-wrapper-modules inputs
+- [ ] Step 2: Create directory structure and move static configs
+- [ ] Step 3: Convert overlays to flake-parts module
+- [ ] Step 4: Convert formatter to flake-parts module
+- [ ] Step 5: Convert development shells to flake-parts modules
+- [ ] Step 6: Split core.nix into feature modules
+- [ ] Step 7: Convert shell tools to wrapper-modules
+- [ ] Step 8: Convert dev tools to feature modules
+- [ ] Step 9: Convert desktop features
+- [ ] Step 10: Convert security features
+- [ ] Step 11: Convert impermanence features
+- [ ] Step 12: Convert virtualization features
+- [ ] Step 13: Convert gaming and work features
+- [ ] Step 14: Convert server features
+- [ ] Step 15: Create profiles
+- [ ] Step 16: Create machine definitions
+- [ ] Step 17: Cutover to flake-parts
+- [ ] Step 18: Cleanup old structure
