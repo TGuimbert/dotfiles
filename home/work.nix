@@ -25,4 +25,10 @@
       ];
     };
   };
+
+  programs = {
+    vscode = {
+      enable = true;
+    };
+  };
 }
