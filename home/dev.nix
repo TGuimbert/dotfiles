@@ -211,5 +211,6 @@
       ".claude"
       ".local/share/claude-code"
     ];
+    files = [ ".claude.json" ];
   };
 }
