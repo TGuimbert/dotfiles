@@ -31,4 +31,7 @@ final: prev: {
         --prefix XDG_DATA_DIRS : "${prev.gtk3}/share/gsettings-schemas/${prev.gtk3.name}"
     '';
   };
+
+  # Custom packages
+  aiven-client = prev.callPackage ../packages/aiven-client { };
 }

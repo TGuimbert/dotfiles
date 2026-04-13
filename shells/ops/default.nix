@@ -2,8 +2,11 @@
 pkgs.mkShell {
   packages = with pkgs; [
     actionlint
+    aiven-client
     ansible
     ansible-lint
+    openssl
+    postgresql
     restic
     tenv
     terraform-ls
