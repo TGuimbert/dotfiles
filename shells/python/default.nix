@@ -3,6 +3,7 @@ pkgs.mkShell {
   packages = with pkgs; [
     uv
     fnm
+    postgresql
     # Language Server Protocol
     python313Packages.python-lsp-server
     ruff
