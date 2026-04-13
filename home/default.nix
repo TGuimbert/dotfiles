@@ -40,6 +40,7 @@
 
       # K8s tools
       kubectl
+      kubelogin
       fluxcd
       kind
       kubectx
