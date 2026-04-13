@@ -196,11 +196,15 @@
         VISUAL = "hx";
         BWS_SERVER_URL = "https://vault.bitwarden.eu";
         CARAPACE_BRIDGES = "zsh,fish,bash,inshellisense";
+        XDG_DATA_DIRS = "$env.XDG_DATA_DIRS:${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}";
       };
       shellAliases = {
         ll = "ls -la";
         k = "kubectl";
         cat = "bat";
+        b = "bash -c";
+        # Override the bash provided in dev shells
+        bash = "/run/current-system/sw/bin/bash";
       };
       settings = {
         show_banner = false;
@@ -243,6 +247,9 @@
             }
         )
       '';
+    };
+    bash = {
+      enable = true;
     };
 
     # Multiplexer
@@ -335,7 +342,7 @@
       enableTransience = true;
       settings = {
         # Based on the gruvbox-rainbow preset
-        format = "[](orange)$os$username[](bg:bright-yellow fg:orange)$directory[](fg:bright-yellow bg:bright-cyan)$git_branch$git_status[](fg:bright-cyan bg:bright-blue)$c$rust$golang$nodejs$php$java$kotlin$haskell$python[](fg:bright-blue bg:bright-black)$docker_context$conda[](fg:bright-black bg:base01)$time[ ](fg:base01)$line_break$character";
+        format = "[](orange)$os$username$shell[](bg:bright-yellow fg:orange)$directory[](fg:bright-yellow bg:bright-cyan)$git_branch$git_status[](fg:bright-cyan bg:bright-blue)$c$rust$golang$nodejs$php$java$kotlin$haskell$python[](fg:bright-blue bg:bright-black)$docker_context$conda[](fg:bright-black bg:base01)$time[ ](fg:base01)$line_break$character";
         os = {
           disabled = false;
           style = "bg:orange fg:bright-white";
@@ -367,6 +374,13 @@
           style_user = "bg:orange fg:bright-white";
           style_root = "bg:orange fg:bright-white";
           format = "[ $user ]($style)";
+        };
+        shell = {
+          disabled = false;
+          style = "bg:orange fg:bright-white";
+          format = "[$indicator]($style)";
+          bash_indicator = " ";
+          nu_indicator = "";
         };
         directory = {
           style = "fg:bright-white bg:bright-yellow";
@@ -499,6 +513,10 @@
       bitwarden-cli
     ];
 
+    sessionPath = [
+      "$HOME/.local/bin"
+    ];
+
     sessionVariables = {
       ZELLIJ_AUTO_ATTACH = "true";
       ZELLIJ_AUTO_EXIT = "true";
@@ -509,6 +527,7 @@
         ".config/nushell/history.txt"
         ".config/nushell/private.nu"
         ".config/Bitwarden CLI/data.json"
+        ".bash_history"
       ];
     };
   };
