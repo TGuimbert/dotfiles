@@ -1,7 +1,5 @@
 use std
 
-$env.path ++= ["~/.local/bin"]
-
 # List existing Zellij layouts (excluding homepage)
 def available-layouts [] {
   ls ~/.config/zellij/layouts/ | get name | path parse | get stem | where {|x| $x != "homepage" }
