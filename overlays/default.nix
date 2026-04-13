@@ -21,8 +21,14 @@ final: prev: {
       azure-cli.extensions.ssh
     ];
 
-  # Temporary fix to this issue: https://github.com/NixOS/nixpkgs/issues/467783#issuecomment-3621306981
-  freecad = prev.freecad.overrideAttrs (old: {
-    nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ prev.wrapGAppsHook3 ];
-  });
+  # Fix missing GTK schema crash on file dialogs: https://github.com/NixOS/nixpkgs/issues/467783
+  freecad = prev.symlinkJoin {
+    name = "freecad-wrapped";
+    paths = [ prev.freecad ];
+    nativeBuildInputs = [ prev.makeWrapper ];
+    postBuild = ''
+      wrapProgram $out/bin/FreeCAD \
+        --prefix XDG_DATA_DIRS : "${prev.gtk3}/share/gsettings-schemas/${prev.gtk3.name}"
+    '';
+  };
 }
