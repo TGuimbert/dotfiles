@@ -11,6 +11,7 @@ final: prev: {
     nushell
     calibre
     tidal-hifi
+    claude-code
     ;
 
   nushellPlugins.formats = unstable.nushellPlugins.formats;
