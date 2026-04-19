@@ -189,7 +189,7 @@
     nushell = {
       enable = true;
       plugins = [ pkgs.nushellPlugins.formats ];
-      configFile.source = ./nushell/config.nu;
+      configFile.source = ../config/nushell/config.nu;
       environmentVariables = {
         TERM = "foot";
         EDITOR = "hx";
@@ -498,9 +498,9 @@
   };
 
   xdg.configFile = {
-    "zellij/layouts/rust.kdl".source = ./zellij/layouts/rust.kdl;
-    "k9s/plugins.yaml".source = ./k9s/plugins.yaml;
-    "k9s/views.yaml".source = ./k9s/views.yaml;
+    "zellij/layouts/rust.kdl".source = ../config/zellij/layouts/rust.kdl;
+    "k9s/plugins.yaml".source = ../config/k9s/plugins.yaml;
+    "k9s/views.yaml".source = ../config/k9s/views.yaml;
   };
 
   home = {

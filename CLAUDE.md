@@ -444,7 +444,7 @@ Tools using `nix-wrapper-modules.wrappers.*`:
 ### Migration Progress
 
 - [x] **Step 1**: Add flake-parts, import-tree, nix-wrapper-modules inputs
-- [ ] Step 2: Create directory structure and move static configs
+- [x] **Step 2**: Create directory structure and move static configs
 - [ ] Step 3: Convert overlays to flake-parts module
 - [ ] Step 4: Convert formatter to flake-parts module
 - [ ] Step 5: Convert development shells to flake-parts modules
