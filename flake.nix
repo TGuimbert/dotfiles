@@ -87,8 +87,6 @@
                 overlays = [ config.flake.overlays.default ];
               };
 
-          pkgs = pkgsFor system;
-
           mkSystem =
             hostname: modules:
             nixpkgs.lib.nixosSystem {
@@ -204,30 +202,6 @@
             ];
           };
 
-          # devShells and formatter will be moved to perSystem modules in steps 4 and 5
-          devShells.${system} = {
-            nixos = import ./shells/nixos { inherit pkgs; };
-            python = import ./shells/python { pkgs = import inputs.unstable { inherit system; config.allowUnfree = true; }; };
-            rust = import ./shells/rust { inherit pkgs; };
-            go = import ./shells/go { inherit pkgs; };
-            ops = import ./shells/ops { inherit pkgs; };
-            markdown = import ./shells/markdown { inherit pkgs; };
-            nodejs = import ./shells/nodejs { inherit pkgs; };
-            protobuf = import ./shells/protobuf { inherit pkgs; };
-
-            python-nodejs = pkgs.mkShell {
-              inputsFrom = [
-                (import ./shells/python { pkgs = import inputs.unstable { inherit system; config.allowUnfree = true; }; })
-                (import ./shells/nodejs { inherit pkgs; })
-              ];
-            };
-            python-protobuf = pkgs.mkShell {
-              inputsFrom = [
-                (import ./shells/python { pkgs = import inputs.unstable { inherit system; config.allowUnfree = true; }; })
-                (import ./shells/protobuf { inherit pkgs; })
-              ];
-            };
-          };
         };
       }
     );
