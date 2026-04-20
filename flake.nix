@@ -228,8 +228,6 @@
               ];
             };
           };
-
-          formatter.${system} = pkgs.nixfmt-rfc-style;
         };
       }
     );
