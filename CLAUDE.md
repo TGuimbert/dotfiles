@@ -448,7 +448,7 @@ Tools using `nix-wrapper-modules.wrappers.*`:
 - [x] **Step 3**: Convert overlays to flake-parts module
 - [x] **Step 4**: Convert formatter to flake-parts module
 - [x] **Step 5**: Convert development shells to flake-parts modules
-- [ ] Step 6: Split core.nix into feature modules
+- [x] **Step 6**: Split core.nix into feature modules
 - [ ] Step 7: Convert shell tools to wrapper-modules
 - [ ] Step 8: Convert dev tools to feature modules
 - [ ] Step 9: Convert desktop features

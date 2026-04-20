@@ -95,7 +95,7 @@
               modules = [
                 # Global modules
                 { nixpkgs.hostPlatform = system; }
-                ./modules/nixos/core.nix
+                (inputs.import-tree ./modules/features/core)
                 inputs.disko.nixosModules.disko
                 inputs.lanzaboote.nixosModules.lanzaboote
                 inputs.impermanence.nixosModules.impermanence
