@@ -449,7 +449,7 @@ Tools using `nix-wrapper-modules.wrappers.*`:
 - [x] **Step 4**: Convert formatter to flake-parts module
 - [x] **Step 5**: Convert development shells to flake-parts modules
 - [x] **Step 6**: Split core.nix into feature modules
-- [ ] Step 7: Convert shell tools to wrapper-modules
+- [x] **Step 7**: Convert shell tools to wrapper-modules
 - [ ] Step 8: Convert dev tools to feature modules
 - [ ] Step 9: Convert desktop features
 - [ ] Step 10: Convert security features
