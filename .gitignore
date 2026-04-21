@@ -2,7 +2,9 @@
 .devenv/
 .pre-commit-config.yaml
 result
+result-*
 *.img
 *.raw
 *.raw.zst
 *.bin
+.claude/

@@ -1,18 +1,9 @@
+{ inputs, ... }:
 {
-  pkgs,
-  lib,
-  config,
-  inputs,
-  ...
-}:
-{
-  options.features.shell.nushell.enable = lib.mkEnableOption "nushell" // {
-    default = true;
-  };
-
-  config = lib.mkIf config.features.shell.nushell.enable {
-    home.packages = [
-      (inputs.nix-wrapper-modules.wrappers.nushell.wrap {
+  perSystem =
+    { pkgs, ... }:
+    {
+      packages.nushell = inputs.nix-wrapper-modules.wrappers.nushell.wrap {
         inherit pkgs;
         flags."--plugins" = "[${pkgs.nushellPlugins.formats}/bin/nu_plugin_formats]";
         "env.nu".content = ''
@@ -80,27 +71,40 @@
               }
           )
         '';
-      })
-    ];
-
-    programs.direnv = {
-      enable = true;
-      nix-direnv.enable = true;
-      config.global = {
-        hide_env_diff = true;
-        warn_timeout = "15s";
       };
     };
 
-    programs.carapace = {
-      enable = true;
-      enableNushellIntegration = false;
-    };
+  flake.nixosModules.nushell =
+    { pkgs, lib, config, inputs, ... }:
+    {
+      options.features.shell.nushell.enable = lib.mkEnableOption "nushell" // {
+        default = true;
+      };
 
-    home.persistence."/persistent".files = [
-      ".config/nushell/history.txt"
-      ".config/nushell/private.nu"
-      ".config/Bitwarden CLI/data.json"
-    ];
-  };
+      config = lib.mkIf config.features.shell.nushell.enable {
+        environment.systemPackages = [ inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.nushell ];
+
+        home-manager.users.tguimbert = {
+          programs.direnv = {
+            enable = true;
+            nix-direnv.enable = true;
+            config.global = {
+              hide_env_diff = true;
+              warn_timeout = "15s";
+            };
+          };
+
+          programs.carapace = {
+            enable = true;
+            enableNushellIntegration = false;
+          };
+
+          home.persistence."/persistent".files = [
+            ".config/nushell/history.txt"
+            ".config/nushell/private.nu"
+            ".config/Bitwarden CLI/data.json"
+          ];
+        };
+      };
+    };
 }

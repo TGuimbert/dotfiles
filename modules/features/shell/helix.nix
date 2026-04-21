@@ -1,18 +1,9 @@
+{ inputs, ... }:
 {
-  pkgs,
-  lib,
-  config,
-  inputs,
-  ...
-}:
-{
-  options.features.shell.helix.enable = lib.mkEnableOption "helix editor" // {
-    default = true;
-  };
-
-  config = lib.mkIf config.features.shell.helix.enable {
-    home.packages = [
-      (inputs.nix-wrapper-modules.wrappers.helix.wrap {
+  perSystem =
+    { pkgs, ... }:
+    {
+      packages.helix = inputs.nix-wrapper-modules.wrappers.helix.wrap {
         inherit pkgs;
         extraPackages = with pkgs; [
           marksman
@@ -134,6 +125,7 @@
           };
         };
         settings = {
+          theme = "gruvbox-material";
           editor = {
             bufferline = "multiple";
             color-modes = true;
@@ -158,12 +150,28 @@
             inline-diagnostics.cursor-line = "error";
           };
         };
-      })
-    ];
-
-    home.sessionVariables = {
-      EDITOR = "hx";
-      VISUAL = "hx";
+      };
     };
-  };
+
+  flake.nixosModules.helix =
+    {
+      pkgs,
+      lib,
+      config,
+      inputs,
+      ...
+    }:
+    {
+      options.features.shell.helix.enable = lib.mkEnableOption "helix editor" // {
+        default = true;
+      };
+
+      config = lib.mkIf config.features.shell.helix.enable {
+        environment.systemPackages = [ inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.helix ];
+        home-manager.users.tguimbert.home.sessionVariables = {
+          EDITOR = "hx";
+          VISUAL = "hx";
+        };
+      };
+    };
 }
