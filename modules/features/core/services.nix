@@ -38,6 +38,10 @@
       ];
     };
 
-    environment.systemPackages = [ pkgs.qemu ];
+    hardware.keyboard.qmk.enable = true;
+
+    environment.systemPackages = with pkgs; [
+      qemu
+    ];
   };
 }

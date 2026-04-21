@@ -72,7 +72,10 @@
     flake-parts.lib.mkFlake { inherit inputs; } (
       { config, ... }:
       {
-        imports = [ (inputs.import-tree ./modules/flake) ];
+        imports = [
+          (inputs.import-tree ./modules/flake)
+          (inputs.import-tree ./modules/features/shell)
+        ];
         systems = [ "x86_64-linux" ];
 
         flake =
@@ -96,6 +99,12 @@
                 # Global modules
                 { nixpkgs.hostPlatform = system; }
                 (inputs.import-tree ./modules/features/core)
+                inputs.self.nixosModules.terminal
+                inputs.self.nixosModules.helix
+                inputs.self.nixosModules.nushell
+                inputs.self.nixosModules.zellij
+                inputs.self.nixosModules.starship
+                inputs.self.nixosModules.cli-tools
                 inputs.disko.nixosModules.disko
                 inputs.lanzaboote.nixosModules.lanzaboote
                 inputs.impermanence.nixosModules.impermanence
