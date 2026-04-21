@@ -1,7 +1,6 @@
 { pkgs, ... }:
 {
   imports = [
-    ./shell.nix
     ./dev.nix
     ./desktop.nix
   ];

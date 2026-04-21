@@ -214,7 +214,7 @@ Remember: Only explicitly listed paths persist across reboots.
 
 ## Editor Configuration
 
-The default editor is Helix (`hx`), configured in `home/shell.nix` with:
+The default editor is Helix (`hx`), configured in `modules/features/shell/helix.nix` with:
 - Auto-formatting for Nix (nixfmt), Markdown (dprint), Go (goimports), YAML (prettier), Python (ruff)
 - LSP support for various languages
 - YAML schemas for GitHub Actions, Ansible, Kubernetes
@@ -314,14 +314,14 @@ This repository is being migrated to the **dendritic pattern** using flake-parts
 #### Step 7: Convert shell tools to wrapper-modules
 **Branch**: `feat/dendritic-step-7-shell-wrappers`
 **Files**: `modules/features/shell/*.nix`
-- Create feature modules using nix-wrapper-modules:
-  - `modules/features/shell/terminal.nix` (foot wrapper)
-  - `modules/features/shell/helix.nix` (helix wrapper)
-  - `modules/features/shell/nushell.nix` (nushell wrapper)
-- Create home-manager feature modules:
-  - `modules/features/shell/zellij.nix`
-  - `modules/features/shell/starship.nix`
-  - `modules/features/shell/cli-tools.nix`
+- Each file is a **flake-parts module** (added to import-tree alongside `modules/flake`)
+- Wrapped tools (`terminal`, `helix`, `nushell`, `cli-tools`) define **both**:
+  - `perSystem.packages.<name>` — single authoritative `wrap { ... }` call
+  - `flake.nixosModules.<name>` — NixOS module using `environment.systemPackages` + `home-manager.users.tguimbert.*` for HM config
+- Plain tools (`zellij`, `starship`) define only `flake.nixosModules.<name>`
+- All nixosModules added to `mkSystem` via `inputs.self.nixosModules.<name>`
+- `home/shell.nix` deleted; `modules/flake/packages/` deleted
+- **Known issue**: fastfetch wrapper uses `lib.types.json` (doesn't exist in nixos-25.11); use `pkgs.fastfetch` directly
 - **Verify**: `nix flake check`, shell tools work correctly
 
 #### Step 8: Convert dev tools to feature modules
@@ -423,16 +423,48 @@ This repository is being migrated to the **dendritic pattern** using flake-parts
 - Update this CLAUDE.md to reflect new structure
 - **Verify**: `nix flake check`, `nh os switch` on all hosts
 
+### Feature Module Pattern (established in Step 7)
+
+Each `modules/features/<area>/<name>.nix` is a **flake-parts module** that bundles everything for one feature:
+
+```nix
+{ inputs, ... }:
+{
+  # Package output (wrapped tools only)
+  perSystem = { pkgs, ... }: {
+    packages.<name> = inputs.nix-wrapper-modules.wrappers.<name>.wrap { inherit pkgs; ... };
+  };
+
+  # NixOS module: install + configure
+  flake.nixosModules.<name> = { pkgs, lib, config, inputs, ... }: {
+    options.features.<area>.<name>.enable = lib.mkEnableOption "..." // { default = true; };
+    config = lib.mkIf config.features.<area>.<name>.enable {
+      environment.systemPackages = [ inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.<name> ];
+      home-manager.users.tguimbert = { ... };  # HM-specific config
+    };
+  };
+}
+```
+
+Key conventions:
+- **`pkgs.stdenv.hostPlatform.system`** — use this, not `pkgs.system` (deprecated, triggers warning)
+- **`inputs.self`** is available in NixOS modules via `specialArgs = { inherit inputs; }` in `mkSystem`
+- **`home-manager.users.tguimbert.*`** can be set from any NixOS module (HM loaded as NixOS module)
+- Feature directories added to **both** the flake-parts import-tree (for `perSystem`/`flake.nixosModules`) and `mkSystem` modules (via `inputs.self.nixosModules.*`)
+- Plain tools with no wrapped package define only `flake.nixosModules.<name>`
+
 ### Wrapper-Modules Reference
 
 Tools using `nix-wrapper-modules.wrappers.*`:
-| Tool | Wrapper |
-|------|---------|
-| Helix | `wrappers.helix.wrap` |
-| Foot | `wrappers.foot.wrap` |
-| Nushell | `wrappers.nushell.wrap` |
-| Git | `wrappers.git.wrap` |
-| Claude Code | `wrappers.claude-code.wrap` |
+| Tool | Wrapper | Notes |
+|------|---------|-------|
+| Helix | `wrappers.helix.wrap` | |
+| Foot | `wrappers.foot.wrap` | |
+| Nushell | `wrappers.nushell.wrap` | |
+| Git | `wrappers.git.wrap` | |
+| Claude Code | `wrappers.claude-code.wrap` | |
+| Bottom | `wrappers.bottom.wrap` | |
+| Fastfetch | — | Upstream module uses `lib.types.json` (missing in nixos-25.11); use `pkgs.fastfetch` directly |
 
 ### Sources
 
@@ -449,7 +481,7 @@ Tools using `nix-wrapper-modules.wrappers.*`:
 - [x] **Step 4**: Convert formatter to flake-parts module
 - [x] **Step 5**: Convert development shells to flake-parts modules
 - [x] **Step 6**: Split core.nix into feature modules
-- [ ] Step 7: Convert shell tools to wrapper-modules
+- [x] **Step 7**: Convert shell tools to wrapper-modules
 - [ ] Step 8: Convert dev tools to feature modules
 - [ ] Step 9: Convert desktop features
 - [ ] Step 10: Convert security features
