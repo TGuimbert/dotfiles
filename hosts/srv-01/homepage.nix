@@ -16,7 +16,7 @@
     homepage-dashboard = {
       enable = true;
       allowedHosts = "localhost:8082,127.0.0.1:8082,homepage.home.guimbert.fr";
-      environmentFile = config.sops.secrets.homepageEnvironments.path;
+      environmentFiles = [ config.sops.secrets.homepageEnvironments.path ];
       settings = {
         statusStyle = "dot";
       };

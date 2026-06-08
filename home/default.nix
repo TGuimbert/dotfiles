@@ -21,7 +21,6 @@
       jq
       dig
       dprint
-      nixfmt-rfc-style
       asciinema
 
       # Desktop apps
@@ -75,7 +74,7 @@
         ".local/share/keyrings"
         ".local/share/zoxide"
         ".minikube"
-        ".mozilla"
+        ".config/mozilla/firefox"
         ".cache/tealdeer"
         ".cache/pip"
         ".cache/pre-commit"
