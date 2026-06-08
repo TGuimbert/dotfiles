@@ -1,14 +1,15 @@
 { ... }:
 {
-  perSystem = { pkgs, ... }: {
-    devShells.nixos = pkgs.mkShellNoCC {
-      buildInputs = with pkgs; [
-        cachix
-        nixfmt-rfc-style
-        deadnix
-        statix
-        nil
-      ];
+  perSystem =
+    { pkgs, ... }:
+    {
+      devShells.nixos = pkgs.mkShellNoCC {
+        buildInputs = with pkgs; [
+          cachix
+          deadnix
+          statix
+          nil
+        ];
+      };
     };
-  };
 }

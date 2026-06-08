@@ -9,7 +9,7 @@
           marksman
           ltex-ls
           yaml-language-server
-          nodePackages.prettier
+          prettier
         ];
         ignores = [
           ".obsidian/"

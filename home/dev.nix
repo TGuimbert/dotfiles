@@ -155,19 +155,21 @@
     ssh = {
       enable = true;
       enableDefaultConfig = false;
-      matchBlocks."*" = {
-        forwardAgent = false;
-        addKeysToAgent = "30m";
-        serverAliveInterval = 0;
-        serverAliveCountMax = 3;
-        hashKnownHosts = false;
-        userKnownHostsFile = "~/.ssh/known_hosts";
-        controlMaster = "no";
-        controlPath = "~/.ssh/master-%r@%n:%p";
-        controlPersist = "no";
+      settings = {
+        "*" = {
+          forwardAgent = false;
+          addKeysToAgent = "30m";
+          serverAliveInterval = 0;
+          serverAliveCountMax = 3;
+          hashKnownHosts = false;
+          userKnownHostsFile = "~/.ssh/known_hosts";
+          controlMaster = "no";
+          controlPath = "~/.ssh/master-%r@%n:%p";
+          controlPersist = "no";
 
-        compression = true;
-        setEnv.TERM = "xterm-256color";
+          compression = true;
+          setEnv = "TERM=\"xterm-256color\"";
+        };
       };
       includes = [ "private-config" ];
     };
