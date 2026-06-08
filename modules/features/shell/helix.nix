@@ -5,7 +5,7 @@
     {
       packages.helix = inputs.nix-wrapper-modules.wrappers.helix.wrap {
         inherit pkgs;
-        extraPackages = with pkgs; [
+        runtimePkgs = with pkgs; [
           marksman
           ltex-ls
           yaml-language-server

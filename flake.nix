@@ -50,9 +50,9 @@
       inputs.nixpkgs.follows = "unstable";
     };
 
-    arkenfox-nixos = {
-      url = "github:dwarfmaster/arkenfox-nixos";
-      inputs.nixpkgs.follows = "nixpkgs";
+    arkenfox-nix = {
+      url = "github:HeitorAugustoLN/arkenfox-nix";
+      inputs.nixpkgs.follows = "unstable";
     };
 
     firefox-addons = {
@@ -126,7 +126,7 @@
                         { ... }:
                         {
                           imports = [
-                            inputs.arkenfox-nixos.hmModules.arkenfox
+                            inputs.arkenfox-nix.modules.homeManager.arkenfox
                             ./home
                           ];
                         };
