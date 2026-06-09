@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ pkgs, lib, ... }:
 {
   programs = {
     git = {
@@ -198,13 +198,29 @@
   };
 
   services = {
-    ssh-agent.enable = true;
     gpg-agent = {
       enable = true;
       enableSshSupport = false;
       pinentry.package = pkgs.pinentry-gnome3;
     };
   };
+
+  systemd.user.services.ssh-agent = {
+    Unit = {
+      Description = "SSH authentication agent";
+      PartOf = [ "graphical-session.target" ];
+    };
+    Service = {
+      ExecStart = "${pkgs.openssh}/bin/ssh-agent -D -a %t/ssh-agent";
+      Environment = [
+        "SSH_ASKPASS=${pkgs.seahorse}/libexec/seahorse/ssh-askpass"
+        "SSH_ASKPASS_REQUIRE=force"
+      ];
+    };
+    Install.WantedBy = [ "graphical-session.target" ];
+  };
+
+  home.sessionVariables.SSH_AUTH_SOCK = "$XDG_RUNTIME_DIR/ssh-agent";
 
   home.persistence."/persistent" = {
     directories = [
