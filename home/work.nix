@@ -1,8 +1,8 @@
 { pkgs, ... }:
 {
   home = {
-    packages = [
-      (pkgs.slack.overrideAttrs (old: {
+    packages = with pkgs; [
+      (slack.overrideAttrs (old: {
         installPhase = old.installPhase + ''
             rm $out/bin/slack
 
@@ -15,7 +15,8 @@
             sed -i'.backup' -e 's/,"WebRTCPipeWireCapturer"/,"LebRTCPipeWireCapturer"/' $out/lib/slack/resources/app.asar
         '';
       }))
-      pkgs.azure-cli
+      azure-cli
+      awscli2
     ];
 
     persistence."/persistent" = {
