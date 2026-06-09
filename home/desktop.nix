@@ -80,6 +80,7 @@ in
         containersForce = true;
         extensions.packages = with inputs.firefox-addons.packages.x86_64-linux; [
           ublock-origin
+          skip-redirect
           bitwarden
           multi-account-containers
         ];
