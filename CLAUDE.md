@@ -238,258 +238,406 @@ The default editor is Helix (`hx`), configured in `modules/features/shell/helix.
 
 ## Migration: Dendritic Pattern
 
-This repository is being migrated to the **dendritic pattern** using flake-parts, import-tree, and nix-wrapper-modules. Each step below is a separate PR that must pass CI before merging.
+This repository is being migrated to the **dendritic pattern** (mightyiam-aligned) using flake-parts and import-tree. Each step below is a separate PR that must pass CI before merging.
+
+> **History**: An earlier plan (old "Step 7" pattern) used per-feature `enable` options, `flake.nixosModules.<name>` + `inputs.self.nixosModules.*`, `mkSystem`/`mkServer` builders, and `nix-wrapper-modules`. That diverged from the canonical dendritic pattern and has been superseded by the **R-series** below. Steps 1–7 (already merged) are refactored by R1–R4.
 
 ### Migration Goals
 
-- **Dendritic pattern**: Every `.nix` file (except entry points) becomes a flake-parts module
-- **import-tree**: Automatic module discovery (no manual import lists)
-- **nix-wrapper-modules**: Portable wrapped packages for shell tools
-- **Feature-based organization**: NixOS + home-manager config together per feature
+- **Dendritic pattern**: Every `.nix` file (except scaffolding entry points) is a flake-parts module
+- **import-tree**: One `import-tree ./modules` root; `_`-prefix a path to disable it
+- **Imports as the toggle**: a host enables a feature by importing its aspect — **no `enable` options**
+- **Feature closure**: one file holds a feature's NixOS + home-manager + package config; organize **by capability, not module class** (no `nixos/` or `home-manager/` directories)
+- **Central generation**: `nixos.configurations.<host>` builds the systems — no `mkSystem`/`mkServer`, no `specialArgs`
+
+### Module Mechanism (mightyiam bespoke options)
+
+Scaffolding files live **flat in `modules/`** (`nixos.nix`, `home-manager.nix`, `nixpkgs.nix`, `eval-modules.nix`, `users.nix`) and are loaded by the **same `import-tree`** as every other module — they are ordinary flake-parts modules that happen to define the framework options. No `_dendritic/` subdir, no explicit import in `outputs.nix`. They define:
+
+- `nixos.modules.<name>` — `lazyAttrsOf deferredModule`: named merge points / feature aspects
+- `homeManager.modules.<name>` — same, for home-manager aspects
+- `nixos.configurations.<host>` — submodule that evaluates `lib.nixosSystem`; feeds `flake.nixosConfigurations` + `flake.checks.configurations:nixos:<host>` (real toplevel builds in CI)
+- `evalModulesModule` helper (`_module.args`) backing the above
+
+**Merge points (system-types)** replace a separate profiles layer:
+
+- `nixos.modules.base` — every host (nix settings, locale, networking, audio, services, boot, user, impermanence, sops)
+- `nixos.modules.desktop` — desktop hosts (gnome, stylix, lanzaboote, firefox, GUI home); also pulls `home.gui`
+- `nixos.modules.server` — srv-01 baseline
+- Named opt-in aspects: `games`, `podman`, `docker`, `traefik`, `authelia`, `lldap`, `homepage`, `restic`, `calibre`, `printing`, `work`
+
+**Deliberate divergences from mightyiam/infra**: no `flake-file` (inputs stay hand-written in `flake.nix`); inputs stay real flakes (use `inputs.home-manager.nixosModules.home-manager`, not `flake = false`); single user `tguimbert` hardcoded (no multi-user `users` option machinery); keep `hardware.nix` (no nixos-facter).
+
+### Home-manager wiring
+
+Home-manager runs as a NixOS module, but feature files contribute HM config through the `homeManager.modules.*` merge points — *not* by touching `home-manager.users.*` directly. The flow:
+
+```
+feature file:  homeManager.modules.base = { … }   ─┐  (deferredModule; many files merge)
+feature file:  homeManager.modules.gui  = { … }   ─┤
+                                                   │   users.nix wires it:
+nixos.modules.base    → home-manager.users.tguimbert.imports = [ homeManager.modules.base ]   (every host)
+nixos.modules.desktop → home-manager.users.tguimbert.imports = [ homeManager.modules.gui ]    (desktop hosts only)
+```
+
+- `homeManager.modules.base` — merged into **every** host's `tguimbert`.
+- `homeManager.modules.gui` — merged in **only on desktop** hosts (pulled by `nixos.modules.desktop`).
+- Both are `deferredModule`s, so any number of feature files can set the same key and the values merge.
+- `users.nix` imports `inputs.home-manager.nixosModules.home-manager` into `nixos.modules.base`, defines `users.users.tguimbert`, and sets `home.stateVersion = osConfig.system.stateVersion` (the user's state version tracks the host's).
+- **Rule of thumb**: per-user config goes in a feature's `homeManager.modules.*` block (co-located with that feature's NixOS config); reserve direct `home-manager.users.tguimbert.*` for the wiring in `users.nix` only.
 
 ### Target Directory Structure
 
+Flat by default (mightyiam-aligned). One feature = one flat `.nix` file; directories appear only for a cohesive multi-file capability or a set of homogeneous peers (see the rule below).
+
 ```
 .dotfiles/
-├── flake.nix                    # flake-parts + import-tree entry point
+├── flake.nix                    # inputs only; outputs = import ./outputs.nix
+├── outputs.nix                  # flake-parts mkFlake + import-tree ./modules
 ├── modules/                     # All modules auto-imported
-│   ├── _lib/                   # Excluded: library functions
-│   ├── flake/                  # overlays, formatter, shells/
-│   ├── machines/               # leshen/, griffin/, tuxedo/, srv-01/
-│   ├── features/               # core/, desktop/, shell/, dev/, security/, etc.
-│   └── profiles/               # desktop.nix, server.nix
+│   ├── nixos.nix                # scaffolding (flat, loaded by import-tree)
+│   ├── home-manager.nix         #   "
+│   ├── nixpkgs.nix              #   "  (also holds overlays)
+│   ├── eval-modules.nix         #   "
+│   ├── users.nix                #   "
+│   ├── formatter.nix            # flake-output feature (flat)
+│   ├── boot.nix  locale.nix  networking.nix  audio.nix  nix-settings.nix  services.nix   # core features (flat)
+│   ├── helix.nix  nushell.nix  zellij.nix  starship.nix  …   # shell tools (flat; or a shell/ dir if you prefer grouping)
+│   ├── shells/                  # dev shells — peer-set dir (python.nix, rust.nix, …)
+│   ├── desktop/                 # cohesive capability dir (gnome, stylix, firefox)
+│   ├── server/                  # peer-set dir (traefik, authelia, lldap, …)
+│   └── machines/                # peer-set dir (leshen.nix, griffin.nix, … + hardware/disks)
 ├── config/                     # Static config files (nushell, zellij, k9s)
 └── secrets/                    # Unchanged
 ```
 
-### Migration Steps
+### When to create a directory (vs a flat file)
 
-#### Step 1: Add flake-parts and import-tree inputs
-**Branch**: `feat/dendritic-step-1-inputs`
-**Files**: `flake.nix`
-- Add `flake-parts`, `import-tree`, `nix-wrapper-modules` to flake inputs
-- Keep existing outputs structure (non-breaking change)
+Because `import-tree` loads every file regardless of path, a path carries **no semantic meaning** — it is only a human label. Keep it shallow.
+
+- **Default — one feature = one flat file** at `modules/<capability>.nix` (`boot.nix`, `firefox.nix`, `steam.nix`).
+- **Directory case 1 — a cohesive capability that outgrew one file.** The dir *is* the feature; files inside are its parts (`desktop/`, `audio/`). You open the dir to work on that one thing.
+- **Directory case 2 — a homogeneous set of peers.** Many files of the same kind (`machines/`, `shells/`, `server/`).
+- **Soft domain grouping** is allowed when the dir names a real domain you'd browse together (e.g. `hardware/`) — not just "all the X-type modules."
+- **Never a class/category bucket.** No `nixos/`, `home-manager/`, `darwin/` (that splits one feature across class dirs — the cardinal anti-pattern), and no generic `features/`/`flake/`/`programs/` umbrella. The test: does the dir name a real capability, domain, or peer-set, or merely a module *kind*?
+
+### Migration Steps (R-series)
+
+Each step is a CI-passing PR. During migration, `import-tree` stays scoped to converted directories and widens as features convert; legacy plain modules (`modules/nixos/`, `hosts/`) are still referenced by path from `mkSystem` until removed (and `_`-prefixed if needed to stay out of import-tree). **Test on leshen first** (canary).
+
+#### R1: Dendritic core (additive)
+**Branch**: `feat/dendritic-r1-core`
+**Files**: `modules/{eval-modules,nixos,home-manager,nixpkgs,users}.nix` (flat scaffolding)
+- Define `nixos.modules` / `nixos.configurations` / `homeManager.modules` options + `evalModulesModule`
+- Establish `base` / `desktop` / `server` merge points; wire home-manager into `nixos.modules.base`
+- Keep existing `mkSystem`/`nixosConfigurations` working in parallel
 - **Verify**: `nix flake check`
 
-#### Step 2: Create directory structure and move static configs
-**Branch**: `feat/dendritic-step-2-structure`
-**Files**: Create directories, move config files
-- Create `modules/`, `modules/_lib/`, `modules/flake/`, `modules/machines/`, `modules/features/`, `modules/profiles/`
-- Create `config/` and move `home/nushell/`, `home/zellij/`, `home/k9s/` there
-- Create `modules/_lib/default.nix` with empty module
-- **Verify**: `nix flake check`
+#### R2: Migrate canary host (leshen)
+**Branch**: `feat/dendritic-r2-leshen`
+**Files**: `modules/machines/leshen.nix` (+ hardware/disks)
+- Express leshen as `nixos.configurations.leshen.module` with a thin `imports` list of aspects
+- Other hosts remain on `mkSystem`
+- **Verify**: `nix flake check`; `nh os build .#leshen` then `nh os test`
 
-#### Step 3: Convert overlays to flake-parts module
-**Branch**: `feat/dendritic-step-3-overlays`
-**Files**: `modules/flake/overlays.nix`, remove `overlays/default.nix`
-- Convert `overlays/default.nix` → `modules/flake/overlays.nix` as perSystem module
-- **Verify**: `nix flake check`, packages from unstable still available
+#### R3: Refactor core features (redo of old Step 6)
+**Branch**: `feat/dendritic-r3-core-features`
+**Files**: flatten `modules/features/core/*.nix` → `modules/{boot,locale,networking,audio,nix-settings,services,user}.nix`
+- Convert each to a collector aspect on `nixos.modules.base`
+- **Delete all `options.features.*.enable`**; drop the `features/core/` umbrella
+- **Verify**: `nix flake check`, leshen builds
 
-#### Step 4: Convert formatter to flake-parts module
-**Branch**: `feat/dendritic-step-4-formatter`
-**Files**: `modules/flake/formatter.nix`, update `flake.nix`
-- Move formatter config to `modules/flake/formatter.nix`
-- **Verify**: `nix fmt` still works
+#### R4: De-wrap + refactor shell tools (redo of old Step 7)
+**Branch**: `feat/dendritic-r4-shell`
+**Files**: flatten `modules/features/shell/*.nix` → `modules/{helix,nushell,zellij,starship,terminal,cli-tools}.nix` (or a `modules/shell/` group)
+- Replace `nix-wrapper-modules` usage with plain `pkgs.<tool>`
+- Convert to `homeManager.modules.*` (and `nixos.modules.*` where a system package is needed)
+- Drop `flake.nixosModules.*`, `inputs.self.nixosModules.*`, `perSystem.packages.*`, and enable options
+- **Verify**: `nix flake check`; CLI tools present/configured after leshen build
 
-#### Step 5: Convert development shells to flake-parts modules
-**Branch**: `feat/dendritic-step-5-shells`
-**Files**: `modules/flake/shells/*.nix`, remove `shells/`
-- Convert each shell in `shells/` to `modules/flake/shells/<name>.nix`
-- Each shell as perSystem module
-- **Verify**: `nix develop .#python`, `nix develop .#rust`, etc.
+#### R5: Migrate remaining hosts
+**Branch**: `feat/dendritic-r5-hosts`
+**Files**: `modules/machines/{griffin,tuxedo,srv-01}.nix`, `flake.nix`
+- Express griffin, tuxedo, srv-01 as `nixos.configurations`; add `server` merge point
+- Remove `mkSystem`/`mkServer` from `flake.nix`
+- **Verify**: `nix flake check`; build each host
 
-#### Step 6: Split core.nix into feature modules
-**Branch**: `feat/dendritic-step-6-core-features`
-**Files**: `modules/features/core/*.nix`
-- Split `modules/nixos/core.nix` into:
-  - `modules/features/core/nix-settings.nix`
-  - `modules/features/core/locale.nix`
-  - `modules/features/core/user.nix`
-  - `modules/features/core/networking.nix`
-  - `modules/features/core/audio.nix`
-  - `modules/features/core/services.nix`
-- Each module uses `options.features.<name>.enable` pattern
-- **Verify**: `nix flake check`, build all configurations
+#### R6: Cutover entry point
+**Branch**: `feat/dendritic-r6-cutover`
+**Files**: `flake.nix`, `outputs.nix`, flatten `modules/flake/*` → `modules/` (formatter.nix flat; overlays into nixpkgs.nix; shells → `modules/shells/`)
+- Introduce `outputs.nix`; shrink `flake.nix` to inputs + `outputs = import ./outputs.nix`
+- Collapse to a single `import-tree ./modules`; drop `specialArgs`/`extraSpecialArgs`; dissolve the `flake/` umbrella
+- **Verify**: `nix flake check`; `nh os test` on leshen
 
-#### Step 7: Convert shell tools to wrapper-modules
-**Branch**: `feat/dendritic-step-7-shell-wrappers`
-**Files**: `modules/features/shell/*.nix`
-- Each file is a **flake-parts module** (added to import-tree alongside `modules/flake`)
-- Wrapped tools (`terminal`, `helix`, `nushell`, `cli-tools`) define **both**:
-  - `perSystem.packages.<name>` — single authoritative `wrap { ... }` call
-  - `flake.nixosModules.<name>` — NixOS module using `environment.systemPackages` + `home-manager.users.tguimbert.*` for HM config
-- Plain tools (`zellij`, `starship`) define only `flake.nixosModules.<name>`
-- All nixosModules added to `mkSystem` via `inputs.self.nixosModules.<name>`
-- `home/shell.nix` deleted; `modules/flake/packages/` deleted
-- **Known issue**: fastfetch wrapper uses `lib.types.json` (doesn't exist in nixos-25.11); use `pkgs.fastfetch` directly
-- **Verify**: `nix flake check`, shell tools work correctly
+#### R7–R12: Remaining feature areas (one PR each)
+Each uses the no-enable, feature-closed pattern with plain `pkgs`, placed by the directory rule (flat unless multi-file/peer-set):
+- **R7** dev tools (flat `modules/{git,gh,gpg,ssh,claude,direnv}.nix`)
+- **R8** desktop (`modules/desktop/`: gnome, stylix, firefox) → `nixos.modules.desktop`
+- **R9** security (flat `modules/{lanzaboote,sops}.nix`)
+- **R10** impermanence (`modules/impermanence/`: btrfs-rollback, persistence)
+- **R11** virtualization (flat `modules/{podman,docker}.nix`) → named aspects
+- **R12** gaming + work (flat `modules/{steam,scortex}.nix`) + server services (`modules/server/`: traefik, authelia, lldap, homepage, restic, calibre, printing) → named aspects
+- **Verify** per PR: `nix flake check`, affected host(s) build
 
-#### Step 8: Convert dev tools to feature modules
-**Branch**: `feat/dendritic-step-8-dev-features`
-**Files**: `modules/features/dev/*.nix`
-- Create feature modules:
-  - `modules/features/dev/git.nix` (git wrapper)
-  - `modules/features/dev/gh.nix` (home-manager)
-  - `modules/features/dev/gpg.nix` (home-manager)
-  - `modules/features/dev/ssh.nix` (home-manager)
-  - `modules/features/dev/claude.nix` (claude-code wrapper)
-  - `modules/features/dev/direnv.nix` (home-manager)
-- **Verify**: `nix flake check`, git, gpg, ssh work correctly
-
-#### Step 9: Convert desktop features
-**Branch**: `feat/dendritic-step-9-desktop-features`
-**Files**: `modules/features/desktop/*.nix`
-- Convert `modules/nixos/gnome.nix` + `home/desktop.nix` into:
-  - `modules/features/desktop/gnome.nix`
-  - `modules/features/desktop/stylix.nix`
-  - `modules/features/desktop/firefox.nix`
-- **Verify**: `nix flake check`, GNOME session works
-
-#### Step 10: Convert security features
-**Branch**: `feat/dendritic-step-10-security-features`
-**Files**: `modules/features/security/*.nix`
-- Create:
-  - `modules/features/security/lanzaboote.nix`
-  - `modules/features/security/sops.nix`
-- **Verify**: `nix flake check`, secure boot still works
-
-#### Step 11: Convert impermanence features
-**Branch**: `feat/dendritic-step-11-impermanence-features`
-**Files**: `modules/features/impermanence/*.nix`
-- Split `modules/nixos/impermanence.nix` into:
-  - `modules/features/impermanence/btrfs-rollback.nix`
-  - `modules/features/impermanence/persistence.nix`
-- **Verify**: `nix flake check`, persistence still works after reboot
-
-#### Step 12: Convert virtualization features
-**Branch**: `feat/dendritic-step-12-virtualization-features`
-**Files**: `modules/features/virtualization/*.nix`
-- Convert:
-  - `modules/nixos/podman.nix` → `modules/features/virtualization/podman.nix`
-  - `modules/nixos/docker.nix` → `modules/features/virtualization/docker.nix`
-- **Verify**: `nix flake check`, podman/docker work
-
-#### Step 13: Convert gaming and work features
-**Branch**: `feat/dendritic-step-13-gaming-work-features`
-**Files**: `modules/features/gaming/*.nix`, `modules/features/work/*.nix`
-- Convert:
-  - `modules/nixos/games.nix` → `modules/features/gaming/steam.nix`
-  - `home/work.nix` → `modules/features/work/scortex.nix`
-- **Verify**: `nix flake check`, Steam launches on gaming hosts
-
-#### Step 14: Convert server features
-**Branch**: `feat/dendritic-step-14-server-features`
-**Files**: `modules/features/server/*.nix`
-- Convert `hosts/srv-01/*.nix` services into:
-  - `modules/features/server/traefik.nix`
-  - `modules/features/server/authelia.nix`
-  - `modules/features/server/lldap.nix`
-  - `modules/features/server/homepage.nix`
-  - `modules/features/server/restic.nix`
-  - `modules/features/server/calibre.nix`
-  - `modules/features/server/printing.nix`
-- **Verify**: `nix flake check`, server services accessible
-
-#### Step 15: Create profiles
-**Branch**: `feat/dendritic-step-15-profiles`
-**Files**: `modules/profiles/*.nix`
-- Create:
-  - `modules/profiles/desktop.nix` (bundles desktop features with enable flags)
-  - `modules/profiles/server.nix` (bundles server features)
-- **Verify**: `nix flake check`
-
-#### Step 16: Create machine definitions
-**Branch**: `feat/dendritic-step-16-machines`
-**Files**: `modules/machines/*/*.nix`
-- Create machine definitions:
-  - `modules/machines/leshen/` (default.nix, hardware.nix, disks.nix)
-  - `modules/machines/griffin/`
-  - `modules/machines/tuxedo/`
-  - `modules/machines/srv-01/`
-- Each machine uses profiles + specific feature overrides
-- **Verify**: `nix flake check`, build all configurations
-
-#### Step 17: Cutover to flake-parts
-**Branch**: `feat/dendritic-step-17-cutover`
-**Files**: `flake.nix`
-- Update `flake.nix` to use flake-parts + import-tree
-- Remove mkSystem/mkServer builders
-- **Verify**: `nix flake check`, build and test on griffin
-
-#### Step 18: Cleanup old structure
-**Branch**: `feat/dendritic-step-18-cleanup`
-**Files**: Remove old directories
-- Remove `home/`, `modules/nixos/`, `hosts/`, `shells/`, `overlays/`
-- Update this CLAUDE.md to reflect new structure
+#### R13: Cleanup
+**Branch**: `feat/dendritic-r13-cleanup`
+**Files**: remove old dirs; docs
+- Remove `home/`, `modules/nixos/`, `hosts/`, `shells/`, `overlays/`, and any leftover `modules/flake/` or `modules/features/` umbrellas
+- Rewrite this CLAUDE.md structure section and the `README.md` "Repository Structure" / disko paths
 - **Verify**: `nix flake check`, `nh os switch` on all hosts
 
-### Feature Module Pattern (established in Step 7)
+### Feature Module Pattern (R-series)
 
-Each `modules/features/<area>/<name>.nix` is a **flake-parts module** that bundles everything for one feature:
+A feature file declares the relevant class block(s). **No `enable` options, no wrappers** during migration — plain `pkgs.<tool>` + home-manager/NixOS config. One file = one capability (NixOS + HM together).
 
+Always-on system feature → collector aspect on a merge point:
 ```nix
-{ inputs, ... }:
+# modules/boot.nix
+{ ... }:
 {
-  # Package output (wrapped tools only)
-  perSystem = { pkgs, ... }: {
-    packages.<name> = inputs.nix-wrapper-modules.wrappers.<name>.wrap { inherit pkgs; ... };
+  nixos.modules.base = { pkgs, ... }: {
+    boot = { /* … */ };
+    environment.systemPackages = [ pkgs.sbctl ];
   };
+}
+```
 
-  # NixOS module: install + configure
-  flake.nixosModules.<name> = { pkgs, lib, config, inputs, ... }: {
-    options.features.<area>.<name>.enable = lib.mkEnableOption "..." // { default = true; };
-    config = lib.mkIf config.features.<area>.<name>.enable {
-      environment.systemPackages = [ inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.<name> ];
-      home-manager.users.tguimbert = { ... };  # HM-specific config
-    };
+Per-user tool → home-manager aspect (merges into the shared home modules):
+```nix
+# modules/helix.nix
+{ ... }:
+{
+  homeManager.modules.base = { pkgs, ... }: {
+    home.packages = [ pkgs.helix ];
+    programs.helix = { /* … */ };
+  };
+}
+```
+
+Opt-in feature → named aspect, imported only by hosts that want it:
+```nix
+# modules/steam.nix
+{ ... }: { nixos.modules.games = { /* steam/gamemode config */ }; }
+```
+
+Host → thin import list:
+```nix
+# modules/machines/leshen.nix
+{ config, inputs, ... }:
+{
+  nixos.configurations.leshen.module = {
+    imports = (with config.nixos.modules; [ base desktop games podman ]) ++ [
+      ./leshen/hardware.nix
+      ./leshen/disks.nix
+    ];
+    system.stateVersion = "22.11";
   };
 }
 ```
 
 Key conventions:
-- **`pkgs.stdenv.hostPlatform.system`** — use this, not `pkgs.system` (deprecated, triggers warning)
-- **`inputs.self`** is available in NixOS modules via `specialArgs = { inherit inputs; }` in `mkSystem`
-- **`home-manager.users.tguimbert.*`** can be set from any NixOS module (HM loaded as NixOS module)
-- Feature directories added to **both** the flake-parts import-tree (for `perSystem`/`flake.nixosModules`) and `mkSystem` modules (via `inputs.self.nixosModules.*`)
-- Plain tools with no wrapped package define only `flake.nixosModules.<name>`
+- **Imports are the toggle** — no `options.features.*.enable`
+- **Organize by capability, not class** — flat file per feature; directories only for a cohesive multi-file capability or a peer-set; never `nixos/`/`home-manager/`/`features/`/`flake/` buckets; co-locate a feature's NixOS + HM config in one file
+- **`_`-prefix to disable** a file/dir from import-tree
+- **No `specialArgs`** — `inputs` is already a module arg; use a `generic`-style constants module for cross-file sharing
+- **`pkgs.stdenv.hostPlatform.system`** — not `pkgs.system` (deprecated)
 
-### Wrapper-Modules Reference
+### Dendritic rules & gotchas
 
-Tools using `nix-wrapper-modules.wrappers.*`:
-| Tool | Wrapper | Notes |
-|------|---------|-------|
-| Helix | `wrappers.helix.wrap` | |
-| Foot | `wrappers.foot.wrap` | |
-| Nushell | `wrappers.nushell.wrap` | |
-| Git | `wrappers.git.wrap` | |
-| Claude Code | `wrappers.claude-code.wrap` | |
-| Bottom | `wrappers.bottom.wrap` | |
-| Fastfetch | — | Upstream module uses `lib.types.json` (missing in nixos-25.11); use `pkgs.fastfetch` directly |
+The silent foot-guns — each wastes an afternoon if you hit it blind:
+
+- **Never `lib.mkIf` in an `imports` list.** `imports` is evaluated unconditionally, so the condition is silently ignored and the module is *always* imported. Gate *config values* with `mkIf`/`mkMerge`; to make a feature conditional, control whether a host imports its aspect.
+- **Never import across module classes.** A `nixos` aspect cannot import a `homeManager` aspect (different option sets → eval error). Cross-class sharing goes through the home-manager wiring above, or a generic/constants module.
+- **No import cycles.** A imports B imports A → infinite recursion. Diamonds (A and C both import B) are fine.
+- **Collector vs named aspect.** Always-on config merges into `nixos.modules.base` (a *collector*: many files set the same key and the values merge). Opt-in config gets its own `nixos.modules.<name>`, imported only by the hosts that want it.
+- **`_`-prefix to disable.** A file or dir with `/_` in its path is skipped by import-tree — the dev toggle for a half-finished feature.
+- **`inputs` by closure, not `specialArgs`.** Aspects reference `inputs.*` lexically (the file's `{ inputs, ... }:`); external NixOS modules (disko, lanzaboote, …) are imported *inside* the aspect that needs them, so hosts stay thin and no `specialArgs` is required.
+- **`pipe-operators` must be enabled** (see below) or `|>` is a syntax error. It is enabled via `nix.settings.experimental-features`; the `flake.nix` `nixConfig` copy is *untrusted* and ignored unless you pass `--accept-flake-config`, so the very first R1 build (before the new setting is active) must pass `--accept-flake-config` (or `--extra-experimental-features pipe-operators`) once.
+
+### Deferred / orthogonal (NOT part of the structural migration)
+
+- **Wrappers (`nix-wrapper-modules`)** — re-introduce post-migration (e.g. as a nixpkgs overlay so `pkgs.<tool>` stays the single reference). Removes the overlay/`self.packages` plumbing and the fastfetch `lib.types.json` issue from the critical path.
+- **No separate `profiles/` layer** — `base`/`desktop`/`server` merge points are the profiles.
+- **No `modules/_lib/`** — the flat scaffolding modules (`nixos.nix`, `eval-modules.nix`, …) supersede it.
+- **Capability-renaming + fine-grained splits** — do 1:1 mechanical moves first (`gnome.nix` stays one file); rename/split later.
+
+### Reference: scaffolding modules (R1)
+
+Adapted from `mightyiam/infra` to this repo (real flake inputs, single user `tguimbert`). **Verified**: these exact shapes evaluate on Nix 2.34 — a test host built `…config.system.build.toplevel.drvPath`, and the home-manager wiring resolved `home.stateVersion` and `programs.home-manager.enable` correctly. `|>` requires `pipe-operators` (see below).
+
+**`flake.nix`** (entry — inputs + `nixConfig`, no logic):
+```nix
+{
+  inputs = { /* nixpkgs, unstable, flake-parts, import-tree, home-manager, disko, … */ };
+  nixConfig.extra-experimental-features = [ "pipe-operators" ];  # untrusted; needs --accept-flake-config on first build
+  outputs = inputs: import ./outputs.nix inputs;
+}
+```
+
+**`outputs.nix`**:
+```nix
+inputs:
+inputs.flake-parts.lib.mkFlake { inherit inputs; } {
+  imports = [ (inputs.import-tree ./modules) ];
+  systems = [ "x86_64-linux" ];
+}
+```
+
+**`modules/eval-modules.nix`** (verbatim from mightyiam):
+```nix
+{ lib, ... }:
+{
+  _module.args.evalModulesModule =
+    { config, ... }:
+    {
+      options = {
+        fn = lib.mkOption { type = lib.types.functionTo lib.types.attrs; };
+        module = lib.mkOption { type = lib.types.deferredModule; };
+        args = lib.mkOption {
+          type = lib.types.lazyAttrsOf lib.types.anything;
+          default = { };
+        };
+        evaluation = lib.mkOption {
+          readOnly = true;
+          type = lib.types.attrs;
+          default = config.fn (config.args // { modules = [ config.module ]; });
+        };
+      };
+    };
+}
+```
+
+**`modules/nixos.nix`** (the merge points + central generation; `|>` style):
+```nix
+{ config, lib, inputs, evalModulesModule, ... }:
+let
+  cfg = config.nixos;
+in
+{
+  options.nixos = {
+    modules = lib.mkOption {
+      type = lib.types.lazyAttrsOf lib.types.deferredModule;
+      default = { };
+    };
+    configurations = lib.mkOption {
+      type = lib.types.lazyAttrsOf (
+        lib.types.submodule (
+          { name, ... }:
+          {
+            imports = [
+              evalModulesModule
+              {
+                fn = inputs.nixpkgs.lib.nixosSystem;
+                module = { networking.hostName = lib.mkDefault name; };
+              }
+            ];
+          }
+        )
+      );
+      default = { };
+    };
+  };
+
+  config.flake = {
+    nixosConfigurations = cfg.configurations |> lib.mapAttrs (_: c: c.evaluation);
+    checks =
+      cfg.configurations
+      |> lib.mapAttrsToList (
+        name: c: {
+          ${c.evaluation.config.nixpkgs.hostPlatform.system}."configurations:nixos:${name}" =
+            c.evaluation.config.system.build.toplevel;
+        }
+      )
+      |> lib.mkMerge;
+  };
+}
+```
+
+**`modules/home-manager.nix`** (seed both keys so they always exist for merging):
+```nix
+{ lib, ... }:
+{
+  options.homeManager.modules = lib.mkOption {
+    type = lib.types.lazyAttrsOf lib.types.deferredModule;
+    default = { };
+  };
+  config.homeManager.modules = {
+    base = { programs.home-manager.enable = true; };
+    gui = { };
+  };
+}
+```
+
+**`modules/nixpkgs.nix`** (reuses the existing overlay from `overlays.nix` → `config.flake.overlays.default`):
+```nix
+{ config, inputs, ... }:
+let
+  nixpkgsSettings = {
+    config.allowUnfree = true;
+    overlays = [ config.flake.overlays.default ];
+  };
+in
+{
+  perSystem =
+    { system, ... }:
+    { _module.args.pkgs = import inputs.nixpkgs ({ inherit system; } // nixpkgsSettings); };
+  nixos.modules.base = { nixpkgs = nixpkgsSettings; };
+}
+```
+
+**`modules/users.nix`** (single-user HM wiring — see "Home-manager wiring"):
+```nix
+{ config, inputs, ... }:
+{
+  config = {
+    nixos.modules.base = {
+      imports = [ inputs.home-manager.nixosModules.home-manager ];
+      users.users.tguimbert = {
+        isNormalUser = true;
+        uid = 1000;
+      };
+      home-manager = {
+        useGlobalPkgs = true;
+        useUserPackages = true;
+        users.tguimbert =
+          { osConfig, ... }:
+          {
+            home.stateVersion = osConfig.system.stateVersion;
+            imports = [ config.homeManager.modules.base ];
+          };
+      };
+    };
+    nixos.modules.desktop = {
+      home-manager.users.tguimbert.imports = [ config.homeManager.modules.gui ];
+    };
+  };
+}
+```
+
+> A host then sets `nixos.configurations.<host>.module = { imports = [ config.nixos.modules.base … ]; system.stateVersion = "…"; nixpkgs.hostPlatform = "x86_64-linux"; … }` (see the Host pattern above).
 
 ### Sources
 
-- [The dendritic pattern](https://discourse.nixos.org/t/the-dendritic-pattern/61271)
+- [The dendritic pattern (mightyiam)](https://github.com/mightyiam/dendritic)
+- [mightyiam/infra (reference implementation)](https://github.com/mightyiam/infra)
+- [mattstruble nix-dendritic SKILL](https://github.com/mattstruble/skills/tree/main/nix-dendritic)
 - [vic/import-tree](https://github.com/vic/import-tree)
 - [hercules-ci/flake-parts](https://github.com/hercules-ci/flake-parts)
-- [BirdeeHub/nix-wrapper-modules](https://github.com/BirdeeHub/nix-wrapper-modules)
 
 ### Migration Progress
 
-- [x] **Step 1**: Add flake-parts, import-tree, nix-wrapper-modules inputs
-- [x] **Step 2**: Create directory structure and move static configs
-- [x] **Step 3**: Convert overlays to flake-parts module
-- [x] **Step 4**: Convert formatter to flake-parts module
-- [x] **Step 5**: Convert development shells to flake-parts modules
-- [x] **Step 6**: Split core.nix into feature modules
-- [x] **Step 7**: Convert shell tools to wrapper-modules
-- [ ] Step 8: Convert dev tools to feature modules
-- [ ] Step 9: Convert desktop features
-- [ ] Step 10: Convert security features
-- [ ] Step 11: Convert impermanence features
-- [ ] Step 12: Convert virtualization features
-- [ ] Step 13: Convert gaming and work features
-- [ ] Step 14: Convert server features
-- [ ] Step 15: Create profiles
-- [ ] Step 16: Create machine definitions
-- [ ] Step 17: Cutover to flake-parts
-- [ ] Step 18: Cleanup old structure
+Steps 1–7 of the original plan are merged but use the superseded pattern; R1–R4 refactor them.
+
+- [ ] **R1**: Dendritic core scaffolding (flat `modules/{nixos,home-manager,nixpkgs,eval-modules,users}.nix`)
+- [ ] **R2**: Migrate canary host (leshen) to `nixos.configurations`
+- [ ] **R3**: Refactor core features to collector aspects; drop enable options
+- [ ] **R4**: De-wrap + refactor shell tools
+- [ ] **R5**: Migrate remaining hosts; remove `mkSystem`/`mkServer`
+- [ ] **R6**: Cutover entry point (`outputs.nix`, single import-tree, no specialArgs)
+- [ ] **R7**: Dev tools
+- [ ] **R8**: Desktop features
+- [ ] **R9**: Security features
+- [ ] **R10**: Impermanence features
+- [ ] **R11**: Virtualization features
+- [ ] **R12**: Gaming + work + server services
+- [ ] **R13**: Cleanup old structure + docs
