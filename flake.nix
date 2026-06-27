@@ -1,6 +1,12 @@
 {
   description = "System Config";
 
+  # `modules/nixos.nix` uses the `|>` pipe operator at flake-eval time. This nixConfig
+  # copy is untrusted, so the first build/check (before the nix-settings change is
+  # active) must pass `--accept-flake-config` or `--extra-experimental-features
+  # pipe-operators`.
+  nixConfig.extra-experimental-features = [ "pipe-operators" ];
+
   inputs = {
     # Core nixpkgs
     nixpkgs.url = "github:nixos/nixpkgs/nixos-26.05";
@@ -80,6 +86,14 @@
         imports = [
           (inputs.import-tree ./modules/flake)
           (inputs.import-tree ./modules/features/shell)
+          # Dendritic core scaffolding (R1). Imported explicitly rather than via
+          # import-tree so the legacy modules/{features/core,nixos} stay out of scope
+          # until later steps; import-tree widens to all of ./modules at R6.
+          ./modules/eval-modules.nix
+          ./modules/nixos.nix
+          ./modules/home-manager.nix
+          ./modules/nixpkgs.nix
+          ./modules/users.nix
         ];
         systems = [ "x86_64-linux" ];
 
