@@ -1,14 +1,6 @@
+{ ... }:
 {
-  lib,
-  config,
-  ...
-}:
-{
-  options.features.locale.enable = lib.mkEnableOption "locale and keyboard" // {
-    default = true;
-  };
-
-  config = lib.mkIf config.features.locale.enable {
+  nixos.modules.desktop = {
     time.timeZone = "Europe/Paris";
     i18n = {
       defaultLocale = "en_US.UTF-8";
