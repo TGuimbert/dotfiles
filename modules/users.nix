@@ -1,4 +1,9 @@
-{ config, inputs, ... }:
+{
+  config,
+  inputs,
+  lib,
+  ...
+}:
 {
   config = {
     nixos.modules.base = {
@@ -13,7 +18,11 @@
         users.tguimbert =
           { osConfig, ... }:
           {
-            home.stateVersion = osConfig.system.stateVersion;
+            # mkDefault so the legacy home/ module's explicit stateVersion keeps
+            # winning until it is refactored (R8). Without this, hosts whose system
+            # stateVersion differs from home/'s hardcoded "22.11" (e.g. tuxedo at
+            # 25.11) hit a conflicting-definition error.
+            home.stateVersion = lib.mkDefault osConfig.system.stateVersion;
             imports = [ config.homeManager.modules.base ];
           };
       };
