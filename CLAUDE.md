@@ -631,7 +631,7 @@ Steps 1â€“7 of the original plan are merged but use the superseded pattern; R1â€
 - [x] **R1**: Dendritic core scaffolding (flat `modules/{nixos,home-manager,nixpkgs,eval-modules,users}.nix`)
 - [x] **R2**: Migrate canary host (leshen) to `nixos.configurations`
 - [x] **R3**: Refactor core features to collector aspects; drop enable options
-- [ ] **R4**: De-wrap + refactor shell tools
+- [x] **R4**: De-wrap + refactor shell tools
 - [ ] **R5**: Migrate remaining hosts; remove `mkSystem`/`mkServer`
 - [ ] **R6**: Cutover entry point (`outputs.nix`, single import-tree, no specialArgs)
 - [ ] **R7**: Dev tools

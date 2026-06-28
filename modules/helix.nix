@@ -1,21 +1,24 @@
-{ inputs, ... }:
+{ ... }:
 {
-  perSystem =
+  homeManager.modules.gui =
     { pkgs, ... }:
     {
-      packages.helix = inputs.nix-wrapper-modules.wrappers.helix.wrap {
-        inherit pkgs;
-        runtimePkgs = with pkgs; [
+      programs.helix = {
+        enable = true;
+
+        extraPackages = with pkgs; [
           marksman
           ltex-ls
           yaml-language-server
           prettier
         ];
+
         ignores = [
           ".obsidian/"
           ".direnv/"
           ".envrc"
         ];
+
         languages = {
           language = [
             {
@@ -124,8 +127,8 @@
             };
           };
         };
+
         settings = {
-          theme = "gruvbox-material";
           editor = {
             bufferline = "multiple";
             color-modes = true;
@@ -151,27 +154,10 @@
           };
         };
       };
-    };
 
-  flake.nixosModules.helix =
-    {
-      pkgs,
-      lib,
-      config,
-      inputs,
-      ...
-    }:
-    {
-      options.features.shell.helix.enable = lib.mkEnableOption "helix editor" // {
-        default = true;
-      };
-
-      config = lib.mkIf config.features.shell.helix.enable {
-        environment.systemPackages = [ inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.helix ];
-        home-manager.users.tguimbert.home.sessionVariables = {
-          EDITOR = "hx";
-          VISUAL = "hx";
-        };
+      home.sessionVariables = {
+        EDITOR = "hx";
+        VISUAL = "hx";
       };
     };
 }
