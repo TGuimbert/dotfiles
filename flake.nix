@@ -86,6 +86,8 @@
         imports = [
           (inputs.import-tree ./modules/flake)
           (inputs.import-tree ./modules/features/shell)
+          # R2: leshen migrated to nixos.configurations (modules/machines/leshen.nix).
+          (inputs.import-tree ./modules/machines)
           # Dendritic core scaffolding (R1). Imported explicitly rather than via
           # import-tree so the legacy modules/{features/core,nixos} stay out of scope
           # until later steps; import-tree widens to all of ./modules at R6.
@@ -170,19 +172,8 @@
               };
           in
           {
+            # leshen is built via nixos.configurations (modules/machines/leshen.nix) as of R2.
             nixosConfigurations = {
-              leshen = mkSystem "leshen" [
-                ./hosts/leshen/hardware.nix
-                ./hosts/leshen/disks.nix
-                ./modules/nixos/impermanence.nix
-                ./modules/nixos/gnome.nix
-                ./modules/nixos/games.nix
-                ./modules/nixos/podman.nix
-
-                {
-                  system.stateVersion = "22.11";
-                }
-              ];
               griffin = mkSystem "griffin" [
                 inputs.nixos-hardware.nixosModules.lenovo-thinkpad-t490
                 ./hosts/griffin/hardware.nix
