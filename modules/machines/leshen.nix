@@ -12,14 +12,10 @@
           desktop
         ])
         ++ [
-          # Global modules formerly injected by mkSystem (move to merge points in R4/R8).
+          # Global modules formerly injected by mkSystem (move to merge points in R8+).
           # R3: core features now arrive via the `desktop` aspect imported above.
-          inputs.self.nixosModules.terminal
-          inputs.self.nixosModules.helix
-          inputs.self.nixosModules.nushell
-          inputs.self.nixosModules.zellij
-          inputs.self.nixosModules.starship
-          inputs.self.nixosModules.cli-tools
+          # R4: shell tools (helix, nushell, zellij, starship, terminal, cli-tools)
+          # now arrive via the `desktop` aspect + homeManager.modules.gui as well.
           inputs.disko.nixosModules.disko
           inputs.lanzaboote.nixosModules.lanzaboote
           inputs.impermanence.nixosModules.impermanence

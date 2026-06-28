@@ -65,12 +65,6 @@
       url = "gitlab:rycee/nur-expressions?dir=pkgs/firefox-addons";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-
-    # Package wrapping
-    nix-wrapper-modules = {
-      url = "github:BirdeeHub/nix-wrapper-modules";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
   outputs =
@@ -85,7 +79,6 @@
       {
         imports = [
           (inputs.import-tree ./modules/flake)
-          (inputs.import-tree ./modules/features/shell)
           # R2: leshen migrated to nixos.configurations (modules/machines/leshen.nix).
           (inputs.import-tree ./modules/machines)
           # Dendritic core scaffolding (R1). Imported explicitly rather than via
@@ -106,6 +99,15 @@
           ./modules/nix-settings.nix
           ./modules/services.nix
           ./modules/user.nix
+          # R4: shell tools, de-wrapped and flattened to modules/*.nix. System
+          # packages merge into the `desktop` aspect; home config into
+          # `homeManager.modules.gui` (wired into `desktop` by users.nix).
+          ./modules/cli-tools.nix
+          ./modules/helix.nix
+          ./modules/nushell.nix
+          ./modules/starship.nix
+          ./modules/terminal.nix
+          ./modules/zellij.nix
         ];
         systems = [ "x86_64-linux" ];
 
@@ -129,16 +131,11 @@
                 modules = [
                   # Global modules
                   { nixpkgs.hostPlatform = system; }
-                  # R3: core features now live in the `desktop` aspect (merged
-                  # deferredModule). griffin/tuxedo are still on mkSystem, so they
-                  # import the aspect directly until they migrate in R5.
+                  # R3/R4: core features and shell tools now live in the `desktop`
+                  # aspect (merged deferredModule); the aspect also pulls in
+                  # homeManager.modules.gui via users.nix. griffin/tuxedo are still
+                  # on mkSystem, so they import the aspect directly until R5.
                   config.nixos.modules.desktop
-                  inputs.self.nixosModules.terminal
-                  inputs.self.nixosModules.helix
-                  inputs.self.nixosModules.nushell
-                  inputs.self.nixosModules.zellij
-                  inputs.self.nixosModules.starship
-                  inputs.self.nixosModules.cli-tools
                   inputs.disko.nixosModules.disko
                   inputs.lanzaboote.nixosModules.lanzaboote
                   inputs.impermanence.nixosModules.impermanence
