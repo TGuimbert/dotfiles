@@ -12,8 +12,8 @@
           desktop
         ])
         ++ [
-          # Global modules formerly injected by mkSystem (move to merge points in R3/R4/R8).
-          (inputs.import-tree ../features/core)
+          # Global modules formerly injected by mkSystem (move to merge points in R4/R8).
+          # R3: core features now arrive via the `desktop` aspect imported above.
           inputs.self.nixosModules.terminal
           inputs.self.nixosModules.helix
           inputs.self.nixosModules.nushell

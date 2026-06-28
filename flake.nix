@@ -89,13 +89,23 @@
           # R2: leshen migrated to nixos.configurations (modules/machines/leshen.nix).
           (inputs.import-tree ./modules/machines)
           # Dendritic core scaffolding (R1). Imported explicitly rather than via
-          # import-tree so the legacy modules/{features/core,nixos} stay out of scope
-          # until later steps; import-tree widens to all of ./modules at R6.
+          # import-tree so the legacy modules/nixos stays out of scope until later
+          # steps; import-tree widens to all of ./modules at R6.
           ./modules/eval-modules.nix
           ./modules/nixos.nix
           ./modules/home-manager.nix
           ./modules/nixpkgs.nix
           ./modules/users.nix
+          # R3: core features, flattened to modules/*.nix and merged into the
+          # `desktop` aspect. Listed explicitly (not import-tree'd) for the same
+          # reason as the scaffolding above.
+          ./modules/boot.nix
+          ./modules/locale.nix
+          ./modules/networking.nix
+          ./modules/audio.nix
+          ./modules/nix-settings.nix
+          ./modules/services.nix
+          ./modules/user.nix
         ];
         systems = [ "x86_64-linux" ];
 
@@ -119,7 +129,10 @@
                 modules = [
                   # Global modules
                   { nixpkgs.hostPlatform = system; }
-                  (inputs.import-tree ./modules/features/core)
+                  # R3: core features now live in the `desktop` aspect (merged
+                  # deferredModule). griffin/tuxedo are still on mkSystem, so they
+                  # import the aspect directly until they migrate in R5.
+                  config.nixos.modules.desktop
                   inputs.self.nixosModules.terminal
                   inputs.self.nixosModules.helix
                   inputs.self.nixosModules.nushell

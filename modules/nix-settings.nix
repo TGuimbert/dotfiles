@@ -1,14 +1,6 @@
+{ ... }:
 {
-  lib,
-  config,
-  ...
-}:
-{
-  options.features.nix-settings.enable = lib.mkEnableOption "nix settings" // {
-    default = true;
-  };
-
-  config = lib.mkIf config.features.nix-settings.enable {
+  nixos.modules.desktop = {
     nix.settings = {
       experimental-features = [
         "nix-command"
