@@ -183,7 +183,24 @@
         autoContext = true;
         confirmDestructiveActions = true;
         statusLine = {
-          command = "input=$(cat); echo \"[$(echo \"$input\" | jq -r '.model.display_name')] 📁 $(basename \"$(echo \"$input\" | jq -r '.workspace.current_dir')\")\"";
+          command = ''
+            input=$(cat)
+            model=$(echo "$input" | jq -r '.model.display_name')
+            dir=$(echo "$input" | jq -r '.workspace.current_dir' | sed "s|$HOME|~|")
+            branch=$(git -C "$(echo "$input" | jq -r '.workspace.current_dir')" --no-optional-locks symbolic-ref --short HEAD 2>/dev/null)
+            used=$(echo "$input" | jq -r '.context_window.used_percentage // empty')
+            orange="\033[38;5;214m"
+            byellow="\033[38;5;178m"
+            bcyan="\033[38;5;72m"
+            bblack="\033[38;5;239m"
+            reset="\033[0m"
+            out=""
+            out="$out$(printf "$orange $model $reset")"
+            out="$out$(printf "  $byellow $dir $reset")"
+            [ -n "$branch" ] && out="$out$(printf "  $bcyan $branch $reset")"
+            [ -n "$used" ] && out="$out$(printf "  $bblack ctx:$(printf '%.0f' "$used")%% $reset")"
+            printf "%b" "$out"
+          '';
           padding = 0;
           type = "command";
         };
