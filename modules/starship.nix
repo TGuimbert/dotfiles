@@ -6,7 +6,7 @@
       enableTransience = true;
       settings = {
         # Based on the gruvbox-rainbow preset
-        format = "[](orange)$os$username$shell[](bg:bright-yellow fg:orange)$directory[](fg:bright-yellow bg:bright-cyan)$git_branch$git_status[](fg:bright-cyan bg:bright-blue)$c$rust$golang$nodejs$php$java$kotlin$haskell$python[](fg:bright-blue bg:bright-black)$docker_context$conda[](fg:bright-black bg:base01)$time[ ](fg:base01)$line_break$character";
+        format = "[](orange)$os$username$shell[](bg:bright-yellow fg:orange)$directory[](fg:bright-yellow bg:bright-cyan)$git_branch$git_status[](fg:bright-cyan bg:bright-blue)$c$rust$golang$nodejs$php$java$kotlin$haskell$python[](fg:bright-blue bg:bright-black)$docker_context$conda[](fg:bright-black bg:base01)$time[ ](fg:base01)$line_break$character";
         os = {
           disabled = false;
           style = "bg:orange fg:bright-white";
