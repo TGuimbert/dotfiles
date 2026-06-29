@@ -1,7 +1,6 @@
 { pkgs, ... }:
 {
   imports = [
-    ./dev.nix
     ./desktop.nix
   ];
 
@@ -63,6 +62,7 @@
         "Videos"
         "Workspace"
         ".dotfiles"
+        ".aws"
         ".config/discord"
         ".config/Signal"
         ".config/OrcaSlicer"
