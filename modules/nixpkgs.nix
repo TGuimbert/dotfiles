@@ -1,14 +1,63 @@
-{ config, ... }:
+{ inputs, ... }:
 let
+  overlay =
+    final: prev:
+    let
+      unstable = import inputs.unstable {
+        system = final.stdenv.hostPlatform.system;
+        config.allowUnfree = true;
+      };
+    in
+    {
+      inherit (unstable)
+        helix
+        k9s
+        carapace
+        obsidian
+        orca-slicer
+        rustfinity
+        base16-schemes
+        nushell
+        calibre
+        tidal-hifi
+        claude-code
+        ;
+
+      nushellPlugins.formats = unstable.nushellPlugins.formats;
+
+      azure-cli = unstable.azure-cli.withExtensions [
+        unstable.azure-cli.extensions.ssh
+      ];
+
+      # Fix missing GTK schema crash on file dialogs: https://github.com/NixOS/nixpkgs/issues/467783
+      freecad = prev.symlinkJoin {
+        name = "freecad-wrapped";
+        paths = [ prev.freecad ];
+        nativeBuildInputs = [ prev.makeWrapper ];
+        postBuild = ''
+          wrapProgram $out/bin/FreeCAD \
+            --prefix XDG_DATA_DIRS : "${prev.gtk3}/share/gsettings-schemas/${prev.gtk3.name}"
+        '';
+      };
+
+      # Custom packages
+      aiven-client = prev.callPackage ../packages/aiven-client { };
+    };
+
   nixpkgsSettings = {
     config.allowUnfree = true;
-    overlays = [ config.flake.overlays.default ];
+    overlays = [ overlay ];
   };
 in
 {
-  # NOTE: perSystem `_module.args.pkgs` is intentionally NOT set here; it is already
-  # defined in modules/flake/overlays.nix (defining a module arg twice errors). The
-  # overlays move into this file at R6, alongside removing the legacy definition.
+  flake.overlays.default = overlay;
+
+  perSystem =
+    { system, ... }:
+    {
+      _module.args.pkgs = import inputs.nixpkgs ({ inherit system; } // nixpkgsSettings);
+    };
+
   nixos.modules.base = {
     nixpkgs = nixpkgsSettings;
   };

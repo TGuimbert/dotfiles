@@ -25,10 +25,10 @@
           # leshen-specific legacy modules (move to machines/ + named aspects later).
           ../../hosts/leshen/hardware.nix
           ../../hosts/leshen/disks.nix
-          ../nixos/impermanence.nix
-          ../nixos/gnome.nix
-          ../nixos/games.nix
-          ../nixos/podman.nix
+          ../_nixos/impermanence.nix
+          ../_nixos/gnome.nix
+          ../_nixos/games.nix
+          ../_nixos/podman.nix
         ];
 
       nixpkgs.hostPlatform = "x86_64-linux";
