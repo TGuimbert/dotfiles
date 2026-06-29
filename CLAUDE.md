@@ -646,7 +646,7 @@ Steps 1–7 of the original plan are merged but use the superseded pattern; R1�
 - [x] **R6**: Cutover entry point (`outputs.nix`, single `import-tree ./modules`; legacy `modules/nixos/` → `_nixos/`; specialArgs deferred to R13)
 - [x] **R7**: Dev tools
 - [x] **R8**: Desktop features (gnome/stylix/firefox → `modules/desktop/`; dropped per-machine `specialArgs`/`extraSpecialArgs`)
-- [ ] **R9**: Security features
+- [x] **R9**: Security features (lanzaboote/sops → flat `modules/{lanzaboote,sops}.nix`; sops input on `base`, lanzaboote + desktop sops defaults on `desktop`; dropped security input-imports from machines; srv-01 sops/services baseline deferred to R12)
 - [ ] **R10**: Impermanence features
 - [ ] **R11**: Virtualization features
 - [ ] **R12**: Gaming + work + server services
