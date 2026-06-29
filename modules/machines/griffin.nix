@@ -9,9 +9,7 @@
         ])
         ++ [
           inputs.disko.nixosModules.disko
-          inputs.lanzaboote.nixosModules.lanzaboote
           inputs.impermanence.nixosModules.impermanence
-          inputs.sops-nix.nixosModules.sops
 
           inputs.nixos-hardware.nixosModules.lenovo-thinkpad-t490
           ../../hosts/griffin/hardware.nix

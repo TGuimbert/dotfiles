@@ -9,9 +9,7 @@
         ])
         ++ [
           inputs.disko.nixosModules.disko
-          inputs.lanzaboote.nixosModules.lanzaboote
           inputs.impermanence.nixosModules.impermanence
-          inputs.sops-nix.nixosModules.sops
 
           # leshen-specific legacy modules (move to machines/ + named aspects later).
           ../../hosts/leshen/hardware.nix

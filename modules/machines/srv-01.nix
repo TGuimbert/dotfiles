@@ -13,7 +13,6 @@
         ++ [
           inputs.disko.nixosModules.disko
           inputs.impermanence.nixosModules.impermanence
-          inputs.sops-nix.nixosModules.sops
 
           ../../hosts/srv-01/hardware.nix
           ../../hosts/srv-01/disks.nix

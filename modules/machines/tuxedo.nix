@@ -9,9 +9,7 @@
         ])
         ++ [
           inputs.disko.nixosModules.disko
-          inputs.lanzaboote.nixosModules.lanzaboote
           inputs.impermanence.nixosModules.impermanence
-          inputs.sops-nix.nixosModules.sops
 
           inputs.nixos-hardware.nixosModules.tuxedo-infinitybook-pro14-gen9-intel
           inputs.tuxedo-nixos.nixosModules.default
