@@ -1,9 +1,5 @@
 { pkgs, ... }:
 {
-  imports = [
-    ./desktop.nix
-  ];
-
   home = {
     username = "tguimbert";
     homeDirectory = "/home/tguimbert";
@@ -103,14 +99,4 @@
   };
 
   programs.home-manager.enable = true;
-
-  stylix = {
-    enable = true;
-    targets = {
-      starship.enable = true;
-      firefox.profileNames = [ "default" ];
-      qt.platform = "qtct";
-      qt.enable = false;
-    };
-  };
 }
