@@ -21,9 +21,9 @@
           inputs.tuxedo-nixos.nixosModules.default
           ../../hosts/tuxedo/hardware.nix
           ../../hosts/tuxedo/disks.nix
-          ../nixos/impermanence.nix
-          ../nixos/gnome.nix
-          ../nixos/docker.nix
+          ../_nixos/impermanence.nix
+          ../_nixos/gnome.nix
+          ../_nixos/docker.nix
         ];
 
       nixpkgs.hostPlatform = "x86_64-linux";

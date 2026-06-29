@@ -67,51 +67,10 @@
     };
   };
 
-  outputs =
-    inputs@{ flake-parts, ... }:
-    flake-parts.lib.mkFlake { inherit inputs; } (
-      { ... }:
-      {
-        imports = [
-          (inputs.import-tree ./modules/flake)
-          # R2: leshen migrated to nixos.configurations (modules/machines/leshen.nix).
-          (inputs.import-tree ./modules/machines)
-          # Dendritic core scaffolding (R1). Imported explicitly rather than via
-          # import-tree so the legacy modules/nixos stays out of scope until later
-          # steps; import-tree widens to all of ./modules at R6.
-          ./modules/eval-modules.nix
-          ./modules/nixos.nix
-          ./modules/home-manager.nix
-          ./modules/nixpkgs.nix
-          ./modules/users.nix
-          # R5: `server` merge point for headless server hosts (srv-01).
-          ./modules/server.nix
-          # R3: core features, flattened to modules/*.nix and merged into the
-          # `desktop` aspect. Listed explicitly (not import-tree'd) for the same
-          # reason as the scaffolding above.
-          ./modules/boot.nix
-          ./modules/locale.nix
-          ./modules/networking.nix
-          ./modules/audio.nix
-          ./modules/nix-settings.nix
-          ./modules/services.nix
-          ./modules/user.nix
-          # R4: shell tools, de-wrapped and flattened to modules/*.nix. System
-          # packages merge into the `desktop` aspect; home config into
-          # `homeManager.modules.gui` (wired into `desktop` by users.nix).
-          ./modules/cli-tools.nix
-          ./modules/helix.nix
-          ./modules/nushell.nix
-          ./modules/starship.nix
-          ./modules/terminal.nix
-          ./modules/zellij.nix
-        ];
-        systems = [ "x86_64-linux" ];
-
-        # All hosts are built by the dendritic central generator
-        # (config.flake.nixosConfigurations in modules/nixos.nix) from their
-        # modules/machines/<host>.nix files. The legacy mkSystem/mkServer builders
-        # were removed in R5.
-      }
-    );
+  # R6: entry point cutover. `flake.nix` is inputs-only; all logic lives in
+  # `outputs.nix`, which evaluates a single `import-tree ./modules`. Every `.nix`
+  # under `modules/` is now auto-imported as a flake-parts module, except paths
+  # with a `_`-prefixed component (legacy `modules/_nixos/`, `modules/_lib/`),
+  # which are migrated/removed in R8+/R13.
+  outputs = inputs: import ./outputs.nix inputs;
 }
