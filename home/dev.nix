@@ -1,4 +1,16 @@
-{ pkgs, lib, ... }:
+{
+  pkgs,
+  lib,
+  config,
+  ...
+}:
+let
+  claude-statusline = pkgs.writeShellApplication {
+    name = "claude-statusline";
+    runtimeInputs = [ pkgs.jq ];
+    text = builtins.readFile ../config/claude/statusline.sh;
+  };
+in
 {
   programs = {
     git = {
@@ -176,40 +188,22 @@
 
     claude-code = {
       enable = true;
+      configDir = "${config.xdg.configHome}/claude";
+      marketplaces.karpathy-skills = pkgs.fetchFromGitHub {
+        owner = "forrestchang";
+        repo = "andrej-karpathy-skills";
+        rev = "2c606141936f1eeef17fa3043a72095b4765b9c2";
+        hash = "sha256-4z/wRdYH7UXRzF8RJU0sw8xbpx0BW/7CBv5sVEC2knY=";
+      };
       settings = {
-        theme = "dark";
-        defaultModel = "sonnet";
-        respectGitignore = true;
-        autoContext = true;
-        confirmDestructiveActions = true;
+        model = "opus";
         statusLine = {
-          command = ''
-            input=$(cat)
-            model=$(echo "$input" | jq -r '.model.display_name')
-            dir=$(echo "$input" | jq -r '.workspace.current_dir' | sed "s|$HOME|~|")
-            branch=$(git -C "$(echo "$input" | jq -r '.workspace.current_dir')" --no-optional-locks symbolic-ref --short HEAD 2>/dev/null)
-            used=$(echo "$input" | jq -r '.context_window.used_percentage // empty')
-            orange="\033[38;5;214m"
-            byellow="\033[38;5;178m"
-            bcyan="\033[38;5;72m"
-            bblack="\033[38;5;239m"
-            reset="\033[0m"
-            out=""
-            out="$out$(printf "$orange $model $reset")"
-            out="$out$(printf "  $byellow $dir $reset")"
-            [ -n "$branch" ] && out="$out$(printf "  $bcyan $branch $reset")"
-            [ -n "$used" ] && out="$out$(printf "  $bblack ctx:$(printf '%.0f' "$used")%% $reset")"
-            printf "%b" "$out"
-          '';
-          padding = 0;
           type = "command";
+          command = lib.getExe claude-statusline;
         };
         includeCoAuthoredBy = false;
-        enableTodoTracking = true;
-        enableCache = true;
-        env = {
-          CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = "1";
-        };
+        enabledPlugins."andrej-karpathy-skills@karpathy-skills" = true;
+        env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = "1";
       };
     };
   };
@@ -243,9 +237,8 @@
     directories = [
       ".ssh"
       ".aws"
-      ".claude"
+      ".config/claude"
       ".local/share/claude-code"
     ];
-    files = [ ".claude.json" ];
   };
 }
