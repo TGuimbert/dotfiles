@@ -16,8 +16,8 @@
       ++ [
         inputs.disko.nixosModules.disko
 
-        ../../hosts/srv-01/hardware.nix
-        ../../hosts/srv-01/disks.nix
+        ../_hosts/srv-01/hardware.nix
+        ../_hosts/srv-01/disks.nix
       ];
 
     nixpkgs.hostPlatform = "x86_64-linux";

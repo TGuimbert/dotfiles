@@ -13,8 +13,8 @@
           inputs.disko.nixosModules.disko
 
           inputs.nixos-hardware.nixosModules.lenovo-thinkpad-t490
-          ../../hosts/griffin/hardware.nix
-          ../../hosts/griffin/disks.nix
+          ../_hosts/griffin/hardware.nix
+          ../_hosts/griffin/disks.nix
         ];
 
       nixpkgs.hostPlatform = "x86_64-linux";

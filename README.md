@@ -46,7 +46,7 @@ export NEW_HOSTNAME=<hostname>  # e.g., griffin, leshen, tuxedo
 
 ```bash
 sudo nix --experimental-features "nix-command flakes" run github:nix-community/disko -- \
-  --mode disko ./hosts/$NEW_HOSTNAME/disks.nix
+  --mode disko ./modules/_hosts/$NEW_HOSTNAME/disks.nix
 ```
 
 #### 3. Create User Password
@@ -59,10 +59,10 @@ exit
 
 #### 4. Disable Secure Boot Temporarily
 
-Edit the host configuration to use systemd-boot instead of lanzaboote for the initial install:
+Edit the lanzaboote configuration to use systemd-boot instead for the initial install:
 
 ```bash
-nano hosts/$NEW_HOSTNAME/default.nix
+nano modules/lanzaboote.nix
 ```
 
 Comment out lanzaboote settings and ensure systemd-boot is enabled in the configuration.
@@ -265,25 +265,22 @@ statix check
 
 ```
 .
-├── flake.nix           # Main flake configuration
-├── hosts/              # Per-host configurations
-│   ├── leshen/         # Desktop system
-│   ├── griffin/        # Laptop (ThinkPad)
-│   ├── tuxedo/         # Laptop (work)
-│   └── srv-01/         # Server
-├── home/               # Home Manager configurations
-│   ├── default.nix     # Base user configuration
-│   ├── shell.nix       # Shell environment (nushell, helix, zellij)
-│   ├── dev.nix         # Development tools
-│   └── desktop.nix     # Desktop applications
-├── modules/nixos/      # NixOS modules
-│   ├── core.nix        # Core system configuration
-│   ├── impermanence.nix # Impermanence setup
-│   ├── gnome.nix       # GNOME desktop
-│   └── ...             # Other modules
-├── shells/             # Development shell environments
-├── secrets/            # SOPS encrypted secrets
-└── scripts/            # Helper scripts
+├── flake.nix               # Inputs only; outputs = import ./outputs.nix
+├── outputs.nix             # flake-parts mkFlake + import-tree ./modules
+├── modules/                # All modules auto-imported (dendritic pattern)
+│   ├── nixos.nix           # Scaffolding: merge points + central generation
+│   ├── home-manager.nix    # Scaffolding: homeManager.modules merge points
+│   ├── nixpkgs.nix         # Scaffolding: nixpkgs config + overlays
+│   ├── eval-modules.nix    # Scaffolding: evalModulesModule helper
+│   ├── users.nix           # Scaffolding: user + home-manager wiring
+│   ├── boot.nix …          # Flat feature files (one capability each)
+│   ├── machines/           # Per-host thin import lists (leshen, griffin, …)
+│   ├── _hosts/             # Per-host hardware.nix + disks.nix (skipped by import-tree)
+│   ├── desktop/            # Desktop capability (gnome, stylix, firefox)
+│   ├── server/             # Server services (traefik, authelia, lldap, …)
+│   └── shells/             # Development shell environments
+├── config/                 # Static config files (nushell, zellij, k9s)
+└── secrets/                # SOPS encrypted secrets
 ```
 
 ## Troubleshooting
