@@ -1,7 +1,11 @@
 { ... }:
 {
   nixos.modules.calibre =
-    { config, ... }:
+    {
+      config,
+      mkAutheliaRouter,
+      ...
+    }:
     let
       smbMount = "/mnt/books";
     in
@@ -22,18 +26,9 @@
             };
           };
         };
-        traefik.dynamicConfigOptions = {
-          http = {
-            routers.calibre = {
-              rule = "Host(`calibre.home.guimbert.fr`)";
-              entrypoints = [ "websecure" ];
-              middlewares = [ "authelia" ];
-              service = "calibre";
-            };
-            services.calibre.loadBalancer.servers = [
-              { url = "http://localhost:${toString config.services.calibre-web.listen.port}"; }
-            ];
-          };
+        traefik.dynamicConfigOptions.http = mkAutheliaRouter {
+          name = "calibre";
+          port = config.services.calibre-web.listen.port;
         };
       };
       environment.persistence."/persistent" = {
@@ -48,19 +43,13 @@
       };
       fileSystems.books = {
         mountPoint = smbMount;
-        device = "//nas.lan/books";
-        fsType = "cifs";
-        options = [
-          "x-systemd.automount"
-          "noauto"
-          "nobrl"
-          "x-systemd.idle-timeout=60"
-          "x-systemd.device-timeout=5s"
-          "x-systemd.mount-timeout=5s"
-          "credentials=${config.sops.secrets.smb-secrets.path}"
-          "uid=${config.services.calibre-web.user}"
-          "gid=${config.services.calibre-web.group}"
-        ];
+      }
+      // import ../_hosts/_lib/cifs.nix {
+        share = "books";
+        credentials = config.sops.secrets.smb-secrets.path;
+        uid = config.services.calibre-web.user;
+        gid = config.services.calibre-web.group;
+        extraOptions = [ "nobrl" ];
       };
       systemd.services.calibre-web = {
         after = [ "mnt-books.mount" ];
