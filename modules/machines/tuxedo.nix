@@ -9,13 +9,11 @@
         ])
         ++ [
           inputs.disko.nixosModules.disko
-          inputs.impermanence.nixosModules.impermanence
 
           inputs.nixos-hardware.nixosModules.tuxedo-infinitybook-pro14-gen9-intel
           inputs.tuxedo-nixos.nixosModules.default
           ../../hosts/tuxedo/hardware.nix
           ../../hosts/tuxedo/disks.nix
-          ../_nixos/impermanence.nix
           ../_nixos/docker.nix
         ];
 

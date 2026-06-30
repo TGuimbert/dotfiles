@@ -9,12 +9,10 @@
         ])
         ++ [
           inputs.disko.nixosModules.disko
-          inputs.impermanence.nixosModules.impermanence
 
           # leshen-specific legacy modules (move to machines/ + named aspects later).
           ../../hosts/leshen/hardware.nix
           ../../hosts/leshen/disks.nix
-          ../_nixos/impermanence.nix
           ../_nixos/games.nix
           ../_nixos/podman.nix
         ];
