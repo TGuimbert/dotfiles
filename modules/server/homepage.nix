@@ -1,7 +1,12 @@
 { ... }:
 {
   nixos.modules.homepage =
-    { config, ... }:
+    {
+      config,
+      constants,
+      mkAutheliaRouter,
+      ...
+    }:
     {
       users.groups.homepage-secrets = { };
       systemd.services.homepage-dashboard = {
@@ -18,7 +23,7 @@
       services = {
         homepage-dashboard = {
           enable = true;
-          allowedHosts = "localhost:8082,127.0.0.1:8082,homepage.home.guimbert.fr";
+          allowedHosts = "localhost:8082,127.0.0.1:8082,homepage.${constants.domain}";
           environmentFiles = [ config.sops.secrets.homepageEnvironments.path ];
           settings = {
             statusStyle = "dot";
@@ -63,14 +68,14 @@
                 {
                   HomeAssistant = {
                     icon = "home-assistant.png";
-                    href = "https://homeassistant.home.guimbert.fr/";
-                    siteMonitor = "https://homeassistant.home.guimbert.fr/";
+                    href = "https://homeassistant.${constants.domain}/";
+                    siteMonitor = "https://homeassistant.${constants.domain}/";
                     description = "Home automation";
                     proxmoxNode = "proxmox1";
                     proxmoxVMID = 100;
                     widget = {
                       type = "homeassistant";
-                      url = "https://homeassistant.home.guimbert.fr";
+                      url = "https://homeassistant.${constants.domain}";
                       key = "{{HOMEPAGE_VAR_HOMEASSISTANT_TOKEN}}";
                     };
                   };
@@ -78,12 +83,12 @@
                 {
                   Immich = {
                     icon = "immich.png";
-                    href = "https://immich.home.guimbert.fr/";
-                    siteMonitor = "https://immich.home.guimbert.fr/";
+                    href = "https://immich.${constants.domain}/";
+                    siteMonitor = "https://immich.${constants.domain}/";
                     description = "Photo and video management";
                     widget = {
                       type = "immich";
-                      url = "https://immich.home.guimbert.fr/";
+                      url = "https://immich.${constants.domain}/";
                       key = "{{HOMEPAGE_VAR_IMMICH_TOKEN}}";
                       version = 2;
                     };
@@ -92,20 +97,20 @@
                 {
                   Klipper = {
                     icon = "klipper.png";
-                    href = "http://klipper.home.guimbert.fr";
-                    siteMonitor = "http://klipper.home.guimbert.fr";
+                    href = "http://klipper.${constants.domain}";
+                    siteMonitor = "http://klipper.${constants.domain}";
                     description = "3D printer management";
                     widget = {
                       type = "moonraker";
-                      url = "http://klipper.home.guimbert.fr";
+                      url = "http://klipper.${constants.domain}";
                     };
                   };
                 }
                 {
                   Authelia = {
                     icon = "authelia.png";
-                    href = "https://auth.home.guimbert.fr";
-                    siteMonitor = "https://auth.home.guimbert.fr";
+                    href = "https://auth.${constants.domain}";
+                    siteMonitor = "https://auth.${constants.domain}";
                     description = "Authentication management";
                   };
                 }
@@ -116,12 +121,12 @@
                 {
                   Truenas = {
                     icon = "truenas.png";
-                    href = "https://truenas.home.guimbert.fr/";
-                    siteMonitor = "https://truenas.home.guimbert.fr/";
+                    href = "https://truenas.${constants.domain}/";
+                    siteMonitor = "https://truenas.${constants.domain}/";
                     description = "Network Attached Storage";
                     widget = {
                       type = "truenas";
-                      url = "https://truenas.home.guimbert.fr";
+                      url = "https://truenas.${constants.domain}";
                       version = 2;
                       key = "{{HOMEPAGE_VAR_TRUENAS_TOKEN}}";
                       enablePools = true;
@@ -131,12 +136,12 @@
                 {
                   OpenWRT = {
                     icon = "openwrt.png";
-                    href = "https://openwrt.home.guimbert.fr/";
-                    siteMonitor = "https://openwrt.home.guimbert.fr/";
+                    href = "https://openwrt.${constants.domain}/";
+                    siteMonitor = "https://openwrt.${constants.domain}/";
                     description = "Router, DHCP and DNS server and Firewall";
                     widget = {
                       type = "openwrt";
-                      url = "https://openwrt.home.guimbert.fr";
+                      url = "https://openwrt.${constants.domain}";
                       username = "homepage";
                       password = "{{HOMEPAGE_VAR_OPENWRT_PASSWORD}}";
                     };
@@ -145,12 +150,12 @@
                 {
                   Traefik = {
                     icon = "traefik.png";
-                    href = "https://traefik.home.guimbert.fr/";
-                    siteMonitor = "https://traefik.home.guimbert.fr/";
+                    href = "https://traefik.${constants.domain}/";
+                    siteMonitor = "https://traefik.${constants.domain}/";
                     description = "Reverse proxy";
                     widget = {
                       type = "traefik";
-                      url = "https://traefik.home.guimbert.fr";
+                      url = "https://traefik.${constants.domain}";
                       headers.Proxy-Authorization = "{{HOMEPAGE_VAR_AUTHELIA_HEADER}}";
                     };
                   };
@@ -158,32 +163,32 @@
                 {
                   Lldap = {
                     icon = "lldap.png";
-                    href = "https://ldap.home.guimbert.fr";
-                    siteMonitor = "https://ldap.home.guimbert.fr";
+                    href = "https://ldap.${constants.domain}";
+                    siteMonitor = "https://ldap.${constants.domain}";
                     description = "LDAP server";
                   };
                 }
                 {
                   Zoraxy = {
                     icon = "zoraxy.png";
-                    href = "https://zoraxy.home.guimbert.fr";
-                    siteMonitor = "https://zoraxy.home.guimbert.fr";
+                    href = "https://zoraxy.${constants.domain}";
+                    siteMonitor = "https://zoraxy.${constants.domain}";
                     description = "Secondary reverse proxy";
                   };
                 }
                 {
                   Garage = {
                     icon = "garage.png";
-                    href = "https://garage-ui.home.guimbert.fr";
-                    siteMonitor = "https://garage-ui.home.guimbert.fr";
+                    href = "https://garage-ui.${constants.domain}";
+                    siteMonitor = "https://garage-ui.${constants.domain}";
                     description = "S3 Object Storage";
                   };
                 }
                 {
                   Proxmox1 = {
                     icon = "proxmox.png";
-                    href = "https://proxmox1.home.guimbert.fr:8006/";
-                    siteMonitor = "https://proxmox1.home.guimbert.fr:8006/";
+                    href = "https://proxmox1.${constants.domain}:8006/";
+                    siteMonitor = "https://proxmox1.${constants.domain}:8006/";
                     description = "First PVE node";
                     widget = {
                       type = "proxmox";
@@ -197,8 +202,8 @@
                 {
                   Proxmox2 = {
                     icon = "proxmox.png";
-                    href = "https://proxmox2.home.guimbert.fr:8006/";
-                    siteMonitor = "https://proxmox1.home.guimbert.fr:8006/";
+                    href = "https://proxmox2.${constants.domain}:8006/";
+                    siteMonitor = "https://proxmox1.${constants.domain}:8006/";
                     description = "Second PVE node";
                     widget = {
                       type = "proxmox";
@@ -213,18 +218,9 @@
             }
           ];
         };
-        traefik.dynamicConfigOptions = {
-          http = {
-            routers.homepage = {
-              rule = "Host(`homepage.home.guimbert.fr`)";
-              entrypoints = [ "websecure" ];
-              middlewares = [ "authelia" ];
-              service = "homepage";
-            };
-            services.homepage.loadBalancer.servers = [
-              { url = "http://localhost:${toString config.services.homepage-dashboard.listenPort}"; }
-            ];
-          };
+        traefik.dynamicConfigOptions.http = mkAutheliaRouter {
+          name = "homepage";
+          port = config.services.homepage-dashboard.listenPort;
         };
       };
     };

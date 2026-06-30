@@ -1,10 +1,9 @@
 { ... }:
 {
-  perSystem = { pkgs, ... }: {
+  perSystem = { pkgs, config, ... }: {
     devShells.ops = pkgs.mkShell {
-      packages = with pkgs; [
+      packages = [ config.packages.aiven-client ] ++ (with pkgs; [
         actionlint
-        aiven-client
         ansible
         ansible-lint
         openssl
@@ -13,7 +12,7 @@
         tenv
         terraform-ls
         tofu-ls
-      ];
+      ]);
 
       shellHook = ''
         if [[ -e .terraform-version ]]; then

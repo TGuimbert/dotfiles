@@ -10,10 +10,7 @@
       };
       users.users.tguimbert.extraGroups = [ "docker" ];
 
-      environment.systemPackages = with pkgs; [
-        docker-compose
-        minikube
-      ];
+      environment.systemPackages = [ pkgs.docker-compose ];
 
       environment.persistence."/persistent" = {
         hideMounts = true;
@@ -33,10 +30,7 @@
           };
         };
 
-        home.persistence."/persistent" = {
-          directories = [ ".minikube" ];
-          files = [ ".docker/config.json" ];
-        };
+        home.persistence."/persistent".files = [ ".docker/config.json" ];
       };
     };
 }

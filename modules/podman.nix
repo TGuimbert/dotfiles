@@ -9,10 +9,7 @@
         defaultNetwork.settings.dns_enabled = true;
       };
 
-      environment.systemPackages = with pkgs; [
-        podman-compose
-        minikube
-      ];
+      environment.systemPackages = [ pkgs.podman-compose ];
 
       home-manager.users.tguimbert = {
         home.file.minikubeConfig = {
@@ -23,10 +20,7 @@
           };
         };
 
-        home.persistence."/persistent" = {
-          directories = [ ".minikube" ];
-          files = [ ".docker/config.json" ];
-        };
+        home.persistence."/persistent".files = [ ".docker/config.json" ];
       };
     };
 }

@@ -1,7 +1,7 @@
 { ... }:
 {
   nixos.modules.authelia =
-    { config, ... }:
+    { config, constants, ... }:
     let
       sopsConfig = {
         owner = config.services.authelia.instances.main.user;
@@ -45,7 +45,7 @@
             identity_validation.elevated_session.require_second_factor = true;
             totp = {
               disable = false;
-              issuer = "home.guimbert.fr";
+              issuer = "${constants.domain}";
             };
             password_policy.zxcvbn = {
               enabled = true;
@@ -62,7 +62,7 @@
               default_policy = "deny";
               rules = [
                 {
-                  domain = "*.home.guimbert.fr";
+                  domain = "*.${constants.domain}";
                   policy = "one_factor";
                 }
               ];
@@ -71,8 +71,8 @@
               name = "authelia_session";
               cookies = [
                 {
-                  domain = "home.guimbert.fr";
-                  authelia_url = "https://auth.home.guimbert.fr";
+                  domain = "${constants.domain}";
+                  authelia_url = "https://auth.${constants.domain}";
                 }
               ];
             };
@@ -93,7 +93,7 @@
         traefik.dynamicConfigOptions = {
           http = {
             routers.authelia = {
-              rule = "Host(`auth.home.guimbert.fr`)";
+              rule = "Host(`auth.${constants.domain}`)";
               entrypoints = [ "websecure" ];
               service = "authelia";
             };
