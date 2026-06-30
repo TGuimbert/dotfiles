@@ -368,7 +368,7 @@ Each step is a CI-passing PR. As of R6 a single `import-tree ./modules` loads ev
 - Introduce `outputs.nix`; shrink `flake.nix` to inputs + `outputs = import ./outputs.nix`
 - Collapse to a single `import-tree ./modules`; dissolve the `flake/` umbrella
 - `_`-prefix the legacy `modules/nixos/` → `modules/_nixos/` so import-tree skips it (still referenced by path from the machines); update those refs
-- **specialArgs deferred, not dropped**: the machines still import legacy `home/` (which reads `inputs` via `home-manager.extraSpecialArgs`) and legacy NixOS modules (via `args.specialArgs`). These go away with the legacy dirs in R13, not here.
+- **specialArgs deferred, not dropped**: the machines still import legacy `home/` (which reads `inputs` via `home-manager.extraSpecialArgs`) and legacy NixOS modules (via `args.specialArgs`). These go away with the legacy dirs across R13–R15, not here.
 - **Verify**: `nix flake check`; `nh os test` on leshen
 
 **Post-R6 layout (current state for R7+)**: `flake.nix` is inputs-only; `outputs.nix` is the entry point running a single `import-tree ./modules`. Every `.nix` under `modules/` is auto-imported *except* `_`-prefixed paths. Legacy code still lives in three places, referenced by relative path from `modules/machines/*.nix`:
@@ -377,23 +377,48 @@ Each step is a CI-passing PR. As of R6 a single `import-tree ./modules` loads ev
 - `hosts/<host>/` — per-host `hardware.nix`, `disks.nix`, and (srv-01) service modules + `default.nix`.
 - `modules/_lib/` — empty placeholder, `_`-prefixed.
 
-Each R7–R12 step lifts one feature out of these legacy locations into a dendritic module (flat `modules/<feature>.nix`, or a grouped dir per the directory rule), drops the now-unused `args.specialArgs`/`home-manager.extraSpecialArgs` entries once nothing legacy depends on `inputs`, and deletes the migrated legacy file.
+Each R7–R15 step lifts one feature out of these legacy locations into a dendritic module (flat `modules/<feature>.nix`, or a grouped dir per the directory rule), drops the now-unused `args.specialArgs`/`home-manager.extraSpecialArgs` entries once nothing legacy depends on `inputs`, and deletes the migrated legacy file.
 
-#### R7–R12: Remaining feature areas (one PR each)
+#### R7–R11: Feature areas (one PR each)
 Each uses the no-enable, feature-closed pattern with plain `pkgs`, placed by the directory rule (flat unless multi-file/peer-set). Source files now live under `home/`, `modules/_nixos/`, or `hosts/`:
 - **R7** dev tools — split `home/dev.nix` into flat `modules/{git,gh,gpg,ssh,claude,direnv}.nix` → `homeManager.modules.base`
 - **R8** desktop — `modules/_nixos/gnome.nix` + stylix/firefox bits of `home/desktop.nix` → `modules/desktop/` → `nixos.modules.desktop`
 - **R9** security — lanzaboote/sops wiring (currently inline in the machines) → flat `modules/{lanzaboote,sops}.nix`
 - **R10** impermanence — `modules/_nixos/impermanence.nix` (+ `environment.persistence`/`home.persistence` scattered across `home/`) → `modules/impermanence/` (btrfs-rollback, persistence)
 - **R11** virtualization — `modules/_nixos/{podman,docker}.nix` → flat `modules/{podman,docker}.nix` named aspects
-- **R12** gaming + work + server — `modules/_nixos/games.nix` → `modules/steam.nix`; `home/work.nix` → `modules/scortex.nix`; `hosts/srv-01/*` services → `modules/server/` (traefik, authelia, lldap, homepage, restic, calibre, printing) → named aspects
 - **Verify** per PR: `nix flake check`, affected host(s) build
 
-#### R13: Cleanup
-**Branch**: `feat/dendritic-r13-cleanup`
-**Files**: remove old dirs; docs
-- Remove `home/`, `modules/_nixos/`, `modules/_lib/`, `hosts/`, and any leftover legacy umbrellas; drop the last `args.specialArgs`/`extraSpecialArgs` from the machines
-- Rewrite this CLAUDE.md structure section and the `README.md` "Repository Structure" / disko paths
+> **Re-org note (post-R11)**: the original plan ended with a bundled "R12 gaming+work+server" and an "R13 cleanup". Re-evaluating the remaining legacy code showed (a) `home/default.nix` — the core home package list + the large `home.persistence` block + minikube config — was never given a real step (only parenthetically "deferred to R13"), and (b) bundling gaming, the work overlay, and the entire 8-module srv-01 stack into one PR made it un-testable. The tail is therefore split into **four** independently-CI-passing PRs (R12–R15) below.
+
+#### R12: Core home (`home/default.nix`)
+**Branch**: `feat/dendritic-r12-home`
+Distribute by capability — co-locate each app's package **and** its persistence in the owning feature file (the pattern already in `docker.nix`/`claude.nix`/`nushell.nix`/`ssh.nix`/`terminal.nix`).
+- Push stranded persistence + packages into existing owners: `gpg.nix` (`.gnupg`), `gh.nix` (`.config/gh/hosts.yml`), `direnv.nix` (`.local/share/direnv`), `desktop/firefox.nix` (`.config/mozilla/firefox`), `desktop/gnome.nix` (`.config/monitors.xml`, `.local/share/keyrings`), `audio.nix` (`.local/state/wireplumber`), `cli-tools.nix` (`jq dig dprint asciinema`, `.local/share/zoxide`, `.cache/tealdeer`), `podman.nix` (`minikube` + containerd minikube config + `.minikube`, `.docker/config.json`).
+- New capability files for owner-less apps: `modules/kubernetes.nix` (`kubectl kubelogin fluxcd kind kubectx` + `.kube`), `modules/media.nix` (discord/signal/vlc/tidal-hifi/mullvad-browser/remmina/obsidian), `modules/cad.nix` (freecad/orca-slicer/sweethome3d/calibre), `modules/secrets-tools.nix` (yubikey-manager/rage/age-plugin-yubikey/sops/bitwarden-cli/bws), a dev-home aspect for uv/pip/npm config.
+- `modules/home-base.nix` (collector on `homeManager.modules.base`) for the generic remainder: `Documents Downloads Music Pictures Videos Workspace .dotfiles .aws` + `home.username`/`homeDirectory`. Steam persistence stays in `home/default.nix` until R13.
+- Drop `home-manager.users.tguimbert.imports = [ ../../home ]` from leshen/griffin/tuxedo (tuxedo keeps `../../home/work.nix` until R13); turn the `lib.mkDefault home.stateVersion` in `users.nix` into a plain assignment (tuxedo home goes 22.11 → 25.11 — intended). Delete `home/default.nix`.
+- **Verify**: `nix flake check`; `nh os build .#leshen` then `nh os test`.
+
+#### R13: Gaming + work aspects
+**Branch**: `feat/dendritic-r13-gaming-work`
+- `modules/_nixos/games.nix` → `modules/steam.nix` named aspect `nixos.modules.games` (+ Steam home persistence in a `homeManager.modules.gui` block); leshen/griffin import `games`.
+- `home/work.nix` → `modules/scortex.nix` named aspect (slack-wayland overlay, azure-cli, awscli2, vscode, `.config/Slack`+`.azure`); tuxedo imports it.
+- Delete the now-empty `modules/_nixos/` and `home/`.
+- **Verify**: `nix flake check`; build leshen/griffin (steam) + tuxedo (slack/vscode).
+
+#### R14: Server services (srv-01)
+**Branch**: `feat/dendritic-r14-server`
+Per-service named aspects.
+- `hosts/srv-01/default.nix` baseline → `nixos.modules.server` collector (`modules/server/base.nix`): grub/EFI, srv-01 `nix.settings`, **sops** (the srv-01 sops baseline deferred from R9), openssh, qemuGuest, server packages, networking, server `users.users.tguimbert`, `environment.persistence`, btrfs wipe-on-boot initrd service.
+- Each service → its own named aspect under `modules/server/`: `nixos.modules.{traefik,authelia,lldap,homepage,restic,calibre,printing}`.
+- Rewrite `modules/machines/srv-01.nix` to import `server` + the seven service aspects; **drop the dead `args.specialArgs = { inherit inputs; }`**.
+- **Verify**: `nix flake check`; `nh os build .#srv-01`.
+
+#### R15: Hardware/disks relocation + cleanup + docs
+**Branch**: `feat/dendritic-r15-cleanup`
+- Relocate `hosts/<host>/{hardware,disks}.nix` → `modules/_hosts/<host>/{hardware,disks}.nix` (`_`-prefixed so import-tree skips these plain modules, mirroring `_nixos/`); update the relative-path imports in all four machine files. Delete top-level `hosts/`.
+- Remove `modules/_lib/`; drop any remaining `args.specialArgs`/`home-manager.extraSpecialArgs` and stale legacy-reference comments from the machines.
+- Rewrite this CLAUDE.md structure section and the `README.md` "Repository Structure" / disko install paths (`./modules/_hosts/<host>/disks.nix`).
 - **Verify**: `nix flake check`, `nh os switch` on all hosts
 
 ### Feature Module Pattern (R-series)
@@ -643,11 +668,13 @@ Steps 1–7 of the original plan are merged but use the superseded pattern; R1�
 - [x] **R3**: Refactor core features to collector aspects; drop enable options
 - [x] **R4**: De-wrap + refactor shell tools
 - [x] **R5**: Migrate remaining hosts (griffin, tuxedo, srv-01) to `nixos.configurations`; add `server` merge point; remove `mkSystem`/`mkServer`
-- [x] **R6**: Cutover entry point (`outputs.nix`, single `import-tree ./modules`; legacy `modules/nixos/` → `_nixos/`; specialArgs deferred to R13)
+- [x] **R6**: Cutover entry point (`outputs.nix`, single `import-tree ./modules`; legacy `modules/nixos/` → `_nixos/`; specialArgs deferred to R14/R15)
 - [x] **R7**: Dev tools
 - [x] **R8**: Desktop features (gnome/stylix/firefox → `modules/desktop/`; dropped per-machine `specialArgs`/`extraSpecialArgs`)
-- [x] **R9**: Security features (lanzaboote/sops → flat `modules/{lanzaboote,sops}.nix`; sops input on `base`, lanzaboote + desktop sops defaults on `desktop`; dropped security input-imports from machines; srv-01 sops/services baseline deferred to R12)
-- [x] **R10**: Impermanence features (`modules/_nixos/impermanence.nix` → `modules/impermanence/{persistence,btrfs-rollback}.nix`; impermanence input import moved to `base`, desktop persistence/rollback on `desktop`; `home/default.nix` home.persistence deferred to R13)
+- [x] **R9**: Security features (lanzaboote/sops → flat `modules/{lanzaboote,sops}.nix`; sops input on `base`, lanzaboote + desktop sops defaults on `desktop`; dropped security input-imports from machines; srv-01 sops/services baseline deferred to R14)
+- [x] **R10**: Impermanence features (`modules/_nixos/impermanence.nix` → `modules/impermanence/{persistence,btrfs-rollback}.nix`; impermanence input import moved to `base`, desktop persistence/rollback on `desktop`; `home/default.nix` home.persistence deferred to R12)
 - [x] **R11**: Virtualization features (`modules/_nixos/{podman,docker}.nix` → flat `modules/{podman,docker}.nix` named aspects; leshen/griffin import `podman`, tuxedo imports `docker`)
-- [ ] **R12**: Gaming + work + server services
-- [ ] **R13**: Cleanup old structure + docs
+- [ ] **R12**: Core home (`home/default.nix` → distributed-by-capability `homeManager.modules.*` aspects + `home-base.nix`)
+- [ ] **R13**: Gaming + work aspects (`games.nix` → `steam.nix`; `work.nix` → `scortex.nix`)
+- [ ] **R14**: Server services (`hosts/srv-01/*` → `modules/server/` baseline collector + per-service named aspects)
+- [ ] **R15**: Cleanup (`hosts/` → `modules/_hosts/`; remove `_lib/`; drop residual specialArgs; docs)
