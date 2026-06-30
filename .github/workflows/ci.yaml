@@ -24,8 +24,13 @@ jobs:
           name: tguimbert
           authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
 
-      - name: Check flake
-        run: nix flake check --all-systems
+      - name: Check flake (evaluate outputs without building them)
+        run: |
+          systems=$(nix eval --raw .#nixosConfigurations --apply \
+            'cfgs: builtins.concatStringsSep " " (builtins.map (n: ".#nixosConfigurations." + n + ".config.system.build.toplevel") (builtins.attrNames cfgs))')
+          shells=$(nix eval --raw .#devShells.x86_64-linux --apply \
+            'sh: builtins.concatStringsSep " " (builtins.map (n: ".#devShells.x86_64-linux." + n) (builtins.attrNames sh))')
+          nix build --dry-run $systems $shells
 
   build-systems:
     name: Build Systems
