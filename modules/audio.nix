@@ -9,4 +9,8 @@
       pulse.enable = true;
     };
   };
+
+  homeManager.modules.gui = {
+    home.persistence."/persistent".directories = [ ".local/state/wireplumber" ];
+  };
 }

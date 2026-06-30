@@ -32,6 +32,11 @@
             };
           };
         };
+
+        home.persistence."/persistent" = {
+          directories = [ ".minikube" ];
+          files = [ ".docker/config.json" ];
+        };
       };
     };
 }

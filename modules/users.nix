@@ -1,7 +1,6 @@
 {
   config,
   inputs,
-  lib,
   ...
 }:
 {
@@ -18,11 +17,10 @@
         users.tguimbert =
           { osConfig, ... }:
           {
-            # mkDefault so the legacy home/ module's explicit stateVersion keeps
-            # winning until it is refactored (R8). Without this, hosts whose system
-            # stateVersion differs from home/'s hardcoded "22.11" (e.g. tuxedo at
-            # 25.11) hit a conflicting-definition error.
-            home.stateVersion = lib.mkDefault osConfig.system.stateVersion;
+            # The user's home tracks the host's stateVersion. (Pre-R12 the legacy
+            # home/ module hardcoded "22.11"; with that gone, tuxedo's home follows
+            # its system at 25.11 — intended.)
+            home.stateVersion = osConfig.system.stateVersion;
             imports = [ config.homeManager.modules.base ];
           };
       };

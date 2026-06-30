@@ -1,102 +1,13 @@
-{ pkgs, ... }:
+{ ... }:
 {
-  home = {
-    username = "tguimbert";
-    homeDirectory = "/home/tguimbert";
-    stateVersion = "22.11";
-
-    packages = with pkgs; [
-      # CLI tools
-      yubikey-manager
-      rage
-      age-plugin-yubikey
-      sops
-      bitwarden-cli
-      bws
-      jq
-      dig
-      dprint
-      asciinema
-
-      # Desktop apps
-      discord
-      vlc
-      remmina
-      obsidian
-      sweethome3d.application
-      mullvad-browser
-      signal-desktop
-      orca-slicer
-      freecad
-      calibre
-      tidal-hifi
-
-      # K8s tools
-      kubectl
-      kubelogin
-      fluxcd
-      kind
-      kubectx
-      minikube
-    ];
-
-    file.minikubeConfig = {
-      target = ".minikube/config/config.json";
-      text = builtins.toJSON {
-        container-runtime = "containerd";
-        rootless = true;
-      };
-    };
-
-    # Persistence
-    persistence."/persistent" = {
-      directories = [
-        "Documents"
-        "Downloads"
-        "Music"
-        "Pictures"
-        "Videos"
-        "Workspace"
-        ".dotfiles"
-        ".aws"
-        ".config/discord"
-        ".config/Signal"
-        ".config/OrcaSlicer"
-        ".config/FreeCAD"
-        ".config/obsidian"
-        ".gnupg"
-        ".kube"
-        ".local/share/direnv"
-        ".local/share/keyrings"
-        ".local/share/zoxide"
-        ".minikube"
-        ".config/mozilla/firefox"
-        ".cache/tealdeer"
-        ".cache/pip"
-        ".cache/pre-commit"
-        ".cache/FreeCAD"
-        ".cache/uv"
-        ".cache/orca-slicer"
-        ".local/state/wireplumber"
-        ".local/share/fish"
-        ".local/share/FreeCAD"
-        ".local/share/Steam"
-        ".steam"
-        ".clonehero"
-        ".config/unity3d/srylain Inc_/Clone Hero"
-        ".config/tidal-hifi"
-      ];
-      files = [
-        ".config/monitors.xml"
-        ".config/gh/hosts.yml"
-        ".config/fish/conf.d/private.fish"
-        ".docker/config.json"
-        ".npmrc"
-        ".pip/pip.conf"
-        ".config/uv/uv.toml"
-      ];
-    };
-  };
-
-  programs.home-manager.enable = true;
+  # Steam / games home persistence. Everything else from this file moved into
+  # capability-co-located dendritic aspects in R12; this remainder is migrated to
+  # modules/steam.nix in R13, after which this file is deleted. Imported only by
+  # the games hosts (leshen, griffin).
+  home.persistence."/persistent".directories = [
+    ".local/share/Steam"
+    ".steam"
+    ".clonehero"
+    ".config/unity3d/srylain Inc_/Clone Hero"
+  ];
 }

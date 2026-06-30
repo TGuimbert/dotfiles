@@ -68,5 +68,10 @@
         Icon=seahorse
         NoDisplay=true
       '';
+
+      home.persistence."/persistent" = {
+        directories = [ ".local/share/keyrings" ];
+        files = [ ".config/monitors.xml" ];
+      };
     };
 }

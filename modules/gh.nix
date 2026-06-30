@@ -23,5 +23,7 @@
           gh-markdown-preview
         ];
       };
+
+      home.persistence."/persistent".files = [ ".config/gh/hosts.yml" ];
     };
 }

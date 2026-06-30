@@ -19,11 +19,8 @@
 
       nixpkgs.hostPlatform = "x86_64-linux";
 
-      # ../../home/work.nix is the work overlay, imported only on tuxedo (named aspect at R12).
-      home-manager.users.tguimbert.imports = [
-        ../../home
-        ../../home/work.nix
-      ];
+      # ../../home/work.nix is the work overlay, imported only on tuxedo (named aspect at R13).
+      home-manager.users.tguimbert.imports = [ ../../home/work.nix ];
 
       system.stateVersion = "25.11";
     };
