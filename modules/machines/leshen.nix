@@ -12,9 +12,8 @@
         ++ [
           inputs.disko.nixosModules.disko
 
-          # leshen-specific legacy modules (move to machines/ + named aspects later).
-          ../../hosts/leshen/hardware.nix
-          ../../hosts/leshen/disks.nix
+          ../_hosts/leshen/hardware.nix
+          ../_hosts/leshen/disks.nix
         ];
 
       nixpkgs.hostPlatform = "x86_64-linux";
