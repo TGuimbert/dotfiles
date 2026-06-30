@@ -1,7 +1,7 @@
 { ... }:
 {
   nixos.modules.traefik =
-    { config, ... }:
+    { config, constants, ... }:
     {
       sops.secrets.traefikEnvironments = { };
       services.traefik = {
@@ -59,15 +59,15 @@
             stores.default.defaultGeneratedCert = {
               resolver = "cloudflareDns";
               domain = {
-                main = "home.guimbert.fr";
-                sans = [ "lldap.home.guimbert.fr" ];
+                main = constants.domain;
+                sans = [ "lldap.${constants.domain}" ];
               };
             };
           };
         };
         dynamicConfigOptions = {
           http.routers.dashboard = {
-            rule = "Host(`traefik.home.guimbert.fr`)";
+            rule = "Host(`traefik.${constants.domain}`)";
             entrypoints = [ "websecure" ];
             middlewares = [ "authelia" ];
             service = "api@internal";

@@ -1,14 +1,14 @@
 { ... }:
 {
   nixos.modules.restic =
-    { pkgs, config, ... }:
+    { pkgs, config, constants, ... }:
     {
       sops.secrets = {
         resticPassword = { };
         resticEnvironment = { };
       };
       services.restic.backups.nas = {
-        repository = "s3:https://garage.home.guimbert.fr/restic-backup";
+        repository = "s3:https://garage.${constants.domain}/restic-backup";
         passwordFile = config.sops.secrets.resticPassword.path;
         environmentFile = config.sops.secrets.resticEnvironment.path;
         paths = [

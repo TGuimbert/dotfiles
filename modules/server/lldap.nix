@@ -1,7 +1,7 @@
 { ... }:
 {
   nixos.modules.lldap =
-    { config, ... }:
+    { config, constants, ... }:
     let
       sopsConfig = {
         group = "lldap-secrets";
@@ -26,7 +26,7 @@
             force_ldap_user_pass_reset = "always";
             ldap_host = "127.0.0.1";
             http_host = "127.0.0.1";
-            http_url = "https://ldap.home.guimbert.fr";
+            http_url = "https://ldap.${constants.domain}";
             jwt_secret_file = config.sops.secrets.lldapJwtSecret.path;
             smtp_options = {
               enable_password_reset = true;
@@ -38,7 +38,7 @@
           dynamicConfigOptions = {
             tcp = {
               routers.lldap = {
-                rule = "HostSNI(`ldap.home.guimbert.fr`)";
+                rule = "HostSNI(`ldap.${constants.domain}`)";
                 entrypoints = [ "ldapsecure" ];
                 service = "lldap-backend";
                 tls.certResolver = "cloudflareDns";
@@ -47,7 +47,7 @@
             };
             http = {
               routers.lldap = {
-                rule = "Host(`ldap.home.guimbert.fr`)";
+                rule = "Host(`ldap.${constants.domain}`)";
                 entrypoints = [ "websecure" ];
                 service = "lldap";
               };
