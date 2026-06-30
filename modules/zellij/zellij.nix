@@ -69,6 +69,6 @@
       };
     };
 
-    xdg.configFile."zellij/layouts/rust.kdl".source = ../config/zellij/layouts/rust.kdl;
+    xdg.configFile."zellij/layouts/rust.kdl".source = ./layouts/rust.kdl;
   };
 }

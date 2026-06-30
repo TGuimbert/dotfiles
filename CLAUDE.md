@@ -294,7 +294,6 @@ Flat by default (mightyiam-aligned). One feature = one flat `.nix` file; directo
 │   ├── server/                  # peer-set dir (traefik, authelia, lldap, …)
 │   ├── machines/                # peer-set dir (leshen.nix, griffin.nix, … — thin import lists)
 │   └── _hosts/                  # per-host hardware.nix + disks.nix (_-prefixed; skipped by import-tree)
-├── config/                     # Static config files (nushell, zellij, k9s)
 └── secrets/                    # SOPS encrypted secrets
 ```
 

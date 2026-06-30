@@ -11,7 +11,7 @@
       claude-statusline = pkgs.writeShellApplication {
         name = "claude-statusline";
         runtimeInputs = [ pkgs.jq ];
-        text = builtins.readFile ../config/claude/statusline.sh;
+        text = builtins.readFile ./statusline.sh;
       };
     in
     {
