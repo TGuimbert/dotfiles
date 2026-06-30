@@ -647,7 +647,7 @@ Steps 1–7 of the original plan are merged but use the superseded pattern; R1�
 - [x] **R7**: Dev tools
 - [x] **R8**: Desktop features (gnome/stylix/firefox → `modules/desktop/`; dropped per-machine `specialArgs`/`extraSpecialArgs`)
 - [x] **R9**: Security features (lanzaboote/sops → flat `modules/{lanzaboote,sops}.nix`; sops input on `base`, lanzaboote + desktop sops defaults on `desktop`; dropped security input-imports from machines; srv-01 sops/services baseline deferred to R12)
-- [ ] **R10**: Impermanence features
+- [x] **R10**: Impermanence features (`modules/_nixos/impermanence.nix` → `modules/impermanence/{persistence,btrfs-rollback}.nix`; impermanence input import moved to `base`, desktop persistence/rollback on `desktop`; `home/default.nix` home.persistence deferred to R13)
 - [ ] **R11**: Virtualization features
 - [ ] **R12**: Gaming + work + server services
 - [ ] **R13**: Cleanup old structure + docs

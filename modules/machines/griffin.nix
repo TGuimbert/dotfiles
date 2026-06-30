@@ -9,12 +9,10 @@
         ])
         ++ [
           inputs.disko.nixosModules.disko
-          inputs.impermanence.nixosModules.impermanence
 
           inputs.nixos-hardware.nixosModules.lenovo-thinkpad-t490
           ../../hosts/griffin/hardware.nix
           ../../hosts/griffin/disks.nix
-          ../_nixos/impermanence.nix
           ../_nixos/games.nix
           ../_nixos/podman.nix
         ];
