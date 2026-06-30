@@ -402,7 +402,7 @@ Distribute by capability — co-locate each app's package **and** its persistenc
 
 #### R13: Gaming + work aspects
 **Branch**: `feat/dendritic-r13-gaming-work`
-- `modules/_nixos/games.nix` → `modules/steam.nix` named aspect `nixos.modules.games` (+ Steam home persistence in a `homeManager.modules.gui` block); leshen/griffin import `games`.
+- `modules/_nixos/games.nix` → `modules/games.nix` named aspect `nixos.modules.games` (+ Steam home persistence scoped inside the aspect via `home-manager.users.tguimbert`, keeping it leshen/griffin-only); leshen/griffin import `games`.
 - `home/work.nix` → `modules/scortex.nix` named aspect (slack-wayland overlay, azure-cli, awscli2, vscode, `.config/Slack`+`.azure`); tuxedo imports it.
 - Delete the now-empty `modules/_nixos/` and `home/`.
 - **Verify**: `nix flake check`; build leshen/griffin (steam) + tuxedo (slack/vscode).
@@ -676,6 +676,6 @@ Steps 1–7 of the original plan are merged but use the superseded pattern; R1�
 - [x] **R10**: Impermanence features (`modules/_nixos/impermanence.nix` → `modules/impermanence/{persistence,btrfs-rollback}.nix`; impermanence input import moved to `base`, desktop persistence/rollback on `desktop`; `home/default.nix` home.persistence deferred to R12)
 - [x] **R11**: Virtualization features (`modules/_nixos/{podman,docker}.nix` → flat `modules/{podman,docker}.nix` named aspects; leshen/griffin import `podman`, tuxedo imports `docker`)
 - [x] **R12**: Core home (`home/default.nix` → distributed-by-capability `homeManager.modules.gui` aspects: new `{home-base,gui-apps,cad,kubernetes,secrets-tools,dev-home}.nix` + persistence/packages pushed into existing owners; minikube config + `.minikube`/`.docker` persistence split across `podman.nix` + `docker.nix`; `users.nix` stateVersion → plain assignment, tuxedo home 22.11→25.11; Steam persistence kept in reduced `home/default.nix` (leshen/griffin only) until R13; dropped redundant `home.username`/`homeDirectory`)
-- [ ] **R13**: Gaming + work aspects (`games.nix` → `steam.nix`; `work.nix` → `scortex.nix`)
+- [x] **R13**: Gaming + work aspects (`modules/_nixos/games.nix` → `modules/games.nix` named aspect `nixos.modules.games`, Steam home persistence scoped inside the aspect via `home-manager.users.tguimbert` so it stays leshen/griffin-only; `home/work.nix` → `modules/scortex.nix` named aspect `nixos.modules.scortex`; leshen/griffin import `games`, tuxedo imports `scortex`; deleted `home/default.nix` + now-empty `modules/_nixos/` and `home/`)
 - [ ] **R14**: Server services (`hosts/srv-01/*` → `modules/server/` baseline collector + per-service named aspects)
 - [ ] **R15**: Cleanup (`hosts/` → `modules/_hosts/`; remove `_lib/`; drop residual specialArgs; docs)
