@@ -19,8 +19,7 @@
 
       nixpkgs.hostPlatform = "x86_64-linux";
 
-      # Legacy home packages/persistence still live in ./home; desktop GUI config
-      # (gnome/stylix/firefox) now arrives via homeManager.modules.gui (the `desktop` aspect).
+      # ../../home now holds only Steam/games persistence (migrated to steam.nix at R13).
       home-manager.users.tguimbert.imports = [ ../../home ];
 
       system.stateVersion = "22.11";

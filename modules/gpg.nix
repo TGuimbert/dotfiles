@@ -25,5 +25,7 @@
         enableSshSupport = false;
         pinentry.package = pkgs.pinentry-gnome3;
       };
+
+      home.persistence."/persistent".directories = [ ".gnupg" ];
     };
 }

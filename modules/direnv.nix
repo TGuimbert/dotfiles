@@ -9,5 +9,7 @@
         warn_timeout = "15s";
       };
     };
+
+    home.persistence."/persistent".directories = [ ".local/share/direnv" ];
   };
 }

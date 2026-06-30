@@ -95,5 +95,7 @@
           "x-scheme-handler/https" = [ "firefox.desktop" ];
         };
       };
+
+      home.persistence."/persistent".directories = [ ".config/mozilla/firefox" ];
     };
 }
