@@ -6,6 +6,7 @@
         (with config.nixos.modules; [
           base
           desktop
+          podman
         ])
         ++ [
           inputs.disko.nixosModules.disko
@@ -14,7 +15,6 @@
           ../../hosts/leshen/hardware.nix
           ../../hosts/leshen/disks.nix
           ../_nixos/games.nix
-          ../_nixos/podman.nix
         ];
 
       nixpkgs.hostPlatform = "x86_64-linux";

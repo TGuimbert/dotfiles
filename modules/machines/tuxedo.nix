@@ -6,6 +6,7 @@
         (with config.nixos.modules; [
           base
           desktop
+          docker
         ])
         ++ [
           inputs.disko.nixosModules.disko
@@ -14,7 +15,6 @@
           inputs.tuxedo-nixos.nixosModules.default
           ../../hosts/tuxedo/hardware.nix
           ../../hosts/tuxedo/disks.nix
-          ../_nixos/docker.nix
         ];
 
       nixpkgs.hostPlatform = "x86_64-linux";
