@@ -1,33 +1,27 @@
 { config, inputs, ... }:
 {
-  nixos.configurations.srv-01 = {
-    # `inputs` for legacy NixOS modules (parity with old mkServer specialArgs); dropped at R12.
-    args.specialArgs = { inherit inputs; };
+  nixos.configurations.srv-01.module = {
+    imports =
+      (with config.nixos.modules; [
+        base
+        server
+        traefik
+        authelia
+        lldap
+        homepage
+        restic
+        calibre
+        printing
+      ])
+      ++ [
+        inputs.disko.nixosModules.disko
 
-    module = {
-      imports =
-        (with config.nixos.modules; [
-          base
-          server
-        ])
-        ++ [
-          inputs.disko.nixosModules.disko
+        ../../hosts/srv-01/hardware.nix
+        ../../hosts/srv-01/disks.nix
+      ];
 
-          ../../hosts/srv-01/hardware.nix
-          ../../hosts/srv-01/disks.nix
-          ../../hosts/srv-01/default.nix
-          ../../hosts/srv-01/printing.nix
-          ../../hosts/srv-01/traefik.nix
-          ../../hosts/srv-01/lldap.nix
-          ../../hosts/srv-01/authelia.nix
-          ../../hosts/srv-01/homepage.nix
-          ../../hosts/srv-01/restic.nix
-          ../../hosts/srv-01/calibre.nix
-        ];
+    nixpkgs.hostPlatform = "x86_64-linux";
 
-      nixpkgs.hostPlatform = "x86_64-linux";
-
-      system.stateVersion = "25.11";
-    };
+    system.stateVersion = "25.11";
   };
 }
