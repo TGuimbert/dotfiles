@@ -1,12 +1,7 @@
 { ... }:
 {
   nixos.modules.desktop =
-    {
-      lib,
-      config,
-      pkgs,
-      ...
-    }:
+    { config, pkgs, ... }:
     let
       mkCifs =
         share: extraOptions:
@@ -16,10 +11,11 @@
         };
     in
     {
-      networking = {
-        networkmanager.enable = true;
-        useDHCP = lib.mkDefault true;
-      };
+      networking.networkmanager.enable = true;
+
+      # NetworkManager owns DHCP; facter's detection would start dhcpcd
+      # on the same interfaces.
+      hardware.facter.detected.dhcp.enable = false;
 
       sops.secrets.smb-secrets = { };
 
