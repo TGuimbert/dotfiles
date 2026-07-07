@@ -186,7 +186,7 @@ For unstable packages, add to the overlay in `modules/nixpkgs.nix` first.
 
 ### Adding a New Host
 
-1. Create `modules/_hosts/<hostname>/` with `disks.nix` and `hardware.nix` (generate with `nixos-generate-config`)
+1. Create `modules/_hosts/<hostname>/` with `disks.nix`, `facter.json` (generate on the host with `sudo nix run nixpkgs#nixos-facter -- -o facter.json`) and a slim `hardware.nix` (`hardware.facter.reportPath = ./facter.json;` + host quirks facter can't detect)
 2. Create age key for SOPS: `ssh-keyscan <hostname> | ssh-to-age`
 3. Add host to `.sops.yaml`
 4. Add `modules/machines/<hostname>.nix` defining `nixos.configurations.<hostname>.module` (import `base` + `desktop`/`server` + opt-in aspects, plus the host's `../_hosts/<hostname>/{hardware,disks}.nix`)
@@ -252,7 +252,7 @@ Scaffolding files live **flat in `modules/`** (`nixos.nix`, `home-manager.nix`, 
 - `nixos.modules.server` — srv-01 baseline
 - Named opt-in aspects: `games`, `podman`, `docker`, `scortex`, `traefik`, `authelia`, `lldap`, `homepage`, `restic`, `calibre`, `printing`
 
-**Deliberate divergences from mightyiam/infra**: no `flake-file` (inputs stay hand-written in `flake.nix`); inputs stay real flakes (use `inputs.home-manager.nixosModules.home-manager`, not `flake = false`); single user `tguimbert` hardcoded (no multi-user `users` option machinery); keep `hardware.nix` (no nixos-facter).
+**Deliberate divergences from mightyiam/infra**: no `flake-file` (inputs stay hand-written in `flake.nix`); inputs stay real flakes (use `inputs.home-manager.nixosModules.home-manager`, not `flake = false`); single user `tguimbert` hardcoded (no multi-user `users` option machinery). Hardware detection uses nixpkgs' `hardware.facter` (report at `modules/_hosts/<host>/facter.json`, must be git-tracked); a slim `hardware.nix` per host keeps `facter.reportPath` + quirks facter can't detect.
 
 ### Home-manager wiring
 
