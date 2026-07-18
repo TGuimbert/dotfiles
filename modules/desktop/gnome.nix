@@ -14,6 +14,11 @@
         gnome.excludePackages = with pkgs; [ gnome-tour ];
         systemPackages = with pkgs; [ wl-clipboard ];
       };
+
+      preservation.preserveAt."/persistent".users.tguimbert = {
+        directories = [ ".local/share/keyrings" ];
+        files = [ ".config/monitors.xml" ];
+      };
     };
 
   homeManager.modules.gui =
@@ -69,9 +74,5 @@
         NoDisplay=true
       '';
 
-      home.persistence."/persistent" = {
-        directories = [ ".local/share/keyrings" ];
-        files = [ ".config/monitors.xml" ];
-      };
     };
 }

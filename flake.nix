@@ -27,10 +27,9 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    impermanence = {
-      url = "github:nix-community/impermanence/master";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    # preservation takes nixpkgs-lib passed in by the consumer; it declares no
+    # nixpkgs input, so there is nothing to `follows`.
+    preservation.url = "github:nix-community/preservation";
 
     lanzaboote = {
       url = "github:nix-community/lanzaboote/v0.4.3";

@@ -26,6 +26,12 @@
         pinentry.package = pkgs.pinentry-gnome3;
       };
 
-      home.persistence."/persistent".directories = [ ".gnupg" ];
     };
+
+  nixos.modules.desktop.preservation.preserveAt."/persistent".users.tguimbert.directories = [
+    {
+      directory = ".gnupg";
+      mode = "0700";
+    }
+  ];
 }

@@ -19,9 +19,10 @@
         "k9s/views.yaml".source = ./views.yaml;
       };
 
-      home.persistence."/persistent".directories = [
-        ".kube"
-        ".minikube"
-      ];
     };
+
+  nixos.modules.desktop.preservation.preserveAt."/persistent".users.tguimbert.directories = [
+    ".kube"
+    ".minikube"
+  ];
 }

@@ -13,11 +13,12 @@
         tidal-hifi
       ];
 
-      home.persistence."/persistent".directories = [
-        ".config/discord"
-        ".config/Signal"
-        ".config/obsidian"
-        ".config/tidal-hifi"
-      ];
     };
+
+  nixos.modules.desktop.preservation.preserveAt."/persistent".users.tguimbert.directories = [
+    ".config/discord"
+    ".config/Signal"
+    ".config/obsidian"
+    ".config/tidal-hifi"
+  ];
 }

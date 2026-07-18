@@ -56,7 +56,7 @@
           };
         };
       };
-      environment.persistence."/persistent" = {
+      preservation.preserveAt."/persistent" = {
         directories = [
           {
             directory = "/var/lib/private/lldap/";

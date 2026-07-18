@@ -1,10 +1,15 @@
 { ... }:
 {
-  nixos.modules.scortex.home-manager.users.tguimbert =
-    { pkgs, ... }:
-    {
-      home = {
-        packages = with pkgs; [
+  nixos.modules.scortex = {
+    preservation.preserveAt."/persistent".users.tguimbert.directories = [
+      ".config/Slack"
+      ".azure"
+    ];
+
+    home-manager.users.tguimbert =
+      { pkgs, ... }:
+      {
+        home.packages = with pkgs; [
           (slack.overrideAttrs (old: {
             installPhase = old.installPhase + ''
                 rm $out/bin/slack
@@ -22,12 +27,7 @@
           awscli2
         ];
 
-        persistence."/persistent".directories = [
-          ".config/Slack"
-          ".azure"
-        ];
+        programs.vscode.enable = true;
       };
-
-      programs.vscode.enable = true;
-    };
+  };
 }

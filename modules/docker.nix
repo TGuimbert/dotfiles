@@ -12,11 +12,11 @@
 
       environment.systemPackages = [ pkgs.docker-compose ];
 
-      environment.persistence."/persistent" = {
-        hideMounts = true;
+      preservation.preserveAt."/persistent" = {
         directories = [
           "/var/lib/docker"
         ];
+        users.tguimbert.files = [ ".docker/config.json" ];
       };
 
       home-manager.users.tguimbert = {
@@ -29,8 +29,6 @@
             };
           };
         };
-
-        home.persistence."/persistent".files = [ ".docker/config.json" ];
       };
     };
 }

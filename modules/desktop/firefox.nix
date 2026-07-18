@@ -96,6 +96,9 @@
         };
       };
 
-      home.persistence."/persistent".directories = [ ".config/mozilla/firefox" ];
     };
+
+  nixos.modules.desktop.preservation.preserveAt."/persistent".users.tguimbert.directories = [
+    ".config/mozilla/firefox"
+  ];
 }

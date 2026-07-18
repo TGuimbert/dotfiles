@@ -82,25 +82,38 @@
         };
       };
 
-      environment.persistence."/persistent" = {
-        hideMounts = true;
-        directories = [
-          "/var/lib/nixos"
-          "/var/lib/systemd/coredump"
-        ];
-        files = [
-          "/etc/machine-id"
-          "/etc/ssh/ssh_host_ed25519_key"
-          "/etc/ssh/ssh_host_ed25519_key.pub"
-        ];
+      preservation = {
+        enable = true;
+        preserveAt."/persistent" = {
+          commonMountOptions = [ "x-gvfs-hide" ];
+          directories = [
+            "/var/lib/nixos"
+            "/var/lib/systemd/coredump"
+          ];
+          files = [
+            {
+              file = "/etc/machine-id";
+              inInitrd = true;
+            }
+            {
+              file = "/etc/ssh/ssh_host_ed25519_key";
+              how = "symlink";
+              configureParent = true;
+            }
+            "/etc/ssh/ssh_host_ed25519_key.pub"
+          ];
+        };
       };
 
-      programs.fuse.userAllowOther = true;
+      systemd.suppressedSystemUnits = [ "systemd-machine-id-commit.service" ];
 
-      system.activationScripts.persistentHome.text = ''
-        install -d -m 0755 -o root -g root /persistent/
-        install -d -m 0755 -o root -g root /.snapshot/root/
-      '';
+      # Snapshot target for the initrd wipe below (/persistent comes from
+      # preservation).
+      systemd.tmpfiles.settings.btrfs-rollback."/.snapshot/root".d = {
+        user = "root";
+        group = "root";
+        mode = "0755";
+      };
 
       boot.initrd.systemd = {
         services.wipe-file-systems = {

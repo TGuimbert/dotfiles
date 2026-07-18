@@ -12,7 +12,7 @@
 
       environment.systemPackages = with pkgs; [ clonehero ];
 
-      home-manager.users.tguimbert.home.persistence."/persistent".directories = [
+      preservation.preserveAt."/persistent".users.tguimbert.directories = [
         ".local/share/Steam"
         ".steam"
         ".clonehero"

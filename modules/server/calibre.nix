@@ -31,7 +31,7 @@
           port = config.services.calibre-web.listen.port;
         };
       };
-      environment.persistence."/persistent" = {
+      preservation.preserveAt."/persistent" = {
         directories = [
           {
             directory = config.services.calibre-web.dataDir;

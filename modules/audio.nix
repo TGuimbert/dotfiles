@@ -8,9 +8,9 @@
       alsa.support32Bit = true;
       pulse.enable = true;
     };
-  };
 
-  homeManager.modules.gui = {
-    home.persistence."/persistent".directories = [ ".local/state/wireplumber" ];
+    preservation.preserveAt."/persistent".users.tguimbert.directories = [
+      ".local/state/wireplumber"
+    ];
   };
 }

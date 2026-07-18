@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-This is a NixOS dotfiles repository using Nix flakes. It manages configurations for multiple hosts (desktop and server systems) using a modular architecture with Home Manager integration. The repository implements an impermanence-based filesystem layout where `/` and `/home` are wiped on reboot for enhanced security.
+This is a NixOS dotfiles repository using Nix flakes. It manages configurations for multiple hosts (desktop and server systems) using a modular architecture with Home Manager integration. The repository implements an ephemeral-root filesystem layout (via the preservation module) where `/` and `/home` are wiped on reboot for enhanced security.
 
 ## Common Commands
 
@@ -136,14 +136,14 @@ Each host is a thin import list in `modules/machines/<hostname>.nix` — it sets
 ### Module Organization
 
 One feature = one capability file holding its NixOS **and** home-manager config together (organized by capability, not by module class). Features contribute to merge points:
-- `nixos.modules.base` — every host (boot, locale, networking, audio, nix settings, services, user, impermanence, sops)
+- `nixos.modules.base` — every host (boot, locale, networking, audio, nix settings, services, user, preservation, sops)
 - `nixos.modules.desktop` — desktop hosts (gnome, stylix, lanzaboote, firefox, GUI home)
 - `nixos.modules.server` — srv-01 baseline (`modules/server/`)
 - Named opt-in aspects imported only by hosts that want them: `games`, `podman`, `docker`, `scortex`, and the srv-01 services (`traefik`, `authelia`, `lldap`, `homepage`, `restic`, `calibre`, `printing`)
 
 Most features are flat `modules/<feature>.nix` files; directories appear only for a cohesive multi-file capability (`desktop/`) or a peer-set (`machines/`, `server/`, `shells/`). Per-user config goes through `homeManager.modules.base` (every host) / `homeManager.modules.gui` (desktop) inside the owning feature file — never `home-manager.users.*` directly (except the wiring in `users.nix`).
 
-### Impermanence Strategy
+### Ephemeral-Root Strategy
 
 **BTRFS subvolumes** (defined in `modules/_hosts/*/disks.nix`):
 - `/root`: Ephemeral, rolled back on boot
@@ -154,9 +154,9 @@ Most features are flat `modules/<feature>.nix` files; directories appear only fo
 - `/.snapshot`: Stores pre-rollback snapshots (15 days for root, 30 for home)
 - `/.swapvol` (`/swap`): Swap file
 
-**Rollback mechanism**: Implemented in `modules/impermanence/btrfs-rollback.nix` via systemd initrd service that moves old root/home to snapshots and creates fresh subvolumes (srv-01 has its own initrd wipe service in `modules/server/base.nix`).
+**Rollback mechanism**: Implemented in `modules/btrfs-rollback.nix` via systemd initrd service that moves old root/home to snapshots and creates fresh subvolumes (srv-01 has its own initrd wipe service in `modules/server/base.nix`).
 
-**Persistence**: Managed using the impermanence module with `environment.persistence."/persistent"` and `home.persistence."/persistent"` blocks throughout configs.
+**Persistence**: Managed with the [preservation](https://github.com/nix-community/preservation) module (`modules/preservation.nix` imports it in `base` and enables it). State is declared via `preservation.preserveAt."/persistent"` blocks: `directories`/`files` for system state and `users.tguimbert.{directories,files}` for per-user state. Preservation is **NixOS-only** — there is no `home.persistence` home-manager option, so per-user paths are declared in the *NixOS* aspect of a feature file (`nixos.modules.desktop`/opt-in aspect), co-located with that feature's HM config. Bind-mounts are hidden with `commonMountOptions = [ "x-gvfs-hide" ]` (replaces impermanence's `hideMounts`).
 
 ### Overlays
 
@@ -169,7 +169,7 @@ Major flake inputs:
 - `unstable`: nixos-unstable for bleeding-edge packages
 - `home-manager`: User environment management
 - `disko`: Declarative disk partitioning
-- `impermanence`: Stateless system configuration
+- `preservation`: Stateless system configuration (declarative state preservation)
 - `lanzaboote`: Secure Boot support
 - `sops-nix`: Secret management
 - `stylix`: System-wide theming
@@ -194,11 +194,11 @@ For unstable packages, add to the overlay in `modules/nixpkgs.nix` first.
 
 ### Modifying Persistence
 
-To persist new directories/files, add them to:
-- System-level: `environment.persistence."/persistent"` in host or module config
-- User-level: `home.persistence."/persistent"` in home modules
+To persist new directories/files, add them to the owning feature's NixOS aspect:
+- System-level: `preservation.preserveAt."/persistent".{directories,files}`
+- User-level: `preservation.preserveAt."/persistent".users.tguimbert.{directories,files}` (paths relative to home). Declare this in the feature's `nixos.modules.*` block, **not** its `homeManager.modules.*` block — preservation is NixOS-only.
 
-Remember: Only explicitly listed paths persist across reboots.
+Entries are bare path strings, or `{ directory|file; user; group; mode; how; inInitrd; }` when a non-default owner/mode is needed (e.g. `.ssh`/`.gnupg` use `mode = "0700"`; ssh host keys use `how = "symlink"`). Remember: Only explicitly listed paths persist across reboots.
 
 ## Editor Configuration
 
@@ -247,7 +247,7 @@ Scaffolding files live **flat in `modules/`** (`nixos.nix`, `home-manager.nix`, 
 
 **Merge points (system-types)** replace a separate profiles layer:
 
-- `nixos.modules.base` — every host (nix settings, locale, networking, audio, services, boot, user, impermanence, sops)
+- `nixos.modules.base` — every host (nix settings, locale, networking, audio, services, boot, user, preservation, sops)
 - `nixos.modules.desktop` — desktop hosts (gnome, stylix, lanzaboote, firefox, GUI home); also pulls `home.gui`
 - `nixos.modules.server` — srv-01 baseline
 - Named opt-in aspects: `games`, `podman`, `docker`, `scortex`, `traefik`, `authelia`, `lldap`, `homepage`, `restic`, `calibre`, `printing`

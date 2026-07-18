@@ -36,9 +36,10 @@
         };
       };
 
-      home.persistence."/persistent".directories = [
-        ".config/claude"
-        ".local/share/claude-code"
-      ];
     };
+
+  nixos.modules.desktop.preservation.preserveAt."/persistent".users.tguimbert.directories = [
+    ".config/claude"
+    ".local/share/claude-code"
+  ];
 }

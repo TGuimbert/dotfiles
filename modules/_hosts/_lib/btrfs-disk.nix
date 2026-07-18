@@ -1,4 +1,4 @@
-# Shared BTRFS-on-LUKS impermanence disk layout.
+# Shared BTRFS-on-LUKS ephemeral-root disk layout.
 #
 # `_`-prefixed dir → skipped by import-tree; imported by relative path from each
 # host's disks.nix (like hardware.nix). Returns the common `main` disk + tmpfs
