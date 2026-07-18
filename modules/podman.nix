@@ -11,6 +11,8 @@
 
       environment.systemPackages = [ pkgs.podman-compose ];
 
+      preservation.preserveAt."/persistent".users.tguimbert.files = [ ".docker/config.json" ];
+
       home-manager.users.tguimbert = {
         home.file.minikubeConfig = {
           target = ".minikube/config/config.json";
@@ -19,8 +21,6 @@
             rootless = true;
           };
         };
-
-        home.persistence."/persistent".files = [ ".docker/config.json" ];
       };
     };
 }

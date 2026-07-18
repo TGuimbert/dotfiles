@@ -41,7 +41,12 @@
       };
 
       home.sessionVariables.SSH_AUTH_SOCK = "$XDG_RUNTIME_DIR/ssh-agent";
-
-      home.persistence."/persistent".directories = [ ".ssh" ];
     };
+
+  nixos.modules.desktop.preservation.preserveAt."/persistent".users.tguimbert.directories = [
+    {
+      directory = ".ssh";
+      mode = "0700";
+    }
+  ];
 }

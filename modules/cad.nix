@@ -10,12 +10,13 @@
         calibre
       ];
 
-      home.persistence."/persistent".directories = [
-        ".config/OrcaSlicer"
-        ".config/FreeCAD"
-        ".cache/FreeCAD"
-        ".cache/orca-slicer"
-        ".local/share/FreeCAD"
-      ];
     };
+
+  nixos.modules.desktop.preservation.preserveAt."/persistent".users.tguimbert.directories = [
+    ".config/OrcaSlicer"
+    ".config/FreeCAD"
+    ".cache/FreeCAD"
+    ".cache/orca-slicer"
+    ".local/share/FreeCAD"
+  ];
 }

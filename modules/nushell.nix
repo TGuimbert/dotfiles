@@ -79,11 +79,11 @@
       };
 
       programs.carapace.enable = true;
-
-      home.persistence."/persistent".files = [
-        ".config/nushell/history.txt"
-        ".config/nushell/private.nu"
-        ".config/Bitwarden CLI/data.json"
-      ];
     };
+
+  nixos.modules.desktop.preservation.preserveAt."/persistent".users.tguimbert.files = [
+    ".config/nushell/history.txt"
+    ".config/nushell/private.nu"
+    ".config/Bitwarden CLI/data.json"
+  ];
 }

@@ -1,7 +1,12 @@
 { ... }:
 {
   nixos.modules.restic =
-    { pkgs, config, constants, ... }:
+    {
+      pkgs,
+      config,
+      constants,
+      ...
+    }:
     {
       sops.secrets = {
         resticPassword = { };
@@ -36,7 +41,7 @@
           "--compression max"
         ];
       };
-      environment.persistence."/persistent" = {
+      preservation.preserveAt."/persistent" = {
         directories = [
           "/var/backup/sqldumps"
           "/var/cache/restic"

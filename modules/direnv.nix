@@ -10,6 +10,9 @@
       };
     };
 
-    home.persistence."/persistent".directories = [ ".local/share/direnv" ];
   };
+
+  nixos.modules.desktop.preservation.preserveAt."/persistent".users.tguimbert.directories = [
+    ".local/share/direnv"
+  ];
 }

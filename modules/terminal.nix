@@ -20,6 +20,9 @@
       ZELLIJ_AUTO_EXIT = "true";
     };
 
-    home.persistence."/persistent".files = [ ".bash_history" ];
   };
+
+  nixos.modules.desktop.preservation.preserveAt."/persistent".users.tguimbert.files = [
+    ".bash_history"
+  ];
 }

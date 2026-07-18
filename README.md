@@ -1,6 +1,6 @@
 # dotfiles
 
-Personal NixOS configuration using flakes, featuring an impermanence-based setup with encrypted BTRFS filesystem.
+Personal NixOS configuration using flakes, featuring an ephemeral-root setup (via preservation) with encrypted BTRFS filesystem.
 
 ## Features
 
@@ -196,9 +196,9 @@ The system uses BTRFS with multiple subvolumes implementing different persistenc
 | `snapshot`   | `/.snapshot` | Persistent | Backup snapshots (15-30 days)   |
 | `swap`       | `/.swapvol` | Persistent  | Swap file                        |
 
-### Impermanence
+### Ephemeral root
 
-The system implements "impermanence" where most of the filesystem is reset on each boot:
+The system implements an ephemeral-root layout (via the [preservation](https://github.com/nix-community/preservation) module) where most of the filesystem is reset on each boot:
 
 - **Root (`/`) and Home (`/home`)** are wiped clean on every reboot
 - Only explicitly configured paths in `/persistent` survive reboots

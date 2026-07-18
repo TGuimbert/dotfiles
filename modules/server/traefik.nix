@@ -74,7 +74,7 @@
           };
         };
       };
-      environment.persistence."/persistent" = {
+      preservation.preserveAt."/persistent" = {
         directories = [
           config.services.traefik.dataDir
         ];

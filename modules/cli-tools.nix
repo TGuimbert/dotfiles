@@ -14,6 +14,11 @@
         restic
         bottom
       ];
+
+      preservation.preserveAt."/persistent".users.tguimbert.directories = [
+        ".local/share/zoxide"
+        ".cache/tealdeer"
+      ];
     };
 
   homeManager.modules.gui =
@@ -39,10 +44,5 @@
         };
         zoxide.enable = true;
       };
-
-      home.persistence."/persistent".directories = [
-        ".local/share/zoxide"
-        ".cache/tealdeer"
-      ];
     };
 }

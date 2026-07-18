@@ -30,12 +30,12 @@
       };
       nix-ld.enable = true;
     };
-  };
 
-  # Persist Nix's trusted-settings.json so answering the flake `nixConfig` prompt
-  # (e.g. our `pipe-operators`) once survives the impermanence rollback, instead
-  # of being re-asked on every `nix develop`/direnv reload.
-  homeManager.modules.gui = {
-    home.persistence."/persistent".directories = [ ".local/share/nix" ];
+    # Persist Nix's trusted-settings.json so answering the flake `nixConfig`
+    # prompt (e.g. our `pipe-operators`) once survives the rollback, instead of
+    # being re-asked on every `nix develop`/direnv reload.
+    preservation.preserveAt."/persistent".users.tguimbert.directories = [
+      ".local/share/nix"
+    ];
   };
 }

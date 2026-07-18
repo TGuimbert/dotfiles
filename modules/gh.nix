@@ -24,6 +24,9 @@
         ];
       };
 
-      home.persistence."/persistent".files = [ ".config/gh/hosts.yml" ];
     };
+
+  nixos.modules.desktop.preservation.preserveAt."/persistent".users.tguimbert.files = [
+    ".config/gh/hosts.yml"
+  ];
 }

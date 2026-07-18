@@ -107,7 +107,7 @@
         };
       };
 
-      environment.persistence."/persistent" = {
+      preservation.preserveAt."/persistent" = {
         directories = [
           "/var/lib/authelia-main/"
         ];
