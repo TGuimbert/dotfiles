@@ -7,6 +7,12 @@
         inherit system;
         config.allowUnfree = true;
       };
+      # pylsp-mypy on unstable currently fails its test suite against the
+      # bundled mypy, so pull it from stable nixpkgs instead.
+      stable = import inputs.nixpkgs {
+        inherit system;
+        config.allowUnfree = true;
+      };
     in
     {
       devShells.python = pkgs.mkShell {
@@ -17,7 +23,7 @@
           # Language Server Protocol
           python313Packages.python-lsp-server
           ruff
-          python313Packages.pylsp-mypy
+          stable.python313Packages.pylsp-mypy
         ];
         shellHook = with pkgs; ''
           export LD_LIBRARY_PATH="${
