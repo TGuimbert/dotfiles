@@ -4,7 +4,7 @@ Personal NixOS configuration using flakes, featuring an ephemeral-root setup (vi
 
 ## Features
 
-- **Impermanence**: Root and home directories are wiped on every boot for enhanced security
+- **Impermanence**: Root is a tmpfs (RAM-backed), so the filesystem is empty on every boot for enhanced security; only explicitly preserved paths survive
 - **Encryption**: Full disk encryption with LUKS, supporting Yubikey FIDO2 authentication
 - **Secure Boot**: Implemented via lanzaboote
 - **Declarative**: Everything managed through Nix flakes
@@ -184,26 +184,24 @@ Reboot and verify that all enrollment methods work before relying on them.
 
 ## Filesystem Layout
 
-The system uses BTRFS with multiple subvolumes implementing different persistence levels:
+The root filesystem (`/`) is a tmpfs (RAM-backed); persistent state lives on BTRFS subvolumes:
 
-| Subvolume    | Mount Point | Persistence | Purpose                          |
-|--------------|-------------|-------------|----------------------------------|
-| `root`       | `/`         | Ephemeral   | System root, wiped on reboot     |
-| `nix`        | `/nix`      | Persistent  | Nix store                        |
-| `persistent` | `/persistent` | Persistent | Stateful data                   |
-| `log`        | `/var/log`  | Persistent  | System logs for debugging        |
-| `home`       | `/home`     | Ephemeral   | User home, wiped on reboot       |
-| `snapshot`   | `/.snapshot` | Persistent | Backup snapshots (15-30 days)   |
-| `swap`       | `/.swapvol` | Persistent  | Swap file                        |
+| Mount point   | Backing     | Persistence | Purpose                          |
+|---------------|-------------|-------------|----------------------------------|
+| `/`           | tmpfs (RAM) | Ephemeral   | System root, empty on every boot |
+| `/tmp`        | preservation bind-mount | Cleaned on boot | Disk-backed temp (keeps builds off RAM) |
+| `/nix`        | btrfs       | Persistent  | Nix store                        |
+| `/persistent` | btrfs       | Persistent  | Stateful data                    |
+| `/var/log`    | btrfs       | Persistent  | System logs for debugging        |
+| `/.swapvol`   | btrfs       | Persistent  | Swap file (desktop hosts)        |
 
 ### Ephemeral root
 
-The system implements an ephemeral-root layout (via the [preservation](https://github.com/nix-community/preservation) module) where most of the filesystem is reset on each boot:
+The system implements an ephemeral-root layout (via the [preservation](https://github.com/nix-community/preservation) module) where the root is reset on each boot:
 
-- **Root (`/`) and Home (`/home`)** are wiped clean on every reboot
+- **Root (`/`)** is a tmpfs, so it is empty on every boot — no wipe/rollback service is needed
 - Only explicitly configured paths in `/persistent` survive reboots
-- Snapshots are automatically created before each wipe
-- Old snapshots are cleaned up after 15 days (root) or 30 days (home)
+- `/tmp` is disk-backed (a preservation bind-mount) and cleaned each boot via `boot.tmp.cleanOnBoot`
 
 Benefits:
 - No accumulation of cruft over time

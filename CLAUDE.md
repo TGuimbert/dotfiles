@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-This is a NixOS dotfiles repository using Nix flakes. It manages configurations for multiple hosts (desktop and server systems) using a modular architecture with Home Manager integration. The repository implements an ephemeral-root filesystem layout (via the preservation module) where `/` and `/home` are wiped on reboot for enhanced security.
+This is a NixOS dotfiles repository using Nix flakes. It manages configurations for multiple hosts (desktop and server systems) using a modular architecture with Home Manager integration. The repository implements an ephemeral-root filesystem layout (via the preservation module) where `/` is a tmpfs (RAM-backed, wiped on every reboot) for enhanced security; only explicitly preserved paths survive.
 
 ## Common Commands
 
@@ -145,16 +145,17 @@ Most features are flat `modules/<feature>.nix` files; directories appear only fo
 
 ### Ephemeral-Root Strategy
 
-**BTRFS subvolumes** (defined in `modules/_hosts/*/disks.nix`):
-- `/root`: Ephemeral, rolled back on boot
-- `/nix`: Persistent (Nix store)
-- `/persistent`: Persistent data
-- `/var/log` (`/log`): Persistent logs
-- `/home`: Ephemeral, rolled back on boot
-- `/.snapshot`: Stores pre-rollback snapshots (15 days for root, 30 for home)
-- `/.swapvol` (`/swap`): Swap file
+**tmpfs root**: `/` is a tmpfs (`size=25%`, `mode=755`, defined in `modules/_hosts/*/disks.nix` as a `disko.devices.nodev."/"` entry). It is RAM-backed and therefore inherently ephemeral — there is no rollback/wipe service; it is simply empty on every boot. The persistent state lives on BTRFS subvolumes.
 
-**Rollback mechanism**: Implemented in `modules/btrfs-rollback.nix` via systemd initrd service that moves old root/home to snapshots and creates fresh subvolumes (srv-01 has its own initrd wipe service in `modules/server/base.nix`).
+**BTRFS subvolumes** (defined in `modules/_hosts/*/disks.nix`):
+- `/nix`: Persistent (Nix store)
+- `/persistent`: Persistent data (`neededForBoot = true`)
+- `/var/log` (`/log`): Persistent logs
+- `/.swapvol` (`/swap`): Swap file (desktop hosts only)
+
+**`/tmp`**: not a tmpfs — it is a preservation bind-mount from the `/persistent` subvolume (so nix builds and large temp writes hit disk, not the tmpfs root's RAM), with `boot.tmp.cleanOnBoot = true` wiping its contents each boot (`modules/boot.nix`).
+
+**No rollback service**: because root is a tmpfs, there is no initrd rollback/wipe service and no pre-rollback snapshot retention (this replaced the earlier `btrfs-rollback.nix` subvolume-rename mechanism). The one tradeoff is the loss of that multi-day snapshot recovery net.
 
 **Persistence**: Managed with the [preservation](https://github.com/nix-community/preservation) module (`modules/preservation.nix` imports it in `base` and enables it). State is declared via `preservation.preserveAt."/persistent"` blocks: `directories`/`files` for system state and `users.tguimbert.{directories,files}` for per-user state. Preservation is **NixOS-only** — there is no `home.persistence` home-manager option, so per-user paths are declared in the *NixOS* aspect of a feature file (`nixos.modules.desktop`/opt-in aspect), co-located with that feature's HM config. Bind-mounts are hidden with `commonMountOptions = [ "x-gvfs-hide" ]` (replaces impermanence's `hideMounts`).
 

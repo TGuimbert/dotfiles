@@ -1,13 +1,13 @@
 # Shared BTRFS-on-LUKS ephemeral-root disk layout.
 #
 # `_`-prefixed dir → skipped by import-tree; imported by relative path from each
-# host's disks.nix (like hardware.nix). Returns the common `main` disk + tmpfs
-# `/tmp` + boot-needed filesystems. Hosts with extra disks (e.g. leshen) merge
-# additional `disko.devices.disk.*` on top via `lib.mkMerge`.
+# host's disks.nix (like hardware.nix). Root is a tmpfs (RAM-backed, empty every
+# boot); only the persistent btrfs subvolumes survive. Hosts with extra disks
+# (e.g. leshen) merge additional `disko.devices.disk.*` on top via `lib.mkMerge`.
 {
   device ? "/dev/nvme0n1",
   swapSize ? "8G",
-  tmpfsSize ? "200M",
+  rootSize ? "25%",
 }:
 {
   disko.devices = {
@@ -42,13 +42,6 @@
                 type = "btrfs";
                 extraArgs = [ "-f" ];
                 subvolumes = {
-                  "/root" = {
-                    mountpoint = "/";
-                    mountOptions = [
-                      "compress=zstd"
-                      "noatime"
-                    ];
-                  };
                   "/nix" = {
                     mountpoint = "/nix";
                     mountOptions = [
@@ -70,20 +63,6 @@
                       "noatime"
                     ];
                   };
-                  "/home" = {
-                    mountpoint = "/home";
-                    mountOptions = [
-                      "compress=zstd"
-                      "noatime"
-                    ];
-                  };
-                  "/snapshot" = {
-                    mountpoint = "/.snapshot";
-                    mountOptions = [
-                      "compress=zstd"
-                      "noatime"
-                    ];
-                  };
                   "/swap" = {
                     mountpoint = "/.swapvol";
                     swap.swapfile = {
@@ -99,10 +78,11 @@
       };
     };
     nodev = {
-      "/tmp" = {
+      "/" = {
         fsType = "tmpfs";
         mountOptions = [
-          "size=${tmpfsSize}"
+          "size=${rootSize}"
+          "mode=755"
         ];
       };
     };
@@ -110,6 +90,5 @@
 
   fileSystems = {
     "/persistent".neededForBoot = true;
-    "/home".neededForBoot = true;
   };
 }
