@@ -28,13 +28,6 @@
                 type = "btrfs";
                 extraArgs = [ "-f" ];
                 subvolumes = {
-                  "/root" = {
-                    mountpoint = "/";
-                    mountOptions = [
-                      "compress=zstd"
-                      "noatime"
-                    ];
-                  };
                   "/nix" = {
                     mountpoint = "/nix";
                     mountOptions = [
@@ -56,13 +49,6 @@
                       "noatime"
                     ];
                   };
-                  "/snapshot" = {
-                    mountpoint = "/.snapshot";
-                    mountOptions = [
-                      "compress=zstd"
-                      "noatime"
-                    ];
-                  };
                 };
               };
             };
@@ -71,9 +57,12 @@
       };
     };
     nodev = {
-      "/tmp" = {
+      "/" = {
         fsType = "tmpfs";
-        mountOptions = [ "size=1G" ];
+        mountOptions = [
+          "size=25%"
+          "mode=755"
+        ];
       };
     };
   };

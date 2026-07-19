@@ -5,6 +5,25 @@
   # system level via `preserveAt.<path>.users.tguimbert` in each feature file.
   nixos.modules.base = {
     imports = [ inputs.preservation.nixosModules.preservation ];
+
+    # Universal state (enable itself is set per host-type below).
+    preservation.preserveAt."/persistent" = {
+      directories = [
+        {
+          directory = "/tmp";
+          mode = "1777";
+        }
+        "/var/lib/systemd/timers"
+      ];
+      files = [
+        {
+          file = "/var/lib/systemd/random-seed";
+          how = "symlink";
+          inInitrd = true;
+          configureParent = true;
+        }
+      ];
+    };
   };
 
   nixos.modules.desktop = {
@@ -21,6 +40,8 @@
           "/var/lib/tailscale"
           "/etc/NetworkManager/system-connections"
           "/etc/secureboot"
+          "/var/lib/systemd/rfkill"
+          "/var/lib/power-profiles-daemon"
         ];
         files = [
           {

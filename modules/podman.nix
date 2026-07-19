@@ -11,7 +11,10 @@
 
       environment.systemPackages = [ pkgs.podman-compose ];
 
-      preservation.preserveAt."/persistent".users.tguimbert.files = [ ".docker/config.json" ];
+      preservation.preserveAt."/persistent".users.tguimbert = {
+        files = [ ".docker/config.json" ];
+        directories = [ ".local/share/containers" ];
+      };
 
       home-manager.users.tguimbert = {
         home.file.minikubeConfig = {
