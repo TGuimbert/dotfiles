@@ -11,10 +11,14 @@
         "https://cache.nixos.org/"
         "https://tguimbert.cachix.org"
         "https://nix-community.cachix.org"
+        "https://niri.cachix.org"
+        "https://noctalia.cachix.org"
       ];
       trusted-public-keys = [
         "tguimbert.cachix.org-1:PDa22nLjEwxsABhCz09ONTfYAP3DJOAJRszoy007ojs="
         "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+        "niri.cachix.org-1:Wv0OmO7PsuocRKzfDoJ3mulSl7Z6oezYhGhR+3W2964="
+        "noctalia.cachix.org-1:pCOR47nnMEo5thcxNDtzWpOxNFQsBRglJzxWPp3dkU4="
       ];
       auto-optimise-store = true;
     };
