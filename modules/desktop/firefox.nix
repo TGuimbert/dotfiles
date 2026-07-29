@@ -79,6 +79,10 @@
               skip-redirect
               bitwarden
               multi-account-containers
+              # Recolors the Firefox chrome from noctalia's palette. Talks to the
+              # noctalia native-messaging host whose manifest is installed by the
+              # `noctaliaFirefoxHost` activation script in modules/niri.nix.
+              pywalfox
             ];
           };
         };

@@ -88,28 +88,60 @@ if [ "${#short_cwd}" -gt "$avail" ]; then
   fi
 fi
 
-# Print the status line using printf to handle ANSI colors
-# Colors: orange bg for user info, bright-yellow for dir, bright-cyan for repo, bright-blue for model/ctx
-printf '\033[38;5;214m\033[1m  %s\033[0m' "$short_cwd"
+# Colors. Default to fixed 256-color codes — used on hosts without noctalia
+# (griffin/tuxedo) and during the brief window before noctalia first renders the
+# theme. On noctalia hosts, pull the live colors from the rendered Noctalia
+# custom theme (~/.config/claude/themes/noctalia.json) so the status line matches
+# Claude Code's theme and follows its light/dark switches (noctalia re-renders on
+# each mode change; the next status-line refresh reads the new hexes). Segments
+# map to theme slots: dir→claude accent, repo→planMode, model→suggestion,
+# ctx/rate meters→secondaryText.
+esc=$'\033'
+reset="${esc}[0m"
+bold="${esc}[1m"
+c_dir="${esc}[38;5;214m"
+c_repo="${esc}[38;5;87m"
+c_model="${esc}[38;5;75m"
+c_muted="${esc}[38;5;246m"
+
+theme_file="${XDG_CONFIG_HOME:-$HOME/.config}/claude/themes/noctalia.json"
+if [ -r "$theme_file" ]; then
+  # #rrggbb -> truecolor SGR (empty on malformed input, so the default stands)
+  hex2sgr() {
+    local h="${1#\#}"
+    [ "${#h}" -eq 6 ] || return 0
+    printf '%s[38;2;%d;%d;%dm' "$esc" "0x${h:0:2}" "0x${h:2:2}" "0x${h:4:2}"
+  }
+  if IFS=$'\t' read -r h_dir h_repo h_model h_muted \
+    < <(jq -r '[.overrides.claude, .overrides.planMode, .overrides.suggestion, .overrides.secondaryText] | @tsv' "$theme_file" 2>/dev/null); then
+    sgr=$(hex2sgr "$h_dir"); if [ -n "$sgr" ]; then c_dir="$sgr"; fi
+    sgr=$(hex2sgr "$h_repo"); if [ -n "$sgr" ]; then c_repo="$sgr"; fi
+    sgr=$(hex2sgr "$h_model"); if [ -n "$sgr" ]; then c_model="$sgr"; fi
+    sgr=$(hex2sgr "$h_muted"); if [ -n "$sgr" ]; then c_muted="$sgr"; fi
+  fi
+fi
+
+# Print the status line.
+printf '%s%s  %s%s' "$c_dir" "$bold" "$short_cwd" "$reset"
 
 if [ -n "$repo_seg" ]; then
-  printf ' \033[38;5;87m%s\033[0m' "$repo_seg"
+  printf ' %s%s%s' "$c_repo" "$repo_seg" "$reset"
 fi
 
 if [ -n "$model_seg" ]; then
-  printf ' \033[38;5;75m%s\033[0m' "$model_seg"
+  printf ' %s%s%s' "$c_model" "$model_seg" "$reset"
 fi
 
 if [ -n "$ctx_seg" ]; then
-  printf ' \033[38;5;246m%s\033[0m' "$ctx_seg"
+  printf ' %s%s%s' "$c_muted" "$ctx_seg" "$reset"
 fi
 
 if [ -n "$rate_seg" ]; then
-  printf ' \033[38;5;246m%s\033[0m' "$rate_seg"
+  printf ' %s%s%s' "$c_muted" "$rate_seg" "$reset"
 fi
 
 if [ -n "$rate7_seg" ]; then
-  printf ' \033[38;5;246m%s\033[0m' "$rate7_seg"
+  printf ' %s%s%s' "$c_muted" "$rate7_seg" "$reset"
 fi
 
 printf '\n'

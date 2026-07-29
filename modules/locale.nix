@@ -18,9 +18,12 @@
     };
 
     services.xserver = {
+      # us(intl) primary, fr(oss) (AZERTY) as an alternative; toggle with
+      # Scroll Lock (KC_SCRL on a Miryoku layer). Mirrored in niri (modules/niri.nix).
       xkb = {
-        layout = "us";
-        variant = "intl";
+        layout = "us,fr";
+        variant = "intl,oss";
+        options = "grp:sclk_toggle";
       };
     };
     console.keyMap = "us";

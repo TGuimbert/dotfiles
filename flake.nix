@@ -60,6 +60,18 @@
       inputs.nixpkgs.follows = "unstable";
     };
 
+    # niri compositor — declarative, build-validated config via home-manager.
+    # Do NOT override its nixpkgs: like noctalia, overriding changes the niri /
+    # xwayland-satellite derivation hashes and defeats niri.cachix.org (they'd
+    # then compile from Rust source). Its own nixpkgs only builds those packages.
+    niri.url = "github:sodiboo/niri-flake";
+
+    # noctalia shell (v5, native Wayland). Pin the `cachix` branch and DO NOT
+    # override its nixpkgs: overriding changes the derivation hash and defeats
+    # its cachix cache (noctalia.cachix.org). Its own nixpkgs only builds the
+    # noctalia package.
+    noctalia.url = "github:noctalia-dev/noctalia/cachix";
+
     firefox-addons = {
       url = "gitlab:rycee/nur-expressions?dir=pkgs/firefox-addons";
       inputs.nixpkgs.follows = "nixpkgs";
