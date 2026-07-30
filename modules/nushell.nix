@@ -13,7 +13,6 @@
           VISUAL = "hx";
           BWS_SERVER_URL = "https://vault.bitwarden.eu";
           CARAPACE_BRIDGES = "zsh,fish,bash,inshellisense";
-          XDG_DATA_DIRS = "$env.XDG_DATA_DIRS:${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}";
         };
 
         settings = {
