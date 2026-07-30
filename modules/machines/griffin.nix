@@ -8,6 +8,7 @@
           desktop
           podman
           games
+          laptop
         ])
         ++ [
           inputs.disko.nixosModules.disko

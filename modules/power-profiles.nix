@@ -1,12 +1,12 @@
-# Pin a power-profiles-daemon profile at boot. Generic opt-in aspect: any host
-# that imports `powerProfiles` gets power-profiles-daemon enabled, and can pin a
-# boot-time default by setting `custom.defaultPowerProfile`. Needed because on
-# the tmpfs-root hosts the daemon's last selection (persisted under /var/lib) is
-# wiped every boot, so it otherwise always comes up `balanced`. Leaving the
-# option null just runs the daemon at its own default (no oneshot).
+# Pin a power-profiles-daemon profile at boot. Every desktop host runs the daemon
+# (noctalia's power widget drives it) and can pin a boot-time default by setting
+# `custom.defaultPowerProfile`. Needed because on the tmpfs-root hosts the
+# daemon's last selection (persisted under /var/lib) is wiped every boot, so it
+# otherwise always comes up `balanced`. Leaving the option null just runs the
+# daemon at its own default (no oneshot).
 { ... }:
 {
-  nixos.modules.powerProfiles =
+  nixos.modules.desktop =
     {
       config,
       lib,
@@ -35,6 +35,8 @@
       };
 
       config = {
+        # Explicit rather than left to noctalia's recommendedServices (which only
+        # mkDefaults it): the boot-pin unit below depends on the daemon.
         services.power-profiles-daemon.enable = true;
 
         systemd.services.default-power-profile = lib.mkIf (profile != null) {

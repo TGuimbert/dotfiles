@@ -5,12 +5,6 @@
     i18n = {
       defaultLocale = "en_US.UTF-8";
 
-      # GNOME's nixpkgs module switches ibus on by default, but no input method is
-      # wanted here: no engines are configured and the layouts below are plain xkb,
-      # which niri and GNOME drive themselves. Off also drops GTK_IM_MODULE /
-      # QT_IM_MODULE, so GTK and Qt apps take Wayland's text-input-v3 instead.
-      inputMethod.enable = false;
-
       extraLocaleSettings = {
         LC_ADDRESS = "fr_FR.UTF-8";
         LC_IDENTIFICATION = "fr_FR.UTF-8";
@@ -25,8 +19,10 @@
     };
 
     services.xserver = {
-      # us(intl) primary, fr(oss) (AZERTY) as an alternative; toggle with
-      # Scroll Lock (KC_SCRL on a Miryoku layer). Mirrored in modules/niri/niri.nix.
+      # us(intl) primary, fr(oss) (AZERTY) as an alternative; toggle with Scroll
+      # Lock (KC_SCRL on a Miryoku layer). Still meaningful with the X server off:
+      # it feeds /etc/X11 and localectl. Mirrored in modules/desktop/niri.nix and
+      # modules/desktop/greeter.nix.
       xkb = {
         layout = "us,fr";
         variant = "intl,oss";

@@ -10,14 +10,24 @@
     {
       services = {
         openssh.enable = true;
+        # No printer GUI: GNOME's control-center panel is gone and
+        # system-config-printer costs ~170 MB. Administer at http://localhost:631.
         printing.enable = true;
         fwupd.enable = true;
+        # Printer/host discovery on the LAN. GNOME used to enable the daemon
+        # itself; only the nsswitch glue was ever set here.
+        avahi = {
+          enable = true;
+          nssmdns4 = true;
+        };
+        # Thunderbolt device authorization (griffin's dock); /var/lib/boltd is
+        # already preserved.
+        hardware.bolt.enable = true;
         # Smartcard access for gpg's scdaemon (modules/gpg.nix sets disable-ccid, so
         # it goes through pcscd rather than claiming the yubikey itself, leaving the
         # card usable by ykman and age-plugin-yubikey).
         pcscd.enable = true;
         btrfs.autoScrub.enable = true;
-        avahi.nssmdns4 = true;
         tailscale = {
           enable = true;
           useRoutingFeatures = "client";
@@ -41,13 +51,6 @@
           lib.getExe (if config.security.polkit.enable then pkgs.pcscliteWithPolkit else pkgs.pcsclite)
         } -f -c /etc/reader.conf"
       ];
-
-      xdg.portal = {
-        enable = true;
-        extraPortals = with pkgs; [
-          xdg-desktop-portal-gnome
-        ];
-      };
 
       hardware.keyboard.qmk.enable = true;
 

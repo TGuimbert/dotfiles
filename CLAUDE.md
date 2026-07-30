@@ -128,17 +128,17 @@ The repo follows the **dendritic pattern** (see "Dendritic Pattern" below for th
 Each host is a thin import list in `modules/machines/<hostname>.nix` — it sets `nixos.configurations.<hostname>.module` to a list of feature aspects (`base`, `desktop`/`server`, opt-in aspects) plus its hardware/disks. Per-host `hardware.nix` and `disks.nix` live in `modules/_hosts/<hostname>/` (`_`-prefixed so import-tree skips them; referenced by relative path from the machine file).
 
 **Current hosts**:
-- `leshen`: Desktop system with GNOME, games, podman
-- `griffin`: Lenovo ThinkPad T490 laptop with GNOME, games, podman
+- `leshen`: Desktop system with niri + noctalia, games, podman (`displaysLeshen` for its dual monitors)
+- `griffin`: Lenovo ThinkPad T490 laptop with niri + noctalia, games, podman (`laptop` for lid handling)
 - `srv-01`: Headless server with Traefik, LLDAP, Authelia, Homepage, Restic
 
 ### Module Organization
 
 One feature = one capability file holding its NixOS **and** home-manager config together (organized by capability, not by module class). Features contribute to merge points:
 - `nixos.modules.base` — every host (boot, locale, networking, audio, nix settings, services, user, preservation, sops)
-- `nixos.modules.desktop` — desktop hosts (gnome, stylix, lanzaboote, firefox, GUI home)
+- `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, stylix, lanzaboote, firefox, GUI home)
 - `nixos.modules.server` — srv-01 baseline (`modules/server/`)
-- Named opt-in aspects imported only by hosts that want them: `games`, `podman`, `docker` (no host currently imports it), and the srv-01 services (`traefik`, `authelia`, `lldap`, `homepage`, `restic`, `calibre`, `printing`)
+- Named opt-in aspects imported only by hosts that want them: `games`, `podman`, `displaysLeshen`, `laptop`, `docker` (no host currently imports it), and the srv-01 services (`traefik`, `authelia`, `lldap`, `homepage`, `restic`, `calibre`, `printing`)
 
 Most features are flat `modules/<feature>.nix` files; directories appear only for a cohesive multi-file capability (`desktop/`) or a peer-set (`machines/`, `server/`, `shells/`). Per-user config goes through `homeManager.modules.base` (every host) / `homeManager.modules.gui` (desktop) inside the owning feature file — never `home-manager.users.*` directly (except the wiring in `users.nix`).
 
@@ -247,9 +247,9 @@ Scaffolding files live **flat in `modules/`** (`nixos.nix`, `home-manager.nix`, 
 **Merge points (system-types)** replace a separate profiles layer:
 
 - `nixos.modules.base` — every host (nix settings, locale, networking, audio, services, boot, user, preservation, sops)
-- `nixos.modules.desktop` — desktop hosts (gnome, stylix, lanzaboote, firefox, GUI home); also pulls `home.gui`
+- `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, stylix, lanzaboote, firefox, GUI home); also pulls `home.gui`
 - `nixos.modules.server` — srv-01 baseline
-- Named opt-in aspects: `games`, `podman`, `docker`, `traefik`, `authelia`, `lldap`, `homepage`, `restic`, `calibre`, `printing`
+- Named opt-in aspects: `games`, `podman`, `displaysLeshen`, `laptop`, `docker`, `traefik`, `authelia`, `lldap`, `homepage`, `restic`, `calibre`, `printing`
 
 **Deliberate divergences from mightyiam/infra**: no `flake-file` (inputs stay hand-written in `flake.nix`); inputs stay real flakes (use `inputs.home-manager.nixosModules.home-manager`, not `flake = false`); single user `tguimbert` hardcoded (no multi-user `users` option machinery). Hardware detection uses nixpkgs' `hardware.facter` (report at `modules/_hosts/<host>/facter.json`, must be git-tracked); a slim `hardware.nix` per host keeps `facter.reportPath` + quirks facter can't detect.
 
@@ -289,7 +289,7 @@ Flat by default (mightyiam-aligned). One feature = one flat `.nix` file; directo
 │   ├── boot.nix  locale.nix  networking.nix  audio.nix  nix-settings.nix  services.nix   # core features (flat)
 │   ├── helix.nix  nushell.nix  zellij.nix  starship.nix  …   # shell tools (flat; or a shell/ dir if you prefer grouping)
 │   ├── shells/                  # dev shells — peer-set dir (python.nix, rust.nix, …)
-│   ├── desktop/                 # cohesive capability dir (gnome, stylix, firefox)
+│   ├── desktop/                 # cohesive capability dir (niri, noctalia, greeter, stylix, firefox)
 │   ├── server/                  # peer-set dir (traefik, authelia, lldap, …)
 │   ├── machines/                # peer-set dir (leshen.nix, griffin.nix, … — thin import lists)
 │   └── _hosts/                  # per-host hardware.nix + disks.nix (_-prefixed; skipped by import-tree)

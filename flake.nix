@@ -68,6 +68,14 @@
     # noctalia package.
     noctalia.url = "github:noctalia-dev/noctalia/cachix";
 
+    # noctalia-greeter (greetd greeter matching the shell). Separate project from
+    # `noctalia` above, with no cachix of its own — it compiles from source either
+    # way, so following our nixpkgs costs nothing and keeps one nixpkgs in the lock.
+    noctalia-greeter = {
+      url = "github:noctalia-dev/noctalia-greeter";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     firefox-addons = {
       url = "gitlab:rycee/nur-expressions?dir=pkgs/firefox-addons";
       inputs.nixpkgs.follows = "nixpkgs";
