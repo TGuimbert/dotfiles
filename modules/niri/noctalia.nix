@@ -14,9 +14,8 @@
       ...
     }:
     let
-      # Palette placeholder that resolves to the active light/dark mode. Shared by
-      # the starship + Claude Code templates below (both map noctalia's palette
-      # onto their own color slots with the exact same `.default` mode ref).
+      # `.default` is noctalia's placeholder for whichever mode is active. Shared by
+      # the starship + Claude Code templates below.
       activeColor = name: "{{colors.${name}.default.hex}}";
 
       # Vendored Gruvbox Material palette (dark + light + terminal colors) — the
@@ -28,6 +27,8 @@
       # {{colors.terminal_*}} placeholders) to ~/.cache/terminal-sequences and the
       # post_hook tees it to every PTY. printf emits the raw ESC/BEL bytes at build
       # time; the {{…}} placeholders pass through untouched for noctalia to fill.
+      # This covers palette changes; a mode flip goes through foot's own theme switch
+      # (the SIGUSR post_hook below).
       terminalSequences = pkgs.runCommand "noctalia-terminal-sequences.tmpl" { } ''
         {
           printf '\033]10;{{colors.terminal_foreground.default.hex}}\007'
@@ -54,11 +55,92 @@
         } > $out
       '';
 
-      # zellij theme — one template emits BOTH `noctalia-dark` and
-      # `noctalia-light` blocks (explicit .dark/.light color refs, so the file is
-      # mode-independent and loads at startup). zellij can't hot-reload theme
-      # files, so the template's post_hook flips the *active* theme per session
-      # via the CLI action, deterministically from the {{ mode }} placeholder.
+      # Three consumers — noctalia renders it, foot includes it, activation places it
+      # — and a mismatch between them costs foot its *entire* config, since a missing
+      # include aborts the parse and takes the font and shell down with the colors.
+      # Absolute, as the activation script needs.
+      footThemeFile = "${config.xdg.configHome}/foot/themes/noctalia";
+
+      # foot theme — replaces noctalia's builtin foot template, which emits a single
+      # `[colors-dark]` section holding whatever mode was active at render time, so
+      # foot's own dark/light switch had nothing to switch to. Emit both sections with
+      # explicit .dark/.light refs (mode-independent, like the zellij theme below) and
+      # let foot choose: `initial-color-theme` at startup, SIGUSR1/SIGUSR2 for a
+      # running server (the post_hook). Keys mirror the upstream builtin template.
+      # `color` resolves a noctalia `terminal_*` name to a bare RRGGBB value, which is
+      # all foot.ini(5) accepts — from a placeholder for noctalia, or from the vendored
+      # palette for the fallback below.
+      mkFootColors =
+        mode: color:
+        let
+          ansiNames = [
+            "black"
+            "red"
+            "green"
+            "yellow"
+            "blue"
+            "magenta"
+            "cyan"
+            "white"
+          ];
+        in
+        lib.concatStringsSep "\n" (
+          [
+            "[colors-${mode}]"
+            "foreground=${color "foreground"}"
+            "background=${color "background"}"
+          ]
+          ++ lib.imap0 (i: name: "regular${toString i}=${color "normal_${name}"}") ansiNames
+          ++ lib.imap0 (i: name: "bright${toString i}=${color "bright_${name}"}") ansiNames
+          ++ [
+            "selection-foreground=${color "selection_fg"}"
+            "selection-background=${color "selection_bg"}"
+            "cursor=${color "cursor_text"} ${color "cursor"}"
+          ]
+        );
+
+      mkFootTheme = initialTheme: color: ''
+        [main]
+        initial-color-theme=${initialTheme}
+        ${mkFootColors "dark" (color "dark")}
+        ${mkFootColors "light" (color "light")}
+      '';
+
+      footThemeTemplate = pkgs.writeText "noctalia-foot.tmpl" (
+        mkFootTheme "{{ mode }}" (mode: name: "{{colors.terminal_${name}.${mode}.hex_stripped}}")
+      );
+
+      # The same file resolved from the vendored palette instead of placeholders,
+      # because the foot server starts with graphical-session.target — a moment
+      # *before* niri's noctalia has rendered anything. Not state: rebuilt from this
+      # palette on every activation, which runs at boot, before the session. `dark` is
+      # just the mode foot opens in until the first render signals the live one.
+      footThemeFallback = pkgs.writeText "noctalia-foot-theme" (
+        mkFootTheme "dark" (
+          mode:
+          let
+            terminal = gruvboxMaterial.${mode}.terminal;
+            byName = {
+              inherit (terminal) foreground background cursor;
+              cursor_text = terminal.cursorText;
+              selection_fg = terminal.selectionFg;
+              selection_bg = terminal.selectionBg;
+            }
+            // lib.concatMapAttrs (name: hex: { "normal_${name}" = hex; }) terminal.normal
+            // lib.concatMapAttrs (name: hex: { "bright_${name}" = hex; }) terminal.bright;
+          in
+          name: lib.removePrefix "#" byName.${name}
+        )
+      );
+
+      # zellij theme — one template emits three blocks: `noctalia-dark` and
+      # `noctalia-light` (explicit .dark/.light refs, so the file is mode-independent
+      # and loads at startup) plus `noctalia`, the active mode via `.default`. zellij
+      # picks its theme from the read-only config.kdl, which can't follow the mode, so
+      # `theme "noctalia"` gives a *newly started* session the live palette; the
+      # -dark/-light pair backs the switch for sessions already running, which the
+      # post_hook drives from the {{ mode }} placeholder (zellij can't hot-reload theme
+      # files, and its own dark/light detection only reacts to a later flip).
       mkZellijTheme =
         mode:
         let
@@ -120,6 +202,9 @@
 
       zellijThemeTemplate = pkgs.writeText "noctalia-zellij.kdl.tmpl" ''
         themes {
+          noctalia {
+        ${mkZellijTheme "default"}
+          }
           noctalia-dark {
         ${mkZellijTheme "dark"}
           }
@@ -280,8 +365,16 @@
 
         # Import noctalia's rendered gtk css (see the gtk3/gtk4 builtin_ids below).
         # Declared via stylix's extraCss so apply.sh finds it present and won't
-        # rewrite the read-only gtk.css symlink.
-        gtk.extraCss = ''@import url("noctalia.css");'';
+        # rewrite the read-only gtk.css symlink. The import is relative, so it only
+        # resolves next to the file noctalia renders — hence flatpakSupport off: it
+        # appends this same css to a flattened adw-gtk3 copy under ~/.themes, where
+        # there is no noctalia.css (nor any way to add one, the dir being a store
+        # path), and every GTK app loading that theme logs a parse error. Nothing
+        # here uses Flatpak, which is all that copy is for.
+        gtk = {
+          extraCss = ''@import url("noctalia.css");'';
+          flatpakSupport.enable = false;
+        };
       };
 
       # Seed noctalia's wallpaper folder with the stylix image. Drop more images
@@ -298,19 +391,26 @@
         run ${config.programs.noctalia.package}/bin/noctalia firefox-theme install
       '';
 
+      # Put footThemeFallback in place before the session; noctalia overwrites it with
+      # the live palette seconds later. Skipped when the file exists so a mid-session
+      # `nh os switch` doesn't revert a runtime palette change.
+      home.activation.footNoctaliaTheme = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        [ -e "${footThemeFile}" ] || run install -Dm644 ${footThemeFallback} "${footThemeFile}"
+      '';
+
       programs = {
-        # Point each app at noctalia's rendered side theme file. Declaring the link
-        # here (instead of letting noctalia's apply.sh edit the read-only HM config)
-        # keeps it declarative — foot's apply.sh sees the include already present
-        # and skips its own edit; helix has no hook and just loads the named theme.
-        foot.settings.main.include = "~/.config/foot/themes/noctalia";
+        # Point each app at the theme file noctalia renders for it. Declaring this
+        # ourselves keeps it declarative: foot is a user template now, so no apply.sh
+        # runs for it; helix has no hook and just loads the named theme.
+        foot.settings.main.include = footThemeFile;
         helix.settings.theme = "noctalia";
 
-        # zellij: noctalia writes both theme blocks to themes/noctalia.kdl; select
-        # them as the dark/light themes and the template post_hook flips the active
-        # one live. `theme` is forced off the shared module's "stylix".
+        # zellij: `noctalia` is the live-mode block, so a session started at any point
+        # opens on the current palette; the dark/light pair is what the post_hook (and
+        # zellij's own detection) switches a running session to. `theme` is forced off
+        # the shared module's "stylix".
         zellij.settings = {
-          theme = lib.mkForce "noctalia-dark";
+          theme = lib.mkForce "noctalia";
           theme_dark = "noctalia-dark";
           theme_light = "noctalia-light";
         };
@@ -321,20 +421,14 @@
         # so noctalia can't write it in place).
         nushell.environmentVariables.STARSHIP_CONFIG = "${config.home.homeDirectory}/.cache/starship.toml";
 
-        # bat: select the noctalia theme rendered by the user template below.
-        # Selecting via HM's option (a declarative `--theme=noctalia` in bat's
-        # config) applies to every shell, not just nushell — and HM legitimately
-        # owns that config file, so this isn't the in-place apply.sh rewrite we
-        # avoid. bat is spawned fresh per invocation, so it picks up each cache
-        # rebuild with no reload.
+        # bat: via HM's option rather than nushell's alias, so every shell gets it —
+        # and HM owns that config file, so this isn't the in-place apply.sh rewrite we
+        # avoid elsewhere. bat is spawned fresh per invocation, so no reload hook.
         bat.config.theme = "noctalia";
 
-        # Claude Code: select the noctalia custom theme rendered by the user
-        # template below. Set here (niri aspect) rather than in
-        # modules/claude/claude.nix so it only applies on hosts that actually run
-        # noctalia to render the theme file; merges into the settings from
-        # claude.nix. "custom:<slug>" is Claude Code's selector for
-        # $CLAUDE_CONFIG_DIR/themes/<slug>.json.
+        # Claude Code: "custom:<slug>" selects $CLAUDE_CONFIG_DIR/themes/<slug>.json.
+        # Set here rather than in modules/claude/claude.nix (into whose settings it
+        # merges) so it only lands on hosts that run noctalia to render that file.
         claude-code.settings.theme = "custom:noctalia";
 
         noctalia = {
@@ -355,12 +449,12 @@
               source = "custom";
               custom_palette = "gruvbox-material";
 
-              # Render side theme files from the palette; the links/includes above
-              # make each app pick them up. Everything else stays stylix.
+              # The links/includes above are what make each app pick these up.
+              # Everything not listed here stays stylix's.
               templates = {
                 enable_builtin_templates = true;
                 builtin_ids = [
-                  "foot"
+                  # No "foot": the `foot` user template below replaces it.
                   "helix"
                   "niri"
                   # GTK colors only — GTK apps (Nautilus, file-picker dialogs) follow
@@ -375,6 +469,16 @@
                 # Each template's render logic + reasoning is on its `let` binding
                 # above; comments here note only per-app render hooks.
                 user = {
+                  # post_hook signals the foot *server*, which switches every current
+                  # and future client window: SIGUSR1 = [colors-dark], SIGUSR2 =
+                  # [colors-light]. `-x` skips the footclient processes (the server
+                  # covers their windows); `|| true` tolerates no server yet.
+                  foot = {
+                    enabled = true;
+                    input_path = "${footThemeTemplate}";
+                    output_path = footThemeFile;
+                    post_hook = ''if [ "{{ mode }}" = light ]; then ${pkgs.procps}/bin/pkill -USR2 -x foot; else ${pkgs.procps}/bin/pkill -USR1 -x foot; fi || true'';
+                  };
                   terminal-sequences = {
                     enabled = true;
                     input_path = "${terminalSequences}";
@@ -440,8 +544,17 @@
             };
 
             shell = {
-              # nerd font for the bar's glyphs/icons
-              font_family = lib.mkDefault "IosevkaTerm Nerd Font";
+              # Bar/launcher/panel *text* only — the icons come from noctalia's own
+              # bundled tabler.ttf, so no nerd-font coverage is needed here. Inheriting
+              # stylix's sans keeps the shell on the same font as the GTK apps.
+              font_family = lib.mkDefault config.stylix.fonts.sansSerif.name;
+
+              # The wizard's only "already done" marker lives in ~/.local/state, which
+              # the tmpfs root wipes, so it would run at every login — and what it asks
+              # for (palette, wallpaper, bar) is declarative here anyway.
+              setup_wizard_enabled = false;
+
+              niri_overview_type_to_launch_enabled = true;
             };
 
             # External-monitor brightness over DDC/CI (gated off by default in
@@ -463,9 +576,18 @@
               temperature_night = 4000;
             };
 
+            # Blurred/tinted copy of the wallpaper on its own background surface
+            # (namespace noctalia-backdrop), which ./niri.nix's layer-rule places in
+            # niri's overview backdrop. Off by default in noctalia, and the layer-rule
+            # matches nothing without it. blur/tint are 0..1.
+            backdrop = {
+              enabled = true;
+              blur_intensity = 0.5;
+              tint_intensity = 0.3;
+            };
+
             wallpaper = {
-              # A folder so more can be added later; seeded with the stylix image
-              # via xdg.configFile above.
+              # Seeded with the stylix image via xdg.configFile above.
               directory = "${config.xdg.configHome}/noctalia/wallpapers";
 
               # Rotate randomly (off by default; interval_seconds keeps its 30-min
