@@ -1,35 +1,40 @@
-# niri (scrollable-tiling Wayland compositor). Opt-in aspect — imported only by
-# hosts that want it (currently leshen). Its shell/theming half lives alongside
-# in ./noctalia.nix, which merges into this same `niri` home-manager aspect, so
-# importing `niri` pulls both. GNOME stays installed as a fallback session; GDM
-# lets you pick niri or GNOME at login.
-{ config, inputs, ... }:
+# niri (scrollable-tiling Wayland compositor) — the desktop session. Its
+# shell/theming half lives alongside in ./noctalia.nix, and the login screen in
+# ./greeter.nix. Host-specific display config lives in ./displays-leshen.nix;
+# laptop-only lid handling in ./laptop.nix.
+{ inputs, ... }:
 {
-  nixos.modules.niri =
-    { pkgs, ... }:
+  nixos.modules.desktop =
+    { lib, pkgs, ... }:
     {
       imports = [ inputs.niri.nixosModules.niri ];
 
       programs.niri = {
         enable = true;
         # niri-unstable is required for the built-in xwayland-satellite
-        # integration below (X11 apps / Steam games — leshen imports `games`).
+        # integration below (X11 apps / Steam games — both hosts import `games`).
         # Both niri-stable and niri-unstable are served by niri.cachix.org.
         package = inputs.niri.packages.${pkgs.stdenv.hostPlatform.system}.niri-unstable;
       };
 
-      # Bridge the niri home-manager aspect onto this host (mirrors the `gui`
-      # bridge in modules/users.nix).
-      home-manager.users.tguimbert.imports = [ config.homeManager.modules.niri ];
+      # The niri module only adds portal-gnome (screencast); niri's own
+      # niri-portals.conf routes Access/Notification to the gtk backend, so it has
+      # to be installed too or those requests find no implementation.
+      xdg.portal.extraPortals = [ pkgs.xdg-desktop-portal-gtk ];
 
-      # External-monitor brightness: leshen has no internal panel, so noctalia
-      # drives the displays over DDC/CI (via ddcutil + i2c-dev) instead of sysfs
-      # backlight. tguimbert joins the `i2c` group for unprivileged access. DDC/CI
-      # must be enabled in each monitor's OSD; verify with `ddcutil detect` (both
-      # DP outputs should report VCP 0x10).
-      hardware.i2c.enable = true;
-      users.users.tguimbert.extraGroups = [ "i2c" ];
-      environment.systemPackages = [ pkgs.ddcutil ];
+      # portal-gnome's FileChooser dispatches to nautilus over D-Bus — the whole of
+      # nixpkgs' `programs.niri.useNautilus`, which niri-flake's module has no
+      # equivalent of. Without it, file dialogs fall back to the GTK chooser.
+      services.dbus.packages = [ pkgs.nautilus ];
+
+      # niri-flake runs kdePackages.polkit-kde-agent-1 as the session's polkit
+      # agent: ~500 MB of Qt6/KDE frameworks for one auth dialog. mate-polkit is
+      # GTK3 and costs ~1 MB on top of what is already here. mkForce because the
+      # vendor unit already defines ExecStart.
+      systemd.user.services.niri-flake-polkit.serviceConfig.ExecStart =
+        lib.mkForce "${pkgs.mate-polkit}/libexec/polkit-mate-authentication-agent-1";
+
+      environment.systemPackages = [ pkgs.wl-clipboard ];
 
       # NB: noctalia 5 keeps its runtime state (settings overrides, wallpaper choice,
       # notification history, wizard marker) in ~/.local/state/noctalia — this dir
@@ -42,19 +47,9 @@
       ];
     };
 
-  # Hands the lid to the compositor so it can lock *before* suspending (the
-  # switch-events bind below) instead of racing logind and resuming unlocked. Opt-in
-  # per host rather than part of `niri`: logind is system-wide, so on a host that
-  # also offers the GNOME session this takes the lid away from GNOME too. Import
-  # next to `niri` from a laptop machine file (griffin, once it moves off GNOME).
-  nixos.modules.niriLaptop.services.logind.settings.Login = {
-    HandleLidSwitch = "ignore";
-    HandleLidSwitchExternalPower = "ignore";
-  };
-
-  # Compositor half of the home-manager `niri` aspect (./noctalia.nix adds the
+  # Compositor half of the home-manager `gui` aspect (./noctalia.nix adds the
   # shell/theming half).
-  homeManager.modules.niri =
+  homeManager.modules.gui =
     {
       config,
       lib,
@@ -87,9 +82,9 @@
         prefer-no-csd = true;
 
         # Input — xkb mirrors the system layout (us/intl + fr/oss AZERTY,
-        # modules/locale.nix) so niri, the console and GNOME agree. Touchpad
-        # settings are sane defaults for when a laptop host (griffin) later imports
-        # this aspect; leshen is a desktop with no touchpad, so they're inert there.
+        # modules/locale.nix) so niri, the console and the greeter agree. Touchpad
+        # settings apply on griffin; leshen is a desktop with no touchpad, so
+        # they're inert there.
         input = {
           keyboard = {
             xkb = {
@@ -158,16 +153,6 @@
           QT_QPA_PLATFORM = "wayland;xcb";
         };
 
-        # Needs `niriLaptop` (above) to take the lid off logind. Inert on leshen,
-        # which has no lid switch, like the touchpad settings above. Switch binds
-        # accept nothing but spawn actions.
-        switch-events.lid-close.action.spawn = [
-          "noctalia"
-          "msg"
-          "session"
-          "lock-and-suspend"
-        ];
-
         # Without this, apps launched from noctalia's launcher open unfocused
         # (upstream's recommendation). An empty argument list is how niri-flake
         # spells a no-argument `debug` node.
@@ -229,39 +214,9 @@
           }
         ];
 
-        # Dual 2560x1440 @ scale 1, side by side. DP-1 (XF270HU, 144 Hz + VRR) is
-        # the primary on the left; DP-2 (VG270U, 75 Hz) sits to its right.
-        # position.x is in logical pixels (scale 1 here, so 2560 == panel width).
-        outputs = {
-          "DP-1" = {
-            mode = {
-              width = 2560;
-              height = 1440;
-              refresh = 143.856;
-            };
-            scale = 1.0;
-            position = {
-              x = 0;
-              y = 0;
-            };
-            # on-demand = VRR only for fullscreen VRR windows (games); avoids the
-            # desktop brightness flicker some panels show with VRR always on.
-            variable-refresh-rate = "on-demand";
-            focus-at-startup = true;
-          };
-          "DP-2" = {
-            mode = {
-              width = 2560;
-              height = 1440;
-              refresh = 74.924;
-            };
-            scale = 1.0;
-            position = {
-              x = 2560;
-              y = 0;
-            };
-          };
-        };
+        # No `outputs` here: griffin's panel and any dock monitor are fine on niri's
+        # autodetected preferred mode. leshen's fixed dual-monitor layout (modes,
+        # VRR, positions) lives in ./displays-leshen.nix.
 
         xwayland-satellite = {
           enable = true;

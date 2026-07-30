@@ -8,8 +8,7 @@
           desktop
           podman
           games
-          niri
-          powerProfiles
+          displaysLeshen
         ])
         ++ [
           inputs.disko.nixosModules.disko

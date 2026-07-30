@@ -1,11 +1,30 @@
 # noctalia (native Wayland shell for niri: bar / launcher / notifications /
 # lockscreen) plus the in-session theming it renders for foot, helix, zellij,
 # starship, bat, Claude Code, Firefox (pywalfox) and Obsidian. Merges into the
-# same home-manager `niri` aspect as ./niri.nix (both are deferredModules, so the
-# values combine), so importing the `niri` aspect pulls this in too.
+# same `desktop`/`gui` aspects as ./niri.nix (both are deferredModules, so the
+# values combine).
 { inputs, ... }:
 {
-  homeManager.modules.niri =
+  # noctalia ships a NixOS module *and* a home-manager one; they share an option
+  # name but nothing else. This half exists only for `recommendedServices`, which
+  # enables the services the shell's widgets talk to (NetworkManager, bluetooth,
+  # upower, power-profiles-daemon) — GNOME used to pull those in implicitly. All
+  # mkDefault, so our own definitions still win.
+  nixos.modules.desktop = {
+    imports = [ inputs.noctalia.nixosModules.default ];
+
+    programs.noctalia = {
+      enable = true;
+      # The home-manager module installs the shell into the user profile; leaving
+      # this null keeps a single owner instead of also adding it system-wide.
+      package = null;
+      recommendedServices.enable = true;
+      # noctalia deprecates systemd startup — niri's spawn-at-startup launches it.
+      systemd.enable = false;
+    };
+  };
+
+  homeManager.modules.gui =
     {
       config,
       options,
@@ -325,23 +344,24 @@
 
       # noctalia is the in-session theme authority for the apps it templates
       # (foot, helix, zellij, niri, starship, bat, …). stylix stays the base for
-      # everything else — fonts, cursor, console, GTK/QT, the GNOME session — as a
-      # fixed gruvbox-dark.
+      # everything else — fonts, cursor, console, GTK/QT — as a fixed gruvbox-dark.
       #
-      # Guard: when stylix ships its own `stylix.targets.noctalia` (present on
-      # stylix master; absent from our release-26.05, expected ~26.11) it will
-      # auto-drive noctalia's palette and clash with the manual theme below. This
-      # assertion blocks the build so we reconcile deliberately — either set
-      # `stylix.targets.noctalia.enable = false` to keep this, or adopt the target.
+      # Guard: our release-26.05 stylix does ship a noctalia target, but spelled
+      # `noctalia-shell` and gated on `options.programs ? noctalia-shell` — the v4
+      # Quickshell module. We are on v5, whose option is `programs.noctalia`, so it
+      # stays inert. Both spellings are checked because whichever one stylix
+      # eventually points at v5 will auto-drive the palette and clash with the
+      # manual theme below; the build then stops so we reconcile deliberately —
+      # either disable that target to keep this config, or adopt it and drop the
+      # manual theme.
       assertions = [
         {
-          assertion = !(options.stylix.targets ? noctalia);
+          assertion = !(options.stylix.targets ? noctalia) && !(options.programs ? noctalia-shell);
           message = ''
-            stylix now ships `stylix.targets.noctalia`, which will drive
-            noctalia's theme and conflict with the manual palette/templates in
-            modules/niri/noctalia.nix. Either set `stylix.targets.noctalia.enable
-            = false` to keep this config, or drop the manual theme and adopt the
-            target.
+            stylix now drives noctalia's theme and will conflict with the manual
+            palette/templates in modules/desktop/noctalia.nix. Either set that
+            target's `enable = false` to keep this config, or drop the manual
+            theme and adopt the target.
           '';
         }
       ];
@@ -512,7 +532,12 @@
                     input_path = "${claudeTheme}";
                     output_path = "~/.config/claude/themes/noctalia.json";
                   };
-                  # Vendored community `pywalfox-beta4` template so it renders offline.
+                  # wal-format palette for the Pywalfox extension: color0..15 are
+                  # the ANSI terminal colors, which is what pywalfox maps onto
+                  # Firefox's theme keys. All sixteen need a value — noctalia
+                  # forwards them verbatim, so an empty string lands in the theme
+                  # as a color. The community `pywalfox-beta4` template this
+                  # replaces left nine of them "".
                   # post_action "firefox-theme" pushes the rendered colors.json to the
                   # Pywalfox extension via the noctalia native-messaging host installed
                   # by the noctaliaFirefoxHost activation above.

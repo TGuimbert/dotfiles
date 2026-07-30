@@ -97,6 +97,9 @@
           "text/xml" = [ "firefox.desktop" ];
           "x-scheme-handler/http" = [ "firefox.desktop" ];
           "x-scheme-handler/https" = [ "firefox.desktop" ];
+          # pdf.js, in place of a dedicated reader (papers/zathura are ~120 MB
+          # each on top of what firefox already carries).
+          "application/pdf" = [ "firefox.desktop" ];
         };
       };
 

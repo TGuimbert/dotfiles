@@ -40,15 +40,38 @@
       };
     };
 
-  homeManager.modules.gui = {
-    stylix = {
-      enable = true;
-      targets = {
-        starship.enable = true;
-        firefox.profileNames = [ "default" ];
-        qt.platform = "qtct";
-        qt.enable = false;
+  homeManager.modules.gui =
+    { config, ... }:
+    {
+      stylix = {
+        enable = true;
+        targets = {
+          starship.enable = true;
+          firefox.profileNames = [ "default" ];
+          qt.enable = false;
+          # These two write their themes whether or not the desktop is installed,
+          # unlike most targets. The GNOME one also carried the interface
+          # gsettings re-declared below, which GTK4 apps read outside GNOME.
+          gnome.enable = false;
+          kde.enable = false;
+        };
       };
+
+      # What stylix.targets.gnome used to set, minus the shell theming. Nautilus
+      # and the GTK file dialogs pick their dark variant from color-scheme; the
+      # font keys are read by GTK apps that don't parse settings.ini (emacs-pgtk
+      # and friends). Cursor keys are not here: home.pointerCursor writes those.
+      dconf.settings."org/gnome/desktop/interface" =
+        let
+          fontSize = toString config.stylix.fonts.sizes.applications;
+        in
+        {
+          color-scheme = if config.stylix.polarity == "dark" then "prefer-dark" else "default";
+          font-name = "${config.stylix.fonts.sansSerif.name} ${fontSize}";
+          document-font-name = "${config.stylix.fonts.serif.name} ${
+            toString (config.stylix.fonts.sizes.applications - 1)
+          }";
+          monospace-font-name = "${config.stylix.fonts.monospace.name} ${fontSize}";
+        };
     };
-  };
 }

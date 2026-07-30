@@ -49,6 +49,19 @@
       };
 
       home.sessionVariables.SSH_AUTH_SOCK = "$XDG_RUNTIME_DIR/ssh-agent";
+
+      # Declares the askpass helper above as an application. NoDisplay keeps it out
+      # of the launcher; it exists so anything resolving an askpass through the
+      # desktop database finds the same binary the agent is pinned to.
+      home.file.".local/share/applications/ssh-askpass.desktop".text = ''
+        [Desktop Entry]
+        Name=SSH Askpass
+        GenericName=ssh-askpass
+        Type=Application
+        Exec=${pkgs.seahorse}/libexec/seahorse/ssh-askpass
+        Icon=seahorse
+        NoDisplay=true
+      '';
     };
 
   nixos.modules.desktop.preservation.preserveAt."/persistent".users.tguimbert.directories = [
