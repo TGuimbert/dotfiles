@@ -31,16 +31,26 @@
       users.users.tguimbert.extraGroups = [ "i2c" ];
       environment.systemPackages = [ pkgs.ddcutil ];
 
-      # config.toml is declaratively managed by home-manager (read-only symlink),
-      # so this only preserves noctalia's runtime state (clipboard history,
-      # screen-time, wallpaper selection) across the tmpfs-root reboots.
+      # NB: noctalia 5 keeps its runtime state (settings overrides, wallpaper choice,
+      # notification history, wizard marker) in ~/.local/state/noctalia — this dir
+      # holds only HM symlinks now, so the entry carries nothing. Preserve the state
+      # dir instead if that state should survive.
       preservation.preserveAt."/persistent".users.tguimbert.directories = [
         ".config/noctalia"
-        # niri writes screenshots here (screenshot-path); keep them across the
-        # tmpfs-root reboots.
+        # where screenshot-path (below) writes
         "Pictures/Screenshots"
       ];
     };
+
+  # Hands the lid to the compositor so it can lock *before* suspending (the
+  # switch-events bind below) instead of racing logind and resuming unlocked. Opt-in
+  # per host rather than part of `niri`: logind is system-wide, so on a host that
+  # also offers the GNOME session this takes the lid away from GNOME too. Import
+  # next to `niri` from a laptop machine file (griffin, once it moves off GNOME).
+  nixos.modules.niriLaptop.services.logind.settings.Login = {
+    HandleLidSwitch = "ignore";
+    HandleLidSwitchExternalPower = "ignore";
+  };
 
   # Compositor half of the home-manager `niri` aspect (./noctalia.nix adds the
   # shell/theming half).
@@ -58,20 +68,14 @@
       # playerctl backs the XF86Audio{Play,Next,Prev} media-key binds below.
       home.packages = [ pkgs.playerctl ];
 
-      # niri itself: noctalia ships a builtin `niri` template (enabled via
-      # builtin_ids in ./noctalia.nix). Its apply.sh *only* injects
-      # `include "noctalia.kdl"` into ~/.config/niri/config.kdl — it never writes
-      # the colors file; the template engine renders that to
-      # ~/.config/niri/noctalia.kdl separately. Our config.kdl is a read-only HM
-      # symlink apply.sh can't edit, so declare the include ourselves: apply.sh
-      # greps for an existing `…noctalia.kdl` include, finds this one, and skips
-      # its write (same trick as foot in ./noctalia.nix). `optional=true` so a
-      # fresh tmpfs boot — before noctalia has rendered noctalia.kdl — doesn't
-      # fail the parse; niri watches the (real, non-symlink) included file and
-      # live-reloads once it appears and on every later palette/mode change, so no
-      # reload hook is needed. Appended to the settings-rendered finalConfig so the
-      # structured programs.niri.settings config is preserved (referencing
-      # finalConfig, not config, avoids a cycle).
+      # noctalia's builtin `niri` template renders the colors to
+      # ~/.config/niri/noctalia.kdl, and its apply.sh injects the include into
+      # config.kdl — which it can't do here, ours being a read-only HM symlink. So
+      # declare the include ourselves; apply.sh greps for one and skips its write.
+      # `optional=true` survives a fresh tmpfs boot with the file not yet rendered,
+      # and niri live-reloads once it appears, so no reload hook is needed. Appending
+      # to finalConfig (not config, which would cycle) keeps the structured settings
+      # below.
       xdg.configFile.niri-config.source = lib.mkForce (
         pkgs.writeText "niri-config.kdl" ''
           ${config.programs.niri.finalConfig}
@@ -135,10 +139,9 @@
           ];
         };
 
-        # Don't pop the hotkey cheatsheet on every login (Mod+Shift+Slash shows it
-        # on demand). Disable the overview hot-corner; Mod+O toggles it instead.
+        # Mod+Shift+Slash still shows the cheatsheet on demand.
         hotkey-overlay.skip-at-startup = true;
-        gestures.hot-corners.enable = false;
+        gestures.hot-corners.enable = true;
 
         # Interactive (Mod+Print) and full screen/window screenshots land here,
         # timestamped so they sort. ~/Pictures/Screenshots is preserved in the
@@ -155,6 +158,16 @@
           QT_QPA_PLATFORM = "wayland;xcb";
         };
 
+        # Needs `niriLaptop` (above) to take the lid off logind. Inert on leshen,
+        # which has no lid switch, like the touchpad settings above. Switch binds
+        # accept nothing but spawn actions.
+        switch-events.lid-close.action.spawn = [
+          "noctalia"
+          "msg"
+          "session"
+          "lock-and-suspend"
+        ];
+
         # Without this, apps launched from noctalia's launcher open unfocused
         # (upstream's recommendation). An empty argument list is how niri-flake
         # spells a no-argument `debug` node.
@@ -162,7 +175,6 @@
 
         # Window rules — matched top-to-bottom, later rules layer over earlier.
         window-rules = [
-          # Rounded corners for every window, clipped to the rounded shape.
           {
             geometry-corner-radius =
               let
@@ -251,7 +263,6 @@
           };
         };
 
-        # X11 support for apps that don't speak Wayland (Steam games, etc.).
         xwayland-satellite = {
           enable = true;
           path =
@@ -326,7 +337,6 @@
           "Mod+BracketLeft".action = consume-or-expel-window-left;
           "Mod+BracketRight".action = consume-or-expel-window-right;
 
-          # column / window sizing
           "Mod+Minus".action = set-column-width "-10%";
           "Mod+Equal".action = set-column-width "+10%";
           "Mod+Shift+Minus".action = set-window-height "-10%";
@@ -334,7 +344,6 @@
           "Mod+Ctrl+F".action = expand-column-to-available-width;
           "Mod+C".action = center-column;
 
-          # tabbed columns + floating
           "Mod+W".action = toggle-column-tabbed-display;
           "Mod+V".action = toggle-window-floating;
           "Mod+Shift+V".action = switch-focus-between-floating-and-tiling;
@@ -346,10 +355,9 @@
           "Mod+Ctrl+Shift+Left".action = move-column-to-monitor-left;
           "Mod+Ctrl+Shift+Right".action = move-column-to-monitor-right;
 
-          # overview (Mod+O; hot-corner disabled above)
+          # the hot corner (enabled above) toggles this too
           "Mod+O".action = toggle-overview;
 
-          # workspaces — focus, plus move the column/workspace itself.
           "Mod+Page_Down".action = focus-workspace-down;
           "Mod+Page_Up".action = focus-workspace-up;
           "Mod+1".action = focus-workspace 1;
@@ -380,7 +388,7 @@
           "Ctrl+Print".action.screenshot-screen = { };
           "Alt+Print".action.screenshot-window = { };
 
-          # volume routed through noctalia (mpris) so its OSD shows.
+          # volume through noctalia so its OSD shows.
           "XF86AudioRaiseVolume" = {
             action = spawn "noctalia" "msg" "volume-up";
             hotkey-overlay.title = "Volume up";
