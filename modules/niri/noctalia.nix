@@ -365,8 +365,16 @@
 
         # Import noctalia's rendered gtk css (see the gtk3/gtk4 builtin_ids below).
         # Declared via stylix's extraCss so apply.sh finds it present and won't
-        # rewrite the read-only gtk.css symlink.
-        gtk.extraCss = ''@import url("noctalia.css");'';
+        # rewrite the read-only gtk.css symlink. The import is relative, so it only
+        # resolves next to the file noctalia renders — hence flatpakSupport off: it
+        # appends this same css to a flattened adw-gtk3 copy under ~/.themes, where
+        # there is no noctalia.css (nor any way to add one, the dir being a store
+        # path), and every GTK app loading that theme logs a parse error. Nothing
+        # here uses Flatpak, which is all that copy is for.
+        gtk = {
+          extraCss = ''@import url("noctalia.css");'';
+          flatpakSupport.enable = false;
+        };
       };
 
       # Seed noctalia's wallpaper folder with the stylix image. Drop more images
