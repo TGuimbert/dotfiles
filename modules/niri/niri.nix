@@ -155,6 +155,11 @@
           QT_QPA_PLATFORM = "wayland;xcb";
         };
 
+        # Without this, apps launched from noctalia's launcher open unfocused
+        # (upstream's recommendation). An empty argument list is how niri-flake
+        # spells a no-argument `debug` node.
+        debug.honor-xdg-activation-with-invalid-serial = [ ];
+
         # Window rules — matched top-to-bottom, later rules layer over earlier.
         window-rules = [
           # Rounded corners for every window, clipped to the rounded shape.
@@ -179,9 +184,37 @@
             ];
             open-floating = true;
           }
+          {
+            matches = [
+              {
+                app-id = "^firefox$";
+                title = "^Extension: \\(Bitwarden";
+              }
+            ];
+            open-floating = true;
+          }
+          # noctalia's own window (its settings UI when opened windowed rather than as
+          # a panel) floats at the size upstream recommends, instead of taking a column.
+          {
+            matches = [ { app-id = "^dev\\.noctalia\\.Noctalia$"; } ];
+            open-floating = true;
+            default-column-width.fixed = 1080;
+            default-window-height.fixed = 920;
+          }
           # Template for keeping secrets out of screencasts (noctalia screen-share,
           # OBS): add a rule matching your password manager's app-id and set
           # `block-out-from = "screencast";` — left empty until one is installed.
+        ];
+
+        # Puts noctalia's blurred wallpaper behind the overview and the gaps between
+        # workspaces, in place of niri's flat backdrop colour. It paints that on a
+        # *second* background surface — distinct from the plain noctalia-wallpaper one
+        # — which exists only while `backdrop.enabled` is set in ./noctalia.nix.
+        layer-rules = [
+          {
+            matches = [ { namespace = "^noctalia-backdrop"; } ];
+            place-within-backdrop = true;
+          }
         ];
 
         # Dual 2560x1440 @ scale 1, side by side. DP-1 (XF270HU, 144 Hz + VRR) is

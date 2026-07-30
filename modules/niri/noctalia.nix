@@ -568,9 +568,18 @@
               temperature_night = 4000;
             };
 
+            # Blurred/tinted copy of the wallpaper on its own background surface
+            # (namespace noctalia-backdrop), which ./niri.nix's layer-rule places in
+            # niri's overview backdrop. Off by default in noctalia, and the layer-rule
+            # matches nothing without it. blur/tint are 0..1.
+            backdrop = {
+              enabled = true;
+              blur_intensity = 0.5;
+              tint_intensity = 0.3;
+            };
+
             wallpaper = {
-              # A folder so more can be added later; seeded with the stylix image
-              # via xdg.configFile above.
+              # Seeded with the stylix image via xdg.configFile above.
               directory = "${config.xdg.configHome}/noctalia/wallpapers";
 
               # Rotate randomly (off by default; interval_seconds keeps its 30-min
