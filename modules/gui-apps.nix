@@ -10,7 +10,7 @@
         obsidian
         mullvad-browser
         signal-desktop
-        tidal-hifi
+        sone
       ];
 
     };
@@ -19,6 +19,6 @@
     ".config/discord"
     ".config/Signal"
     ".config/obsidian"
-    ".config/tidal-hifi"
+    ".config/sone"
   ];
 }

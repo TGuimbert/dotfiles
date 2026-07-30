@@ -19,7 +19,7 @@ let
         base16-schemes
         nushell
         calibre
-        tidal-hifi
+        sone
         claude-code
         ;
 
