@@ -532,7 +532,12 @@
                     input_path = "${claudeTheme}";
                     output_path = "~/.config/claude/themes/noctalia.json";
                   };
-                  # Vendored community `pywalfox-beta4` template so it renders offline.
+                  # wal-format palette for the Pywalfox extension: color0..15 are
+                  # the ANSI terminal colors, which is what pywalfox maps onto
+                  # Firefox's theme keys. All sixteen need a value — noctalia
+                  # forwards them verbatim, so an empty string lands in the theme
+                  # as a color. The community `pywalfox-beta4` template this
+                  # replaces left nine of them "".
                   # post_action "firefox-theme" pushes the rendered colors.json to the
                   # Pywalfox extension via the noctalia native-messaging host installed
                   # by the noctaliaFirefoxHost activation above.
