@@ -19,13 +19,17 @@
           size = 24;
         };
         fonts = {
+          # One UI sans for the whole desktop: stylix themes GTK/GNOME with it and
+          # noctalia's bar inherits it (modules/niri/noctalia.nix). Inter is drawn for
+          # screen UI — it stays legible at bar sizes where Lato went soft. serif
+          # mirrors it, as it did with Lato: no serifs anywhere.
           sansSerif = {
-            package = pkgs.lato;
-            name = "Lato";
+            package = pkgs.inter;
+            name = "Inter";
           };
           serif = {
-            package = pkgs.lato;
-            name = "Lato";
+            package = pkgs.inter;
+            name = "Inter";
           };
           monospace = {
             package = pkgs.nerd-fonts.iosevka-term;

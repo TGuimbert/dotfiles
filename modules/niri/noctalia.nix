@@ -536,8 +536,10 @@
             };
 
             shell = {
-              # nerd font for the bar's glyphs/icons
-              font_family = lib.mkDefault "IosevkaTerm Nerd Font";
+              # Bar/launcher/panel *text* only — the icons come from noctalia's own
+              # bundled tabler.ttf, so no nerd-font coverage is needed here. Inheriting
+              # stylix's sans keeps the shell on the same font as the GTK apps.
+              font_family = lib.mkDefault config.stylix.fonts.sansSerif.name;
             };
 
             # External-monitor brightness over DDC/CI (gated off by default in
