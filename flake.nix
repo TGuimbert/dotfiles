@@ -45,10 +45,6 @@
     # Hardware
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
 
-    # Note: tuxedo-nixos requires its pinned nixpkgs (22.11) for nodejs-14_x and electron-13
-    # Do not add nixpkgs.follows here as it would break the package
-    tuxedo-nixos.url = "github:sund3RRR/tuxedo-nixos";
-
     # Desktop & theming
     stylix = {
       url = "github:danth/stylix/release-26.05";

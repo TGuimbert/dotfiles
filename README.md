@@ -27,7 +27,7 @@ nix develop
 
 ### Desktop/Laptop Installation
 
-This process is for physical machines where you have direct access (leshen, griffin, tuxedo).
+This process is for physical machines where you have direct access (leshen, griffin).
 
 #### 1. Prepare the Installation
 
@@ -37,7 +37,7 @@ git clone https://github.com/TGuimbert/dotfiles.git
 cd dotfiles
 
 # Set your target hostname
-export NEW_HOSTNAME=<hostname>  # e.g., griffin, leshen, tuxedo
+export NEW_HOSTNAME=<hostname>  # e.g., griffin, leshen
 ```
 
 #### 2. Format the Disk
