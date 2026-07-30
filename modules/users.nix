@@ -17,9 +17,7 @@
         users.tguimbert =
           { osConfig, ... }:
           {
-            # The user's home tracks the host's stateVersion. (Pre-R12 the legacy
-            # home/ module hardcoded "22.11"; with that gone, tuxedo's home follows
-            # its system at 25.11 — intended.)
+            # The user's home tracks the host's stateVersion.
             home.stateVersion = osConfig.system.stateVersion;
             imports = [ config.homeManager.modules.base ];
           };

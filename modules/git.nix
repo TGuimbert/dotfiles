@@ -8,18 +8,6 @@
         key = null;
       };
 
-      # Modify commit email for work related repos
-      includes = [
-        {
-          condition = "hasconfig:remote.*.url:git@github.com:scortexio/**";
-          contents = {
-            user = {
-              email = "tguimbert@scortex.io";
-            };
-          };
-        }
-      ];
-
       settings = {
         user = {
           name = "TGuimbert";

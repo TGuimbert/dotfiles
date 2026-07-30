@@ -89,7 +89,7 @@ if [ "${#short_cwd}" -gt "$avail" ]; then
 fi
 
 # Colors. Default to fixed 256-color codes — used on hosts without noctalia
-# (griffin/tuxedo) and during the brief window before noctalia first renders the
+# (griffin) and during the brief window before noctalia first renders the
 # theme. On noctalia hosts, pull the live colors from the rendered Noctalia
 # custom theme (~/.config/claude/themes/noctalia.json) so the status line matches
 # Claude Code's theme and follows its light/dark switches (noctalia re-renders on
