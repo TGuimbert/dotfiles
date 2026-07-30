@@ -540,6 +540,13 @@
               # bundled tabler.ttf, so no nerd-font coverage is needed here. Inheriting
               # stylix's sans keeps the shell on the same font as the GTK apps.
               font_family = lib.mkDefault config.stylix.fonts.sansSerif.name;
+
+              # The wizard's only "already done" marker lives in ~/.local/state, which
+              # the tmpfs root wipes, so it would run at every login — and what it asks
+              # for (palette, wallpaper, bar) is declarative here anyway.
+              setup_wizard_enabled = false;
+
+              niri_overview_type_to_launch_enabled = true;
             };
 
             # External-monitor brightness over DDC/CI (gated off by default in
