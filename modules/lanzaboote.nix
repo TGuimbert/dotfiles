@@ -24,5 +24,11 @@
       };
 
       environment.systemPackages = [ pkgs.sbctl ];
+
+      # The signing keys are the aspect's own state, and root is a tmpfs: without
+      # this they are gone on the next boot, leaving nothing that matches what the
+      # firmware has enrolled. Lives here rather than in preservation.nix so it
+      # follows the aspect onto any host that imports it.
+      preservation.preserveAt."/persistent".directories = [ "/etc/secureboot" ];
     };
 }
