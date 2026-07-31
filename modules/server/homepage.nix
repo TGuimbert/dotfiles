@@ -34,11 +34,6 @@
               token = "{{HOMEPAGE_VAR_PROXMOX_TOKEN}}";
               secret = "{{HOMEPAGE_VAR_PROXMOX_SECRET}}";
             };
-            proxmox2 = {
-              url = "{{HOMEPAGE_VAR_PROXMOX_URL}}";
-              token = "{{HOMEPAGE_VAR_PROXMOX_TOKEN}}";
-              secret = "{{HOMEPAGE_VAR_PROXMOX_SECRET}}";
-            };
           };
           widgets = [
             {
@@ -196,21 +191,6 @@
                       username = "{{HOMEPAGE_VAR_PROXMOX_TOKEN}}";
                       password = "{{HOMEPAGE_VAR_PROXMOX_SECRET}}";
                       node = "proxmox1";
-                    };
-                  };
-                }
-                {
-                  Proxmox2 = {
-                    icon = "proxmox.png";
-                    href = "https://proxmox2.${constants.domain}:8006/";
-                    siteMonitor = "https://proxmox1.${constants.domain}:8006/";
-                    description = "Second PVE node";
-                    widget = {
-                      type = "proxmox";
-                      url = "{{HOMEPAGE_VAR_PROXMOX_URL}}";
-                      username = "{{HOMEPAGE_VAR_PROXMOX_TOKEN}}";
-                      password = "{{HOMEPAGE_VAR_PROXMOX_SECRET}}";
-                      node = "proxmox2";
                     };
                   };
                 }

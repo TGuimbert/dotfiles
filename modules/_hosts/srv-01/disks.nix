@@ -1,25 +1,27 @@
+# Bare-metal layout: unencrypted (headless box, no unattended-unlock story), so
+# it does not share ../_lib/btrfs-disk.nix, which is BTRFS-on-LUKS. Root is a
+# tmpfs; only the btrfs subvolumes below survive a reboot.
 {
   disko.devices = {
     disk = {
       main = {
         type = "disk";
-        device = "/dev/sda";
+        # By-id: /dev/nvme0n1 is not stable across kernel/firmware changes and
+        # disko writes the device into the generated fstab.
+        device = "/dev/disk/by-id/nvme-PC611_NVMe_SK_hynix_512GB_NJ03N572411703G27";
         content = {
           type = "gpt";
           partitions = {
-            boot = {
-              size = "1M";
-              type = "EF02";
-            };
             ESP = {
-              size = "512M";
+              size = "1G";
               type = "EF00";
               name = "EFI";
               content = {
                 type = "filesystem";
                 format = "vfat";
                 mountpoint = "/boot";
-                mountOptions = [ "defaults" ];
+                # systemd-boot warns when the ESP is world-readable.
+                mountOptions = [ "umask=0077" ];
               };
             };
             root = {
@@ -48,6 +50,15 @@
                       "compress=zstd"
                       "noatime"
                     ];
+                  };
+                  # 15G of RAM, a quarter of which goes to the tmpfs root;
+                  # matches the 8G the proxmox install had on pve-swap.
+                  "/swap" = {
+                    mountpoint = "/.swapvol";
+                    swap.swapfile = {
+                      size = "8G";
+                      path = "swapfile";
+                    };
                   };
                 };
               };

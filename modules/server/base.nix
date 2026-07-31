@@ -9,10 +9,9 @@
       ...
     }:
     {
-      boot.loader.grub = {
-        enable = true;
-        efiSupport = true;
-        efiInstallAsRemovable = true;
+      boot.loader = {
+        systemd-boot.enable = true;
+        efi.canTouchEfiVariables = true;
       };
 
       nix.settings = {
@@ -46,9 +45,10 @@
             PermitRootLogin = "no";
           };
         };
-        qemuGuest.enable = true;
         xserver.enable = false;
         pipewire.enable = false;
+        # Real disk now, not a virtio block device.
+        smartd.enable = true;
       };
 
       environment.systemPackages = with pkgs; [
