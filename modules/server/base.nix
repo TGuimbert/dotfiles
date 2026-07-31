@@ -67,7 +67,9 @@
 
       networking = {
         networkmanager.enable = false;
-        useDHCP = true;
+        # The address is declared per host (see machines/srv-01.nix); a server
+        # that moves address on a DHCP whim is a server you cannot find.
+        useDHCP = false;
         firewall = {
           enable = true;
         };
