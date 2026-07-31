@@ -6,6 +6,7 @@
         (with config.nixos.modules; [
           base
           desktop
+          secureBoot
           podman
           games
           displaysLeshen

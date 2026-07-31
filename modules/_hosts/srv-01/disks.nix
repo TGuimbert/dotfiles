@@ -1,82 +1,17 @@
-# Bare-metal layout: unencrypted (headless box, no unattended-unlock story), so
-# it does not share ../_lib/btrfs-disk.nix, which is BTRFS-on-LUKS. Root is a
-# tmpfs; only the btrfs subvolumes below survive a reboot.
-{
-  disko.devices = {
-    disk = {
-      main = {
-        type = "disk";
-        # By-id: /dev/nvme0n1 is not stable across kernel/firmware changes and
-        # disko writes the device into the generated fstab.
-        device = "/dev/disk/by-id/nvme-PC611_NVMe_SK_hynix_512GB_NJ03N572411703G27";
-        content = {
-          type = "gpt";
-          partitions = {
-            ESP = {
-              size = "1G";
-              type = "EF00";
-              name = "EFI";
-              content = {
-                type = "filesystem";
-                format = "vfat";
-                mountpoint = "/boot";
-                # systemd-boot warns when the ESP is world-readable.
-                mountOptions = [ "umask=0077" ];
-              };
-            };
-            root = {
-              size = "100%";
-              content = {
-                type = "btrfs";
-                extraArgs = [ "-f" ];
-                subvolumes = {
-                  "/nix" = {
-                    mountpoint = "/nix";
-                    mountOptions = [
-                      "compress=zstd"
-                      "noatime"
-                    ];
-                  };
-                  "/persistent" = {
-                    mountpoint = "/persistent";
-                    mountOptions = [
-                      "compress=zstd"
-                      "noatime"
-                    ];
-                  };
-                  "/log" = {
-                    mountpoint = "/var/log";
-                    mountOptions = [
-                      "compress=zstd"
-                      "noatime"
-                    ];
-                  };
-                  # 15G of RAM, a quarter of which goes to the tmpfs root;
-                  # matches the 8G the proxmox install had on pve-swap.
-                  "/swap" = {
-                    mountpoint = "/.swapvol";
-                    swap.swapfile = {
-                      size = "8G";
-                      path = "swapfile";
-                    };
-                  };
-                };
-              };
-            };
-          };
-        };
-      };
-    };
-    nodev = {
-      "/" = {
-        fsType = "tmpfs";
-        mountOptions = [
-          "size=25%"
-          "mode=755"
-        ];
-      };
-    };
-  };
-
-  fileSystems."/persistent".neededForBoot = true;
-}
+{ lib, ... }:
+lib.mkMerge [
+  (import ../_lib/btrfs-disk.nix {
+    # By-id: /dev/nvme0n1 is not stable across kernel/firmware changes and disko
+    # writes the device into the generated fstab. The 8G swap and 25% tmpfs root
+    # defaults suit the box as-is (15G of RAM, matching the old pve-swap).
+    device = "/dev/disk/by-id/nvme-PC611_NVMe_SK_hynix_512GB_NJ03N572411703G27";
+  })
+  {
+    # The box is headless, so nothing can type a passphrase at boot. Unlock from
+    # the TPM instead, enrolled at runtime with systemd-cryptenroll against PCR 7
+    # (Secure Boot state) — which means enrolling *after* the lanzaboote keys are
+    # in the firmware, or the sealed policy stops matching the moment they are.
+    # The passphrase set at disko time stays as the fallback slot.
+    boot.initrd.luks.devices.encrypted.crypttabExtraOpts = [ "tpm2-device=auto" ];
+  }
+]

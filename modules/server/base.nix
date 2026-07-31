@@ -6,11 +6,15 @@
     {
       pkgs,
       config,
+      lib,
       ...
     }:
     {
       boot.loader = {
-        systemd-boot.enable = true;
+        # mkDefault so the `secureBoot` aspect can hand the ESP to lanzaboote.
+        # Plain systemd-boot is what the machine installs on, before the sbctl
+        # keys exist; see README.
+        systemd-boot.enable = lib.mkDefault true;
         efi.canTouchEfiVariables = true;
       };
 

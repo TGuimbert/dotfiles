@@ -1,6 +1,8 @@
 { inputs, ... }:
 {
-  nixos.modules.desktop =
+  # A named aspect rather than part of `desktop`: srv-01 wants Secure Boot too,
+  # and a bootloader is not a desktop concern. Hosts opt in by importing it.
+  nixos.modules.secureBoot =
     { pkgs, ... }:
     {
       imports = [ inputs.lanzaboote.nixosModules.lanzaboote ];
