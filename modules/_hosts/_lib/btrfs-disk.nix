@@ -25,8 +25,11 @@
               type = "filesystem";
               format = "vfat";
               mountpoint = "/boot";
+              # vfat has no permission bits of its own, so "defaults" leaves the
+              # ESP world-readable and bootctl warns that the random seed backing
+              # it is exposed to any local user. Restrict it to root.
               mountOptions = [
-                "defaults"
+                "umask=0077"
               ];
             };
           };
