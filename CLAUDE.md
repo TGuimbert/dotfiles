@@ -136,7 +136,7 @@ Each host is a thin import list in `modules/machines/<hostname>.nix` — it sets
 
 One feature = one capability file holding its NixOS **and** home-manager config together (organized by capability, not by module class). Features contribute to merge points:
 - `nixos.modules.base` — every host (boot, locale, networking, audio, nix settings, services, user, preservation, sops)
-- `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, stylix, lanzaboote, firefox, GUI home)
+- `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, lanzaboote, firefox, GUI home)
 - `nixos.modules.server` — srv-01 baseline (`modules/server/`)
 - Named opt-in aspects imported only by hosts that want them: `games`, `podman`, `displaysLeshen`, `laptop`, `docker` (no host currently imports it), and the srv-01 services (`traefik`, `authelia`, `lldap`, `homepage`, `restic`, `calibre`, `printing`)
 
@@ -172,7 +172,6 @@ Major flake inputs:
 - `preservation`: Stateless system configuration (declarative state preservation)
 - `lanzaboote`: Secure Boot support
 - `sops-nix`: Secret management
-- `stylix`: System-wide theming
 - `nixos-hardware`: Hardware-specific configurations
 
 ## Development Workflow
@@ -247,7 +246,7 @@ Scaffolding files live **flat in `modules/`** (`nixos.nix`, `home-manager.nix`, 
 **Merge points (system-types)** replace a separate profiles layer:
 
 - `nixos.modules.base` — every host (nix settings, locale, networking, audio, services, boot, user, preservation, sops)
-- `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, stylix, lanzaboote, firefox, GUI home); also pulls `home.gui`
+- `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, lanzaboote, firefox, GUI home); also pulls `home.gui`
 - `nixos.modules.server` — srv-01 baseline
 - Named opt-in aspects: `games`, `podman`, `displaysLeshen`, `laptop`, `docker`, `traefik`, `authelia`, `lldap`, `homepage`, `restic`, `calibre`, `printing`
 
@@ -289,7 +288,7 @@ Flat by default (mightyiam-aligned). One feature = one flat `.nix` file; directo
 │   ├── boot.nix  locale.nix  networking.nix  audio.nix  nix-settings.nix  services.nix   # core features (flat)
 │   ├── helix.nix  nushell.nix  zellij.nix  starship.nix  …   # shell tools (flat; or a shell/ dir if you prefer grouping)
 │   ├── shells/                  # dev shells — peer-set dir (python.nix, rust.nix, …)
-│   ├── desktop/                 # cohesive capability dir (niri, noctalia, greeter, stylix, firefox)
+│   ├── desktop/                 # cohesive capability dir (niri, noctalia, greeter, appearance, firefox)
 │   ├── server/                  # peer-set dir (traefik, authelia, lldap, …)
 │   ├── machines/                # peer-set dir (leshen.nix, griffin.nix, … — thin import lists)
 │   └── _hosts/                  # per-host hardware.nix + disks.nix (_-prefixed; skipped by import-tree)

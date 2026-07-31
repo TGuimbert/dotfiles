@@ -16,7 +16,6 @@ let
         obsidian
         orca-slicer
         rustfinity
-        base16-schemes
         nushell
         calibre
         sone

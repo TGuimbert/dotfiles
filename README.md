@@ -274,7 +274,7 @@ statix check
 │   ├── boot.nix …          # Flat feature files (one capability each)
 │   ├── machines/           # Per-host thin import lists (leshen, griffin, …)
 │   ├── _hosts/             # Per-host hardware.nix + disks.nix (skipped by import-tree)
-│   ├── desktop/            # Desktop capability (niri, noctalia, greeter, stylix, firefox)
+│   ├── desktop/            # Desktop capability (niri, noctalia, greeter, appearance, firefox)
 │   ├── server/             # Server services (traefik, authelia, lldap, …)
 │   └── shells/             # Development shell environments
 ├── config/                 # Static config files (nushell, zellij, k9s)

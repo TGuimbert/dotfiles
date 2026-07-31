@@ -4,7 +4,9 @@
     programs.zellij = {
       enable = true;
       settings = {
-        theme = "stylix";
+        # Rendered by noctalia (../desktop/noctalia.nix), which also defines the
+        # theme_dark/theme_light pair a running session switches between.
+        theme = "noctalia";
         default_shell = "nu";
         default_layout = "welcome";
         scrollback_editor = "hx";

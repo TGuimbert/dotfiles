@@ -1,8 +1,8 @@
 # noctalia (native Wayland shell for niri: bar / launcher / notifications /
-# lockscreen) plus the in-session theming it renders for foot, helix, zellij,
-# starship, bat, Claude Code, Firefox (pywalfox) and Obsidian. Merges into the
-# same `desktop`/`gui` aspects as ./niri.nix (both are deferredModules, so the
-# values combine).
+# lockscreen) plus the in-session app theming it renders — the authority note on
+# the home-manager aspect below lists what it owns. Merges into the same
+# `desktop`/`gui` aspects as ./niri.nix (both are deferredModules, so the values
+# combine).
 { inputs, ... }:
 {
   # noctalia ships a NixOS module *and* a home-manager one; they share an option
@@ -26,8 +26,8 @@
 
   homeManager.modules.gui =
     {
+      appearance,
       config,
-      options,
       pkgs,
       lib,
       ...
@@ -280,6 +280,223 @@
         };
       };
 
+      # k9s skin, written against k9s 0.51's config.Style structs
+      # (internal/config/styles.go) with k9s's own shipped
+      # skins/gruvbox-material-dark-medium.yaml as the structural reference — that
+      # is this very palette, so only the placeholders differ. Chrome comes from
+      # the surface/outline tones, semantic colors from the terminal ANSI set, as
+      # in mkZellijTheme above.
+      #
+      # Every key the struct defines is set deliberately: k9s fills unset ones
+      # from newStyle()'s hardcoded defaults (aqua, dodgerblue, palegreen, black
+      # …), which render as off-palette noise rather than as "unthemed".
+      #
+      # Pairings are chosen for contrast in *both* modes; the ones k9s composites
+      # in non-obvious ways are noted at their site. Light-mode accents on the
+      # cream surface cap around 3-4:1 (yellow is #b47109 on #f2e5bc) — the
+      # palette's ceiling, so accents stay off body text and carry status only.
+      #
+      # The flash bar (the "Synchronizing … namespace" line) is not themable at
+      # all: config.Style has no key for it, and internal/ui/flash.go overwrites
+      # the skin foreground per level with hardcoded tcell colors meant for a dark
+      # background (1.02:1 on the light surface). Upstream bug; patching k9s or
+      # pinning it to the dark palette both cost more than a transient line is
+      # worth.
+      k9sSkin = (pkgs.formats.yaml { }).generate "noctalia-k9s-skin.yaml" {
+        k9s =
+          let
+            fg = activeColor "on_surface";
+            # De-emphasised text: the M3 secondary-text role rather than a grey,
+            # because terminal_bright_black is a fixed #928374 in both modes and
+            # drops to 2.9:1 on the light surface.
+            fgDim = activeColor "on_surface_variant";
+            surface = activeColor "surface";
+            raised = activeColor "surface_variant";
+            outline = activeColor "outline";
+            accent = activeColor "primary";
+            onAccent = activeColor "on_primary";
+            orange = activeColor "secondary";
+            red = activeColor "terminal_normal_red";
+            green = activeColor "terminal_normal_green";
+            yellow = activeColor "terminal_normal_yellow";
+            blue = activeColor "terminal_normal_blue";
+            magenta = activeColor "terminal_normal_magenta";
+            cyan = activeColor "terminal_normal_cyan";
+          in
+          {
+            body = {
+              fgColor = fg;
+              bgColor = surface;
+              logoColor = accent;
+              logoColorMsg = fg;
+              logoColorInfo = green;
+              logoColorWarn = yellow;
+              logoColorError = red;
+            };
+
+            prompt = {
+              fgColor = fg;
+              bgColor = surface;
+              suggestColor = fgDim;
+              border = {
+                command = cyan;
+                default = outline;
+              };
+            };
+
+            # Top-level, not under `views`: the old placement parses but is
+            # ignored, leaving the help screen on k9s's black default.
+            help = {
+              fgColor = fg;
+              bgColor = surface;
+              sectionColor = green;
+              keyColor = blue;
+              numKeyColor = magenta;
+            };
+
+            info = {
+              fgColor = accent;
+              sectionColor = fg;
+              cpuColor = blue;
+              memColor = magenta;
+              k9sRevColor = fgDim;
+            };
+
+            dialog = {
+              fgColor = fg;
+              bgColor = raised;
+              buttonFgColor = fg;
+              buttonBgColor = surface;
+              buttonFocusFgColor = onAccent;
+              buttonFocusBgColor = accent;
+              labelFgColor = blue;
+              fieldFgColor = fg;
+            };
+
+            frame = {
+              border = {
+                fgColor = outline;
+                focusColor = accent;
+              };
+
+              menu = {
+                fgColor = fg;
+                keyColor = green;
+                numKeyColor = green;
+              };
+
+              # crumbs.go renders `[fgColor:bgColor:b]`, swapping in activeColor
+              # as the *background* of the last crumb — one shared foreground over
+              # two backgrounds, so both must contrast with it. An accent here put
+              # cream text on light green at 1.3:1. Surface tones instead: inactive
+              # crumbs melt into the bar, the active one reads as a raised chip.
+              crumbs = {
+                fgColor = fg;
+                bgColor = surface;
+                activeColor = raised;
+              };
+
+              status = {
+                newColor = cyan;
+                modifyColor = blue;
+                addColor = green;
+                pendingColor = orange;
+                errorColor = red;
+                highlightColor = yellow;
+                killColor = fgDim;
+                completedColor = fgDim;
+              };
+
+              title = {
+                fgColor = fg;
+                bgColor = raised;
+                highlightColor = blue;
+                counterColor = cyan;
+                filterColor = green;
+              };
+            };
+
+            views = {
+              charts = {
+                bgColor = surface;
+                dialBgColor = surface;
+                chartBgColor = surface;
+                focusFgColor = onAccent;
+                focusBgColor = accent;
+                defaultDialColors = [
+                  green
+                  red
+                ];
+                defaultChartColors = [
+                  green
+                  red
+                ];
+                # Keyed by k9s's config.CPU / config.MEM constants — note MEM is
+                # spelled "memory", not "mem".
+                resourceColors = {
+                  cpu = [
+                    blue
+                    magenta
+                  ];
+                  memory = [
+                    yellow
+                    orange
+                  ];
+                };
+              };
+
+              table = {
+                fgColor = fg;
+                bgColor = surface;
+                # Selected row. cursorBgColor only lands on an empty table:
+                # select_table.go's selectionChanged re-styles the selection as
+                # cursorFgColor over the *cell's own* color, so the foreground has
+                # to stay legible over every status color below, not just here.
+                cursorFgColor = onAccent;
+                cursorBgColor = accent;
+                markColor = yellow;
+                header = {
+                  fgColor = fgDim;
+                  bgColor = surface;
+                  sorterColor = cyan;
+                  selectedSortColumnColor = yellow;
+                };
+              };
+
+              xray = {
+                fgColor = fg;
+                bgColor = surface;
+                cursorColor = accent;
+                cursorTextColor = onAccent;
+                graphicColor = cyan;
+              };
+
+              yaml = {
+                keyColor = magenta;
+                colonColor = fgDim;
+                valueColor = fg;
+              };
+
+              picker = {
+                mainColor = fg;
+                focusColor = accent;
+                shortcutColor = yellow;
+              };
+
+              logs = {
+                fgColor = fg;
+                bgColor = surface;
+                indicator = {
+                  fgColor = fg;
+                  bgColor = raised;
+                  toggleOnColor = green;
+                  toggleOffColor = fgDim;
+                };
+              };
+            };
+          };
+      };
+
       # Vendored + wrapped copy of noctalia's community obsidian apply.sh (so
       # nothing is fetched at runtime and find/python3 resolve from the store).
       # `output` emits the per-vault snippet paths; `apply` enables the snippet in
@@ -342,64 +559,14 @@
     {
       imports = [ inputs.noctalia.homeModules.default ];
 
-      # noctalia is the in-session theme authority for the apps it templates
-      # (foot, helix, zellij, niri, starship, bat, …). stylix stays the base for
-      # everything else — fonts, cursor, console, GTK/QT — as a fixed gruvbox-dark.
-      #
-      # Guard: our release-26.05 stylix does ship a noctalia target, but spelled
-      # `noctalia-shell` and gated on `options.programs ? noctalia-shell` — the v4
-      # Quickshell module. We are on v5, whose option is `programs.noctalia`, so it
-      # stays inert. Both spellings are checked because whichever one stylix
-      # eventually points at v5 will auto-drive the palette and clash with the
-      # manual theme below; the build then stops so we reconcile deliberately —
-      # either disable that target to keep this config, or adopt it and drop the
-      # manual theme.
-      assertions = [
-        {
-          assertion = !(options.stylix.targets ? noctalia) && !(options.programs ? noctalia-shell);
-          message = ''
-            stylix now drives noctalia's theme and will conflict with the manual
-            palette/templates in modules/desktop/noctalia.nix. Either set that
-            target's `enable = false` to keep this config, or drop the manual
-            theme and adopt the target.
-          '';
-        }
-      ];
+      # noctalia is the theme authority for every app it templates (foot, helix,
+      # zellij, niri, starship, bat, GTK, Firefox, Obsidian, k9s, Claude Code) —
+      # each one renders live and follows the day/night mode. ./appearance.nix
+      # owns what has no live story: fonts, cursor, wallpaper, GTK base theme.
 
-      # stylix target hand-offs — noctalia owns the palette for the apps it
-      # templates; disabling stylix's targets for them avoids fighting over the
-      # same colors. stylix keeps theming every other app.
-      stylix.targets = {
-        # foot/helix/zellij/niri: theming handed to noctalia's side-file templates
-        # (rendered below); the links/includes make each app pick them up.
-        foot.enable = false;
-        helix.enable = false;
-        zellij.enable = false;
-        niri.enable = false;
-
-        # bat + starship: mkForce because stylix.nix enables these targets
-        # explicitly (unlike foot/helix). noctalia renders their palettes live so
-        # they follow the auto day/night mode instead of stylix's fixed variant.
-        bat.enable = lib.mkForce false;
-        starship.enable = lib.mkForce false;
-
-        # Import noctalia's rendered gtk css (see the gtk3/gtk4 builtin_ids below).
-        # Declared via stylix's extraCss so apply.sh finds it present and won't
-        # rewrite the read-only gtk.css symlink. The import is relative, so it only
-        # resolves next to the file noctalia renders — hence flatpakSupport off: it
-        # appends this same css to a flattened adw-gtk3 copy under ~/.themes, where
-        # there is no noctalia.css (nor any way to add one, the dir being a store
-        # path), and every GTK app loading that theme logs a parse error. Nothing
-        # here uses Flatpak, which is all that copy is for.
-        gtk = {
-          extraCss = ''@import url("noctalia.css");'';
-          flatpakSupport.enable = false;
-        };
-      };
-
-      # Seed noctalia's wallpaper folder with the stylix image. Drop more images
-      # into this dir (another xdg.configFile entry) and noctalia will offer them.
-      xdg.configFile."noctalia/wallpapers/gruvbox-stairs.jpg".source = config.stylix.image;
+      # Seed noctalia's wallpaper folder. Drop more images into this dir (another
+      # xdg.configFile entry) and noctalia will offer them.
+      xdg.configFile."noctalia/wallpapers/gruvbox-stairs.jpg".source = appearance.wallpaper;
 
       # Install the pywalfox native-messaging manifest (noctalia is the pywalfox
       # host; the Pywalfox extension is added in modules/desktop/firefox.nix).
@@ -425,12 +592,11 @@
         foot.settings.main.include = footThemeFile;
         helix.settings.theme = "noctalia";
 
-        # zellij: `noctalia` is the live-mode block, so a session started at any point
-        # opens on the current palette; the dark/light pair is what the post_hook (and
-        # zellij's own detection) switches a running session to. `theme` is forced off
-        # the shared module's "stylix".
+        # zellij: ../zellij/zellij.nix names `noctalia`, the live-mode block, so a
+        # session started at any point opens on the current palette; the dark/light
+        # pair here is what the post_hook (and zellij's own detection) switches a
+        # running session to.
         zellij.settings = {
-          theme = lib.mkForce "noctalia";
           theme_dark = "noctalia-dark";
           theme_light = "noctalia-light";
         };
@@ -451,26 +617,35 @@
         # merges) so it only lands on hosts that run noctalia to render that file.
         claude-code.settings.theme = "custom:noctalia";
 
+        # k9s: names the skin noctalia renders to ~/.config/k9s/skins/. Set here
+        # rather than in modules/kubernetes/kubernetes.nix for the same reason as
+        # claude-code above. Both keys are load-bearing and fail silently:
+        #   k9s.  config.yaml is `Config{ K9s *K9s yaml:"k9s" }`, schema-validated
+        #         with additionalProperties:false, so a bare `ui.skin` is dropped
+        #         and k9s falls back to its stock skin.
+        #   reactive.  App.Resume only starts SkinsDirWatcher when it is set;
+        #         without it a running k9s picks up a re-render only on restart.
+        k9s.settings.k9s.ui = {
+          skin = "noctalia";
+          reactive = true;
+        };
+
         noctalia = {
           enable = true;
 
           settings = {
             theme = {
-              # Gruvbox Material, generated from base16-schemes (dark + light
-              # variants below). noctalia has no builtin for it. mkDefault so a
-              # future stylix.targets.noctalia can override cleanly; the assertion
-              # above still forces a conscious decision when that lands.
+              # Gruvbox Material — noctalia has no builtin for it, so the palette
+              # is vendored as JSON (gruvboxMaterial above, both variants).
               #
-              # auto = follow day/night from location (auto_locate below). Only the
-              # noctalia-owned surfaces (bar, foot, helix) switch; stylix's apps are
-              # baked dark and won't follow — an accepted split until user-space
-              # theming moves fully to noctalia.
-              mode = lib.mkDefault "auto";
+              # auto = follow day/night from location (auto_locate below). Every
+              # templated surface switches with it; the fixed pieces in
+              # ./appearance.nix (fonts, cursor, wallpaper) are mode-independent.
+              mode = "auto";
               source = "custom";
               custom_palette = "gruvbox-material";
 
               # The links/includes above are what make each app pick these up.
-              # Everything not listed here stays stylix's.
               templates = {
                 enable_builtin_templates = true;
                 builtin_ids = [
@@ -478,11 +653,11 @@
                   "helix"
                   "niri"
                   # GTK colors only — GTK apps (Nautilus, file-picker dialogs) follow
-                  # the live day/night palette. stylix keeps the base theme/cursor/font
-                  # (targets.gtk stays on); the `@import` is declared via
-                  # stylix.targets.gtk.extraCss above so apply.sh finds it present and
-                  # won't rewrite the read-only gtk.css symlink. (electron apps ignore
-                  # GTK for their inner UI.)
+                  # the live day/night palette. ./appearance.nix keeps the base
+                  # theme/cursor/font and declares the `@import` that pulls the
+                  # rendered noctalia.css in, so apply.sh finds it present and won't
+                  # rewrite the read-only gtk.css symlink. (electron apps ignore GTK
+                  # for their inner UI.)
                   "gtk3"
                   "gtk4"
                 ];
@@ -532,6 +707,12 @@
                     input_path = "${claudeTheme}";
                     output_path = "~/.config/claude/themes/noctalia.json";
                   };
+                  # Likewise k9s, which watches its config dir and re-reads the skin.
+                  k9s = {
+                    enabled = true;
+                    input_path = "${k9sSkin}";
+                    output_path = "~/.config/k9s/skins/noctalia.yaml";
+                  };
                   # wal-format palette for the Pywalfox extension: color0..15 are
                   # the ANSI terminal colors, which is what pywalfox maps onto
                   # Firefox's theme keys. All sixteen need a value — noctalia
@@ -571,8 +752,9 @@
             shell = {
               # Bar/launcher/panel *text* only — the icons come from noctalia's own
               # bundled tabler.ttf, so no nerd-font coverage is needed here. Inheriting
-              # stylix's sans keeps the shell on the same font as the GTK apps.
-              font_family = lib.mkDefault config.stylix.fonts.sansSerif.name;
+              # The shared UI sans (./appearance.nix) keeps the shell on the same
+              # font as the GTK apps.
+              font_family = appearance.font.name;
 
               # The wizard's only "already done" marker lives in ~/.local/state, which
               # the tmpfs root wipes, so it would run at every login — and what it asks
@@ -612,7 +794,7 @@
             };
 
             wallpaper = {
-              # Seeded with the stylix image via xdg.configFile above.
+              # Seeded with appearance.wallpaper via xdg.configFile above.
               directory = "${config.xdg.configHome}/noctalia/wallpapers";
 
               # Rotate randomly (off by default; interval_seconds keeps its 30-min
