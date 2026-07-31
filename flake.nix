@@ -46,11 +46,6 @@
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
 
     # Desktop & theming
-    stylix = {
-      url = "github:danth/stylix/release-26.05";
-      inputs.nixpkgs.follows = "unstable";
-    };
-
     arkenfox-nix = {
       url = "github:HeitorAugustoLN/arkenfox-nix";
       inputs.nixpkgs.follows = "unstable";

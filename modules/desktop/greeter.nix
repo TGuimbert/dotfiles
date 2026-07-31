@@ -9,11 +9,16 @@
 {
   nixos.modules.desktop =
     {
-      config,
+      appearance,
       lib,
       ...
     }:
     let
+      # Destructured because the greeter's own settings block is also called
+      # `appearance`, and reading the module arg from inside it looks like a
+      # shadow even though attrset keys are not in scope.
+      inherit (appearance) font cursor wallpaper;
+
       # Same vendored Gruvbox Material palette the shell uses (./noctalia.nix).
       palette = (builtins.fromJSON (builtins.readFile ./gruvbox-material-palette.json)).dark;
 
@@ -67,7 +72,7 @@
             # "Synced" = use the palette below rather than a builtin scheme.
             scheme = "Synced";
             theme_mode = "dark";
-            font_family = config.stylix.fonts.sansSerif.name;
+            font_family = font.name;
 
             palette =
               palette
@@ -76,10 +81,11 @@
               |> lib.mapAttrs' (name: value: lib.nameValuePair (greeterKey name) value)
               |> lib.filterAttrs (name: _: builtins.elem name greeterPaletteKeys);
 
-            # The stylix wallpaper, so login screen and session open on the same
-            # image. A store path, readable by the unprivileged greeter user.
+            # The same image the session opens on (./appearance.nix, which also
+            # seeds noctalia's wallpaper folder with it). A store path, readable
+            # by the unprivileged greeter user.
             wallpaper = {
-              path = "${config.stylix.image}";
+              path = "${wallpaper}";
               fill_mode = "crop";
             };
           };
@@ -88,9 +94,9 @@
           # reaches the compositor: name the theme here, with a search path since
           # it is not under the default icon dirs.
           cursor = {
-            theme = config.stylix.cursor.name;
-            inherit (config.stylix.cursor) size;
-            path = "${config.stylix.cursor.package}/share/icons";
+            theme = cursor.name;
+            inherit (cursor) size;
+            path = "${cursor.package}/share/icons";
           };
 
           # Mirrors modules/locale.nix so the password field types the same as the
