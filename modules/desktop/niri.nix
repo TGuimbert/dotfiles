@@ -105,10 +105,7 @@
             click-method = "clickfinger";
             scroll-method = "two-finger";
           };
-          # Pointer follows keyboard focus and vice-versa — handy across the two
-          # monitors. warp-mouse-to-focus teleports the cursor to a newly focused
-          # window so it's never lost on the other screen.
-          focus-follows-mouse.enable = true;
+          focus-follows-mouse.enable = false;
           warp-mouse-to-focus.enable = true;
         };
 
