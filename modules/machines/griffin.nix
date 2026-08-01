@@ -12,8 +12,6 @@
           laptop
         ])
         ++ [
-          inputs.disko.nixosModules.disko
-
           inputs.nixos-hardware.nixosModules.lenovo-thinkpad-t490
           ../_hosts/griffin/hardware.nix
           ../_hosts/griffin/disks.nix

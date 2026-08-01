@@ -6,60 +6,48 @@
   nixos.modules.base = {
     imports = [ inputs.preservation.nixosModules.preservation ];
 
-    # Universal state (enable itself is set per host-type below).
-    preservation.preserveAt."/persistent" = {
-      directories = [
-        {
-          directory = "/tmp";
-          mode = "1777";
-        }
-        "/var/lib/systemd/timers"
-      ];
-      files = [
-        {
-          file = "/var/lib/systemd/random-seed";
-          how = "symlink";
-          inInitrd = true;
-          configureParent = true;
-        }
-      ];
-    };
-  };
-
-  nixos.modules.desktop = {
     preservation = {
       enable = true;
       preserveAt."/persistent" = {
         commonMountOptions = [ "x-gvfs-hide" ];
         directories = [
-          "/var/lib/nixos"
-          "/var/lib/fwupd"
+          {
+            directory = "/tmp";
+            mode = "1777";
+          }
+          "/var/lib/systemd/timers"
+          # inInitrd because this holds the uid-map that pins every
+          # dynamically-allocated system user, and NixOS allocates those in the
+          # stage-2 activation script — before systemd, so before an ordinary
+          # bind-mount exists. Read too late, the map looks empty, every system
+          # user is renumbered, and services stop being able to read their own
+          # 0600 state. Prescribed by preservation's own docs.
+          {
+            directory = "/var/lib/nixos";
+            inInitrd = true;
+          }
           "/var/lib/systemd/coredump"
-          "/var/lib/bluetooth"
-          "/var/lib/boltd"
-          "/var/lib/tailscale"
-          "/etc/NetworkManager/system-connections"
-          "/var/lib/systemd/rfkill"
-          "/var/lib/power-profiles-daemon"
+          "/var/lib/fwupd"
         ];
         files = [
+          {
+            file = "/var/lib/systemd/random-seed";
+            how = "symlink";
+            inInitrd = true;
+            configureParent = true;
+          }
           {
             file = "/etc/machine-id";
             inInitrd = true;
           }
-          # host keys are symlinked so preservation never rewrites their 0600
-          # mode (a bindmount would apply the default 0644 and break sshd)
-          {
-            file = "/etc/ssh/ssh_host_rsa_key";
-            how = "symlink";
-            configureParent = true;
-          }
+          # The host key is symlinked so preservation never rewrites its 0600
+          # mode (a bindmount would apply the default 0644 and break sshd).
+          # ed25519 only — see services.openssh in ./services.nix.
           {
             file = "/etc/ssh/ssh_host_ed25519_key";
             how = "symlink";
             configureParent = true;
           }
-          "/etc/ssh/ssh_host_rsa_key.pub"
           "/etc/ssh/ssh_host_ed25519_key.pub"
         ];
       };
@@ -79,4 +67,13 @@
       mode = "0700";
     };
   };
+
+  nixos.modules.desktop.preservation.preserveAt."/persistent".directories = [
+    "/var/lib/bluetooth"
+    "/var/lib/boltd"
+    "/var/lib/tailscale"
+    "/etc/NetworkManager/system-connections"
+    "/var/lib/systemd/rfkill"
+    "/var/lib/power-profiles-daemon"
+  ];
 }

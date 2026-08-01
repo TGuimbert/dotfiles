@@ -1,4 +1,4 @@
-{ config, inputs, ... }:
+{ config, ... }:
 {
   nixos.configurations.leshen = {
     module = {
@@ -12,8 +12,6 @@
           displaysLeshen
         ])
         ++ [
-          inputs.disko.nixosModules.disko
-
           ../_hosts/leshen/hardware.nix
           ../_hosts/leshen/disks.nix
         ];

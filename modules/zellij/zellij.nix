@@ -1,12 +1,12 @@
 { ... }:
 {
-  homeManager.modules.gui = {
+  homeManager.modules.base = {
     programs.zellij = {
       enable = true;
       settings = {
-        # Rendered by noctalia (../desktop/noctalia.nix), which also defines the
-        # theme_dark/theme_light pair a running session switches between.
-        theme = "noctalia";
+        # A builtin, so it holds where there is no noctalia to render a theme
+        # file; ../desktop/noctalia.nix overrides it on the desktops.
+        theme = "gruvbox-dark";
         default_shell = "nu";
         default_layout = "welcome";
         scrollback_editor = "hx";

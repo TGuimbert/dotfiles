@@ -24,6 +24,4 @@
     ];
     search = [ "lan" ];
   };
-
-  services.smartd.enable = true;
 }

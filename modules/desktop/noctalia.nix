@@ -592,11 +592,12 @@
         foot.settings.main.include = footThemeFile;
         helix.settings.theme = "noctalia";
 
-        # zellij: ../zellij/zellij.nix names `noctalia`, the live-mode block, so a
-        # session started at any point opens on the current palette; the dark/light
-        # pair here is what the post_hook (and zellij's own detection) switches a
-        # running session to.
+        # zellij: `noctalia` is the live-mode block, so a session started at any
+        # point opens on the current palette; the dark/light pair is what the
+        # post_hook (and zellij's own detection) switches a running session to.
+        # Overrides the builtin ../zellij/zellij.nix falls back to off-desktop.
         zellij.settings = {
+          theme = lib.mkForce "noctalia";
           theme_dark = "noctalia-dark";
           theme_light = "noctalia-light";
         };

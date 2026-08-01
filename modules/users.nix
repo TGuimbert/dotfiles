@@ -7,10 +7,8 @@
   config = {
     nixos.modules.base = {
       imports = [ inputs.home-manager.nixosModules.home-manager ];
-      users.users.tguimbert = {
-        isNormalUser = true;
-        uid = 1000;
-      };
+      # The account itself is declared in ./user.nix; this file is only the
+      # home-manager wiring.
       home-manager = {
         useGlobalPkgs = true;
         useUserPackages = true;

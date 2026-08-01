@@ -1,12 +1,8 @@
 { ... }:
 {
-  homeManager.modules.gui = {
+  homeManager.modules.base = {
     programs.git = {
       enable = true;
-      signing = {
-        signByDefault = true;
-        key = null;
-      };
 
       settings = {
         user = {
@@ -78,6 +74,17 @@
       ];
     };
 
+  };
+
+  homeManager.modules.gui = {
+    # Signing needs gpg + a pinentry, both desktop-only (../gpg.nix); on srv-01
+    # it would only make a commit fail.
+    programs.git.signing = {
+      signByDefault = true;
+      key = null;
+    };
+
+    # 119 MiB for a diff pager, on a host with no checkout to diff.
     programs.difftastic = {
       enable = true;
       options.background = "dark";

@@ -1,18 +1,21 @@
 { ... }:
 {
-  homeManager.modules.gui =
+  homeManager.modules.base =
     { pkgs, ... }:
     {
       programs.nushell = {
         enable = true;
         plugins = [ pkgs.nushellPlugins.formats ];
 
+        # Not `home.sessionVariables`: home-manager's nushell module does not
+        # read those. Matters now that nu is the login shell (./user.nix) — over
+        # ssh there is no graphical session to have exported them.
         environmentVariables = {
-          TERM = "foot";
           EDITOR = "hx";
           VISUAL = "hx";
-          BWS_SERVER_URL = "https://vault.bitwarden.eu";
           CARAPACE_BRIDGES = "zsh,fish,bash,inshellisense";
+          ZELLIJ_AUTO_ATTACH = "true";
+          ZELLIJ_AUTO_EXIT = "true";
         };
 
         settings = {
@@ -22,7 +25,6 @@
 
         shellAliases = {
           ll = "ls -la";
-          k = "kubectl";
           cat = "bat";
           b = "bash -c";
           bash = "/run/current-system/sw/bin/bash";
@@ -67,11 +69,6 @@
             zellij action close-tab
           }
 
-          # Open in a browser a local copy of the rust documentation
-          def open-rust-doc [] {
-            xdg-open (nix build fenix#latest.rust-docs --json --no-link | from json | first | get outputs.out | path join share/doc/rust/html/index.html)
-          }
-
           source ~/.config/nushell/private.nu
           use ${pkgs.nu_scripts}/share/nu_scripts/aliases/eza/eza-aliases.nu *
         '';
@@ -80,9 +77,15 @@
       programs.carapace.enable = true;
     };
 
-  nixos.modules.desktop.preservation.preserveAt."/persistent".users.tguimbert.files = [
+  homeManager.modules.gui.programs.nushell.extraConfig = ''
+    # Open in a browser a local copy of the rust documentation
+    def open-rust-doc [] {
+      xdg-open (nix build fenix#latest.rust-docs --json --no-link | from json | first | get outputs.out | path join share/doc/rust/html/index.html)
+    }
+  '';
+
+  nixos.modules.base.preservation.preserveAt."/persistent".users.tguimbert.files = [
     ".config/nushell/history.txt"
     ".config/nushell/private.nu"
-    ".config/Bitwarden CLI/data.json"
   ];
 }

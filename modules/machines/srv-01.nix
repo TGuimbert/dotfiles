@@ -1,4 +1,4 @@
-{ config, inputs, ... }:
+{ config, ... }:
 {
   nixos.configurations.srv-01.module = {
     imports =
@@ -16,8 +16,6 @@
         printing
       ])
       ++ [
-        inputs.disko.nixosModules.disko
-
         ../_hosts/srv-01/hardware.nix
         ../_hosts/srv-01/disks.nix
       ];

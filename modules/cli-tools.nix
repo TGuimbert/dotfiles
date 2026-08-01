@@ -1,6 +1,6 @@
 { ... }:
 {
-  nixos.modules.desktop =
+  nixos.modules.base =
     { pkgs, ... }:
     {
       environment.systemPackages = with pkgs; [
@@ -9,10 +9,11 @@
         sd
         dust
         ripgrep
-        bitwarden-cli
-        fastfetch
         restic
         bottom
+        htop
+        iotop
+        wget
       ];
 
       preservation.preserveAt."/persistent".users.tguimbert.directories = [
@@ -21,14 +22,12 @@
       ];
     };
 
-  homeManager.modules.gui =
+  homeManager.modules.base =
     { pkgs, ... }:
     {
       home.packages = with pkgs; [
         jq
         dig
-        dprint
-        asciinema
       ];
 
       programs = {
@@ -44,5 +43,17 @@
         };
         zoxide.enable = true;
       };
+    };
+
+  # dprint is helix's markdown formatter, so it follows the language tooling in
+  # ./helix.nix.
+  homeManager.modules.gui =
+    { pkgs, ... }:
+    {
+      home.packages = with pkgs; [
+        dprint
+        asciinema
+        fastfetch
+      ];
     };
 }

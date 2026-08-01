@@ -14,6 +14,8 @@
 
       programs.k9s.enable = true;
 
+      programs.nushell.shellAliases.k = "kubectl";
+
       xdg.configFile = {
         "k9s/plugins.yaml".source = ./plugins.yaml;
         "k9s/views.yaml".source = ./views.yaml;
