@@ -2,7 +2,10 @@
 {
   perSystem = { pkgs, config, ... }: {
     devShells.ops = pkgs.mkShell {
-      packages = [ config.packages.aiven-client ] ++ (with pkgs; [
+      packages = [
+        config.packages.aiven-client
+      ]
+      ++ (with pkgs; [
         actionlint
         ansible
         ansible-lint
