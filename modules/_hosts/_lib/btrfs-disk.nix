@@ -8,6 +8,11 @@
   device ? "/dev/nvme0n1",
   swapSize ? "8G",
   rootSize ? "25%",
+  # Unlock from the TPM instead of a passphrase, for hosts with no keyboard at
+  # boot. Enrol at runtime with systemd-cryptenroll against PCR 7 — which
+  # measures Secure Boot state, so it has to happen *after* the lanzaboote keys
+  # are in the firmware or the sealed policy stops matching the moment they are.
+  tpm2Unlock ? false,
 }:
 {
   disko.devices = {
@@ -26,8 +31,8 @@
               format = "vfat";
               mountpoint = "/boot";
               # vfat has no permission bits of its own, so "defaults" leaves the
-              # ESP world-readable and bootctl warns that the random seed backing
-              # it is exposed to any local user. Restrict it to root.
+              # ESP world-readable — and bootctl warns that the random seed it
+              # backs is then exposed to any local user.
               mountOptions = [
                 "umask=0077"
               ];
@@ -94,4 +99,7 @@
   fileSystems = {
     "/persistent".neededForBoot = true;
   };
+
+  boot.initrd.luks.devices.encrypted.crypttabExtraOpts =
+    if tpm2Unlock then [ "tpm2-device=auto" ] else [ ];
 }

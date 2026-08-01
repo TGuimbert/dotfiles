@@ -217,8 +217,8 @@ The default editor is Helix (`hx`), configured in `modules/features/shell/helix.
 - User is `tguimbert` with UID 1000, immutable users (`mutableUsers = false`)
 - Password stored at `/persistent/tguimbert-password` (hashed)
 - SSH keys are yubikey-based (`sk-ssh-ed25519`)
-- Secure Boot enabled via lanzaboote (PKI bundle in `/etc/secureboot`)
-- All desktop hosts use LUKS encryption with systemd-cryptenroll support (FIDO2/password/recovery)
+- Secure Boot enabled via lanzaboote (`secureBoot` aspect; PKI bundle in `/var/lib/sbctl`, sbctl's own default)
+- All hosts use LUKS encryption with systemd-cryptenroll support (FIDO2/password/recovery on the desktops, TPM 2.0 against PCR 7 on srv-01)
 - Network shares auto-mount from `//nas.lan/` via CIFS with SOPS credentials
 - Tailscale enabled on desktop systems for remote access
 

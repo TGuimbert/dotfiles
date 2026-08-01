@@ -1,5 +1,10 @@
 { ... }:
 {
+  # Every host declares its own addressing — NetworkManager on the desktops, a
+  # static address on srv-01 — so facter's per-interface DHCP would only ever
+  # start a dhcpcd competing with it.
+  nixos.modules.base.hardware.facter.detected.dhcp.enable = false;
+
   nixos.modules.desktop =
     { config, pkgs, ... }:
     let
@@ -12,10 +17,6 @@
     in
     {
       networking.networkmanager.enable = true;
-
-      # NetworkManager owns DHCP; facter's detection would start dhcpcd
-      # on the same interfaces.
-      hardware.facter.detected.dhcp.enable = false;
 
       sops.secrets.smb-secrets = { };
 

@@ -20,15 +20,10 @@
         lldap = {
           enable = true;
           environmentFile = config.sops.secrets.lldapEnvironment.path;
-          # Passed as LLDAP_-prefixed variables rather than through `settings`,
-          # which is where the module's own example puts them. The start script
-          # bootstraps a JWT secret when neither LLDAP_JWT_SECRET_FILE nor
-          # LLDAP_JWT_SECRET is set — and it guards on `settings.jwt_secret`, not
-          # `settings.jwt_secret_file`, so setting the latter does not prevent it.
-          # The bootstrap then exports LLDAP_JWT_SECRET_FILE=./jwt_secret_file,
-          # and LLDAP_ variables take priority over the config file, silently
-          # replacing the sops path with one relative to WorkingDirectory:
-          #   Could not open `./jwt_secret_file` ...: Permission denied
+          # Via LLDAP_*, not `settings`: the start script bootstraps its own JWT
+          # secret unless LLDAP_JWT_SECRET[_FILE] is set (it only checks
+          # `settings.jwt_secret`, never `jwt_secret_file`), and the LLDAP_ var it
+          # then exports outranks the config file. The pass-file follows suit.
           environment = {
             LLDAP_JWT_SECRET_FILE = config.sops.secrets.lldapJwtSecret.path;
             LLDAP_LDAP_USER_PASS_FILE = config.sops.secrets.lldapUserPass.path;

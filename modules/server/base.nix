@@ -6,18 +6,9 @@
     {
       pkgs,
       config,
-      lib,
       ...
     }:
     {
-      boot.loader = {
-        # mkDefault so the `secureBoot` aspect can hand the ESP to lanzaboote.
-        # Plain systemd-boot is what the machine installs on, before the sbctl
-        # keys exist; see README.
-        systemd-boot.enable = lib.mkDefault true;
-        efi.canTouchEfiVariables = true;
-      };
-
       nix.settings = {
         trusted-users = [
           "root"
@@ -51,8 +42,6 @@
         };
         xserver.enable = false;
         pipewire.enable = false;
-        # Real disk now, not a virtio block device.
-        smartd.enable = true;
       };
 
       environment.systemPackages = with pkgs; [
@@ -67,8 +56,7 @@
 
       networking = {
         networkmanager.enable = false;
-        # The address is declared per host (see machines/srv-01.nix); a server
-        # that moves address on a DHCP whim is a server you cannot find.
+        # Servers declare a static address in their own _hosts/<host>/hardware.nix.
         useDHCP = false;
         firewall = {
           enable = true;
