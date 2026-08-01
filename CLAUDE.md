@@ -36,9 +36,35 @@ sudo nixos-rebuild switch --flake .#<hostname>
 sudo nixos-rebuild test --flake .
 ```
 
+### Deploying to srv-01
+
+The server is never rebuilt in place from a checkout — it has none. Changes reach it two ways:
+
+```bash
+# Push: build on the workstation, copy the closure over SSH, activate
+just deploy srv-01
+just deploy-boot srv-01         # only set it as boot default
+just deploy srv-01 10.0.0.57    # explicit ssh target
+
+# Pull: run the nightly upgrade job now instead of waiting for the timer
+just upgrade-now srv-01
+just upgrade-log srv-01
+```
+
+Every remote recipe takes the same `<host> [target]` arguments, and `srv-01` is the default for
+both. `<host>` is the `nixosConfigurations` name; `<target>` defaults to `<host>.local` — mDNS, because
+srv-01's address is static and never registered by DHCP, so `srv-01.lan` does not resolve.
+The avahi daemon that publishes it lives in `modules/server/base.nix` (deliberately not in the
+`printing` aspect). `just --list` shows the rest (`check`, `fmt`, `build <host>`, `switch`,
+`update`). `just` ships in the `nixos` dev shell. Flake refs only see git-tracked files, so
+`git add` a new module before deploying.
+
 ### Updating the System
 
-The repository uses CI (Renovate) to automatically update flake inputs. To update your system:
+The repository uses CI (Renovate) to automatically update flake inputs: a weekly lockfile PR,
+CI builds every host and pushes the closures to `tguimbert.cachix.org`, minor updates automerge on green.
+
+Desktops pull and switch by hand:
 
 ```bash
 # Navigate to the dotfiles directory
@@ -51,13 +77,21 @@ git pull
 nh os switch
 ```
 
+srv-01 updates itself: the `autoUpgrade` aspect (`modules/auto-upgrade.nix`) pulls
+`github:TGuimbert/dotfiles` nightly at ~03:00 and reboots only for a kernel change, only
+between 03:00 and 05:00 (safe unattended because its LUKS volume unlocks from the TPM
+against PCR 7). Failures are not alerted — check `journalctl -u nixos-upgrade`.
+
 **Note**: You typically don't need to run `nix flake update` manually since flake updates are managed by CI.
 
 ### Formatting and Linting
 
 ```bash
-# Format all Nix files
+# Format the tree (nixfmt via treefmt; `just fmt` is the same thing)
 nix fmt
+
+# Format-check + lint + evaluate every host and shell
+just check
 
 # Check for linter issues (uses statix)
 statix check
@@ -138,7 +172,7 @@ One feature = one capability file holding its NixOS **and** home-manager config 
 - `nixos.modules.base` — every host (boot, locale, networking, audio, nix settings, services, user, preservation, sops)
 - `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, firefox, GUI home)
 - `nixos.modules.server` — srv-01 baseline (`modules/server/`)
-- Named opt-in aspects imported only by hosts that want them: `secureBoot` (lanzaboote; every host with a bootloader), `games`, `podman`, `displaysLeshen`, `laptop`, `docker` (no host currently imports it), and the srv-01 services (`traefik`, `authelia`, `lldap`, `homepage`, `restic`, `calibre`, `printing`)
+- Named opt-in aspects imported only by hosts that want them: `secureBoot` (lanzaboote; every host with a bootloader), `autoUpgrade` (pull-based nightly updates; srv-01 only), `games`, `podman`, `displaysLeshen`, `laptop`, `docker` (no host currently imports it), and the srv-01 services (`traefik`, `authelia`, `lldap`, `homepage`, `restic`, `calibre`, `printing`)
 
 Most features are flat `modules/<feature>.nix` files; directories appear only for a cohesive multi-file capability (`desktop/`) or a peer-set (`machines/`, `server/`, `shells/`). Per-user config goes through `homeManager.modules.base` (every host) / `homeManager.modules.gui` (desktop) inside the owning feature file — never `home-manager.users.*` directly (except the wiring in `users.nix`).
 
@@ -248,7 +282,7 @@ Scaffolding files live **flat in `modules/`** (`nixos.nix`, `home-manager.nix`, 
 - `nixos.modules.base` — every host (nix settings, locale, networking, audio, services, boot, user, preservation, sops)
 - `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, firefox, GUI home); also pulls `home.gui`
 - `nixos.modules.server` — srv-01 baseline
-- Named opt-in aspects: `secureBoot`, `games`, `podman`, `displaysLeshen`, `laptop`, `docker`, `traefik`, `authelia`, `lldap`, `homepage`, `restic`, `calibre`, `printing`
+- Named opt-in aspects: `secureBoot`, `autoUpgrade`, `games`, `podman`, `displaysLeshen`, `laptop`, `docker`, `traefik`, `authelia`, `lldap`, `homepage`, `restic`, `calibre`, `printing`
 
 **Deliberate divergences from mightyiam/infra**: no `flake-file` (inputs stay hand-written in `flake.nix`); inputs stay real flakes (use `inputs.home-manager.nixosModules.home-manager`, not `flake = false`); single user `tguimbert` hardcoded (no multi-user `users` option machinery). Hardware detection uses nixpkgs' `hardware.facter` (report at `modules/_hosts/<host>/facter.json`, must be git-tracked); a slim `hardware.nix` per host keeps `facter.reportPath` + quirks facter can't detect.
 

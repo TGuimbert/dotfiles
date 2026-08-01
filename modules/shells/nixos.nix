@@ -7,6 +7,7 @@
         buildInputs = with pkgs; [
           cachix
           deadnix
+          just
           statix
           nil
         ];

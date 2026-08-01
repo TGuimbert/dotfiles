@@ -9,16 +9,11 @@
       ...
     }:
     {
-      nix.settings = {
-        trusted-users = [
-          "root"
-          "tguimbert"
-        ];
-        experimental-features = [
-          "nix-command"
-          "flakes"
-        ];
-      };
+      # The rest of `nix.settings` is shared, in `modules/nix-settings.nix`.
+      nix.settings.trusted-users = [
+        "root"
+        "tguimbert"
+      ];
 
       sops = {
         defaultSopsFile = ../../secrets/srv-01.yaml;
@@ -42,6 +37,17 @@
         };
         xserver.enable = false;
         pipewire.enable = false;
+
+        avahi = {
+          enable = true;
+          nssmdns4 = true;
+          openFirewall = true;
+          publish = {
+            enable = true;
+            addresses = true;
+            workstation = true;
+          };
+        };
       };
 
       environment.systemPackages = with pkgs; [

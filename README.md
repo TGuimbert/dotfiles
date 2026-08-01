@@ -212,20 +212,50 @@ Benefits:
 
 ### Updating the System
 
-The repository uses CI to automatically update flake inputs. To update your system:
+The repository uses CI to automatically update flake inputs. Renovate opens a weekly
+lockfile PR, CI builds every host and pushes the closures to `tguimbert.cachix.org`, and
+minor updates automerge once the checks are green.
+
+**Desktops (leshen, griffin)** — pull and switch by hand:
 
 ```bash
-# Navigate to your dotfiles
 cd ~/.dotfiles
-
-# Pull the latest changes (flake.lock is updated by CI)
-git pull
-
-# Rebuild and switch to the new configuration
+git pull            # flake.lock is updated by CI
 nh os switch
 ```
 
+**srv-01** — updates itself. `system.autoUpgrade` (`modules/auto-upgrade.nix`) pulls
+`github:TGuimbert/dotfiles` nightly at ~03:00, substituting from cachix what CI already
+built, and reboots only if the kernel changed and only between 03:00 and 05:00. There is
+no alerting on failure, so if the host looks stale:
+
+```bash
+just upgrade-now srv-01     # run the timer's job now
+just upgrade-log srv-01     # the last two nights' runs
+```
+
 **Note**: Flake updates are managed by CI (Renovate), so you typically don't need to run `nix flake update` manually.
+
+### Deploying to srv-01
+
+Your own changes are pushed from a desktop rather than waiting for the nightly pull —
+the closure is built locally and copied over SSH:
+
+```bash
+just deploy srv-01              # build here, activate there
+just deploy-boot srv-01         # only make it the boot default
+just deploy srv-01 10.0.0.57    # same, with an explicit ssh target
+```
+
+The argument is the `nixosConfigurations` name; the ssh target defaults to `<host>.local`.
+That is mDNS on purpose — srv-01 has a static address and never takes a DHCP lease, so the
+router's `lan` zone never learns its name (`srv-01.lan` does not resolve, `srv-01.local`
+does). `home.guimbert.fr` remains the namespace for *services*; mDNS names the *machine*.
+Override the target as above if multicast is ever in the way (VLANs, AP isolation).
+
+`just --list` shows the rest (`just check`, `just build <host>`, …). `just` comes from the
+`nixos` dev shell, which direnv loads in this directory. Because flake refs only see
+git-tracked files, `git add` any brand new module before deploying.
 
 ### Managing Secrets
 
@@ -251,11 +281,14 @@ nix develop .#<shell-name>
 ### Formatting Code
 
 ```bash
-# Format all Nix files
+# Format the tree (nixfmt via treefmt; `just fmt` is the same thing)
 nix fmt
 
 # Lint Nix files
 statix check
+
+# Format-check + lint + evaluate every host and shell
+just check
 ```
 
 ## Repository Structure

@@ -42,17 +42,9 @@
           browsing = false;
           defaultShared = false;
         };
-        avahi = {
-          enable = true;
-          nssmdns4 = true;
-          openFirewall = true;
-          publish = {
-            enable = true;
-            addresses = true;
-            workstation = true;
-            userServices = true;
-          };
-        };
+        # ippeveprinter (below) registers its _ipp._tcp record through the avahi
+        # client API, which this permits; the daemon is in `server/base.nix`.
+        avahi.publish.userServices = true;
       };
 
       systemd.services.ipp-proxy = {
