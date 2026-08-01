@@ -24,6 +24,11 @@ jobs:
           name: tguimbert
           authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
 
+      # Nothing enforced formatting before this, which is how modules/shells/ops.nix
+      # stayed unformatted from #289 onwards.
+      - name: Check formatting
+        run: nix fmt -- --ci
+
       - name: Check flake (evaluate outputs without building them)
         run: |
           systems=$(nix eval --raw .#nixosConfigurations --apply \
