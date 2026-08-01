@@ -6,6 +6,7 @@
         base
         server
         secureBoot
+        autoUpgrade
         traefik
         authelia
         lldap

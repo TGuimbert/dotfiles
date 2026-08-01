@@ -51,6 +51,9 @@ jobs:
         system:
           - leshen
           - griffin
+          # srv-01 pulls this closure from cachix on its nightly autoUpgrade, so
+          # this job is what keeps that upgrade a download rather than a build.
+          - srv-01
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Free Disk Space

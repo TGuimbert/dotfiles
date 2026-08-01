@@ -9,16 +9,11 @@
       ...
     }:
     {
-      nix.settings = {
-        trusted-users = [
-          "root"
-          "tguimbert"
-        ];
-        experimental-features = [
-          "nix-command"
-          "flakes"
-        ];
-      };
+      # The rest of `nix.settings` is shared, in `modules/nix-settings.nix`.
+      nix.settings.trusted-users = [
+        "root"
+        "tguimbert"
+      ];
 
       sops = {
         defaultSopsFile = ../../secrets/srv-01.yaml;
