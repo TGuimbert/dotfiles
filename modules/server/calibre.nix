@@ -10,6 +10,12 @@
       smbMount = "/mnt/books";
     in
     {
+      # Recorded from `getent passwd`, not chosen — see ../preservation.nix.
+      users = {
+        users.calibre-web.uid = 997;
+        groups.calibre-web.gid = 997;
+      };
+
       sops.secrets.smb-secrets = { };
       services = {
         calibre-web = {

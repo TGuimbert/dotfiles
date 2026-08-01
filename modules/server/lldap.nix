@@ -1,7 +1,12 @@
 { ... }:
 {
   nixos.modules.lldap =
-    { config, constants, ... }:
+    {
+      config,
+      constants,
+      lib,
+      ...
+    }:
     let
       sopsConfig = {
         group = "lldap-secrets";
@@ -9,13 +14,36 @@
       };
     in
     {
-      users.groups.lldap-secrets = { };
+      # nixpkgs runs lldap under `DynamicUser`, which allocates a UID per boot —
+      # fine for throwaway state, fatal for preserved state, since the next boot
+      # cannot read the `server_key` (mode 0400) the last one wrote and systemd
+      # will not re-chown a directory preservation has bind-mounted. A static
+      # user also makes the `user = "lldap"` below resolve, which it could not
+      # while the user lived only for a boot, and moves the state directory from
+      # /var/lib/private/lldap to /var/lib/lldap.
+      users = {
+        users.lldap = {
+          isSystemUser = true;
+          group = "lldap";
+          # Recorded from `getent passwd`, not chosen — see ../preservation.nix.
+          uid = 990;
+        };
+        groups = {
+          lldap.gid = 984;
+          lldap-secrets = { };
+        };
+      };
+
       sops.secrets = {
         lldapEnvironment = sopsConfig;
         lldapUserPass = sopsConfig;
         lldapJwtSecret = sopsConfig;
       };
-      systemd.services.lldap.serviceConfig.SupplementaryGroups = "lldap-secrets";
+
+      systemd.services.lldap.serviceConfig = {
+        DynamicUser = lib.mkForce false;
+        SupplementaryGroups = "lldap-secrets";
+      };
       services = {
         lldap = {
           enable = true;
@@ -65,10 +93,13 @@
       preservation.preserveAt."/persistent" = {
         directories = [
           {
-            directory = "/var/lib/private/lldap/";
+            # /var/lib/lldap, not /var/lib/private/lldap: the `private`
+            # indirection is a DynamicUser mechanism, disabled above.
+            directory = "/var/lib/lldap";
             user = "lldap";
             group = "lldap";
-            mode = "0700";
+            # Matches the module's StateDirectoryMode; 0700 fought it.
+            mode = "0750";
           }
         ];
       };
