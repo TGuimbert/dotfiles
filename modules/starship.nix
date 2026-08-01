@@ -1,6 +1,6 @@
 { ... }:
 {
-  homeManager.modules.gui = {
+  homeManager.modules.base = {
     programs.starship = {
       enable = true;
       enableTransience = true;

@@ -1,5 +1,7 @@
 { ... }:
 {
+  homeManager.modules.base.programs.bash.enable = true;
+
   homeManager.modules.gui =
     { appearance, ... }:
     {
@@ -15,18 +17,10 @@
         };
       };
 
-      programs.bash.enable = true;
-
       home.sessionPath = [ "$HOME/.local/bin" ];
-
-      home.sessionVariables = {
-        ZELLIJ_AUTO_ATTACH = "true";
-        ZELLIJ_AUTO_EXIT = "true";
-      };
-
     };
 
-  nixos.modules.desktop.preservation.preserveAt."/persistent".users.tguimbert.files = [
+  nixos.modules.base.preservation.preserveAt."/persistent".users.tguimbert.files = [
     ".bash_history"
   ];
 }

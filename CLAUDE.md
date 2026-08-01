@@ -169,9 +169,9 @@ Each host is a thin import list in `modules/machines/<hostname>.nix` — it sets
 ### Module Organization
 
 One feature = one capability file holding its NixOS **and** home-manager config together (organized by capability, not by module class). Features contribute to merge points:
-- `nixos.modules.base` — every host (boot, locale, networking, audio, nix settings, services, user, preservation, sops)
-- `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, firefox, GUI home)
-- `nixos.modules.server` — srv-01 baseline (`modules/server/`)
+- `nixos.modules.base` — every host (boot, locale, nix settings, disko, user account + nushell login shell, sshd, avahi, fwupd/smartd/btrfs-scrub, cli tools, preservation, sops)
+- `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, firefox, audio, NetworkManager + CIFS, tailscale, printing client, GUI home)
+- `nixos.modules.server` — srv-01 baseline (`modules/server/`); deliberately thin — only the sops file, the headless service disables and static networking
 - Named opt-in aspects imported only by hosts that want them: `secureBoot` (lanzaboote; every host with a bootloader), `autoUpgrade` (pull-based nightly updates; srv-01 only), `games`, `podman`, `displaysLeshen`, `laptop`, `docker` (no host currently imports it), and the srv-01 services (`traefik`, `authelia`, `lldap`, `homepage`, `restic`, `calibre`, `printing`)
 
 Most features are flat `modules/<feature>.nix` files; directories appear only for a cohesive multi-file capability (`desktop/`) or a peer-set (`machines/`, `server/`, `shells/`). Per-user config goes through `homeManager.modules.base` (every host) / `homeManager.modules.gui` (desktop) inside the owning feature file — never `home-manager.users.*` directly (except the wiring in `users.nix`).
@@ -190,7 +190,7 @@ Most features are flat `modules/<feature>.nix` files; directories appear only fo
 
 **No rollback service**: because root is a tmpfs, there is no initrd rollback/wipe service and no pre-rollback snapshot retention (this replaced the earlier `btrfs-rollback.nix` subvolume-rename mechanism). The one tradeoff is the loss of that multi-day snapshot recovery net.
 
-**Persistence**: Managed with the [preservation](https://github.com/nix-community/preservation) module (`modules/preservation.nix` imports it in `base` and enables it). State is declared via `preservation.preserveAt."/persistent"` blocks: `directories`/`files` for system state and `users.tguimbert.{directories,files}` for per-user state. Preservation is **NixOS-only** — there is no `home.persistence` home-manager option, so per-user paths are declared in the *NixOS* aspect of a feature file (`nixos.modules.desktop`/opt-in aspect), co-located with that feature's HM config. Bind-mounts are hidden with `commonMountOptions = [ "x-gvfs-hide" ]` (replaces impermanence's `hideMounts`).
+**Persistence**: Managed with the [preservation](https://github.com/nix-community/preservation) module (`modules/preservation.nix` imports it in `base` and enables it). State is declared via `preservation.preserveAt."/persistent"` blocks: `directories`/`files` for system state and `users.tguimbert.{directories,files}` for per-user state. Preservation is **NixOS-only** — there is no `home.persistence` home-manager option, so per-user paths are declared in the *NixOS* aspect of a feature file (`nixos.modules.base` for a feature every host has, `nixos.modules.desktop`/opt-in aspect otherwise), co-located with that feature's HM config. Bind-mounts are hidden with `commonMountOptions = [ "x-gvfs-hide" ]` (replaces impermanence's `hideMounts`).
 
 ### Overlays
 
@@ -234,17 +234,26 @@ Entries are bare path strings, or `{ directory|file; user; group; mode; how; inI
 
 ## Editor Configuration
 
-The default editor is Helix (`hx`), configured in `modules/features/shell/helix.nix` with:
+The default editor is Helix (`hx`), configured in `modules/helix.nix`. The editor and its `settings`
+are on `homeManager.modules.base` (so srv-01 has them); the language tooling is on
+`homeManager.modules.gui`, since a headless host would otherwise build `ltex-ls` to run nothing:
 - Auto-formatting for Nix (nixfmt), Markdown (dprint), Go (goimports), YAML (prettier), Python (ruff)
 - LSP support for various languages
 - YAML schemas for GitHub Actions, Ansible, Kubernetes
 
 ## Shell Environment
 
-- **Shell**: Nushell (nu) with carapace completions
+Shared by every host, srv-01 included — SSH in and you get the same environment as a desktop.
+
+- **Shell**: Nushell (nu) with carapace completions — also `tguimbert`'s **login shell**, so it is what
+  an SSH session lands in. bash stays configured as a fallback (`ssh <host> -t bash -l`).
 - **Multiplexer**: Zellij with custom keybindings
-- **Terminal**: Foot (launches zellij on start)
+- **Terminal**: Foot (launches zellij on start) — desktop only
 - **Prompt**: Starship with custom gruvbox-rainbow theme
+
+Note: home-manager's nushell module does **not** read `home.sessionVariables`, so anything nu must see
+goes in `programs.nushell.environmentVariables` (`modules/nushell.nix`). This matters more now that nu
+is the login shell: over SSH there is no graphical session to have exported them.
 
 ## Important Notes
 
@@ -279,8 +288,8 @@ Scaffolding files live **flat in `modules/`** (`nixos.nix`, `home-manager.nix`, 
 
 **Merge points (system-types)** replace a separate profiles layer:
 
-- `nixos.modules.base` — every host (nix settings, locale, networking, audio, services, boot, user, preservation, sops)
-- `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, firefox, GUI home); also pulls `home.gui`
+- `nixos.modules.base` — every host (nix settings, locale, boot, disko, user, sshd/avahi/fwupd/smartd, preservation, sops)
+- `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, firefox, audio, NetworkManager, tailscale); also pulls `home.gui`
 - `nixos.modules.server` — srv-01 baseline
 - Named opt-in aspects: `secureBoot`, `autoUpgrade`, `games`, `podman`, `displaysLeshen`, `laptop`, `docker`, `traefik`, `authelia`, `lldap`, `homepage`, `restic`, `calibre`, `printing`
 
@@ -298,10 +307,14 @@ nixos.modules.base    → home-manager.users.tguimbert.imports = [ homeManager.m
 nixos.modules.desktop → home-manager.users.tguimbert.imports = [ homeManager.modules.gui ]    (desktop hosts only)
 ```
 
-- `homeManager.modules.base` — merged into **every** host's `tguimbert`.
+- `homeManager.modules.base` — merged into **every** host's `tguimbert`. Holds the shell environment,
+  which srv-01 needs just as much as a desktop does: nushell (the login shell) + carapace, starship,
+  zellij, helix, git, bat/eza/zoxide, jq/dig.
 - `homeManager.modules.gui` — merged in **only on desktop** hosts (pulled by `nixos.modules.desktop`).
+  Anything needing a screen, a browser or a yubikey: foot, firefox, noctalia theming, the ssh-agent +
+  askpass, gpg, git commit signing, helix's language servers, gh, direnv, kubernetes, claude-code.
 - Both are `deferredModule`s, so any number of feature files can set the same key and the values merge.
-- `users.nix` imports `inputs.home-manager.nixosModules.home-manager` into `nixos.modules.base`, defines `users.users.tguimbert`, and sets `home.stateVersion = osConfig.system.stateVersion` (the user's state version tracks the host's).
+- `users.nix` imports `inputs.home-manager.nixosModules.home-manager` into `nixos.modules.base` and sets `home.stateVersion = osConfig.system.stateVersion` (the user's state version tracks the host's). The account itself is `modules/user.nix`.
 - **Rule of thumb**: per-user config goes in a feature's `homeManager.modules.*` block (co-located with that feature's NixOS config); reserve direct `home-manager.users.tguimbert.*` for the wiring in `users.nix` only.
 
 ### Directory Structure
@@ -319,7 +332,7 @@ Flat by default (mightyiam-aligned). One feature = one flat `.nix` file; directo
 │   ├── eval-modules.nix         #   "
 │   ├── users.nix                #   "
 │   ├── formatter.nix            # flake-output feature (flat)
-│   ├── boot.nix  locale.nix  networking.nix  audio.nix  nix-settings.nix  services.nix   # core features (flat)
+│   ├── boot.nix  locale.nix  networking.nix  audio.nix  nix-settings.nix  services.nix  disko.nix  user.nix   # core features (flat)
 │   ├── helix.nix  nushell.nix  zellij.nix  starship.nix  …   # shell tools (flat; or a shell/ dir if you prefer grouping)
 │   ├── shells/                  # dev shells — peer-set dir (python.nix, rust.nix, …)
 │   ├── desktop/                 # cohesive capability dir (niri, noctalia, greeter, appearance, firefox)

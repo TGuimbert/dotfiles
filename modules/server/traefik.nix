@@ -3,6 +3,12 @@
   nixos.modules.traefik =
     { config, constants, ... }:
     {
+      # Recorded from `getent passwd`, not chosen — see ../preservation.nix.
+      users = {
+        users.traefik.uid = 993;
+        groups.traefik.gid = 988;
+      };
+
       sops.secrets.traefikEnvironments = { };
       services.traefik = {
         enable = true;
@@ -76,7 +82,15 @@
       };
       preservation.preserveAt."/persistent" = {
         directories = [
-          config.services.traefik.dataDir
+          # Ownership spelled out: preservation.conf sorts after nixpkgs'
+          # 00-nixos.conf, so a bare path string wins the tie and resets this to
+          # root:root 0755, leaving traefik unable to write acme.json.
+          {
+            directory = config.services.traefik.dataDir;
+            user = "traefik";
+            inherit (config.services.traefik) group;
+            mode = "0700";
+          }
         ];
       };
       networking.firewall.allowedTCPPorts = [

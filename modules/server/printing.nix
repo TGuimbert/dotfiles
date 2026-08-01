@@ -43,7 +43,7 @@
           defaultShared = false;
         };
         # ippeveprinter (below) registers its _ipp._tcp record through the avahi
-        # client API, which this permits; the daemon is in `server/base.nix`.
+        # client API, which this permits; the daemon is in `modules/services.nix`.
         avahi.publish.userServices = true;
       };
 

@@ -1,5 +1,43 @@
 { ... }:
 {
+  nixos.modules.base = {
+    services = {
+      openssh = {
+        enable = true;
+        # ed25519 only — an RSA host key buys nothing here and would be a second
+        # key to preserve (see ./preservation.nix).
+        hostKeys = [
+          {
+            path = "/etc/ssh/ssh_host_ed25519_key";
+            type = "ed25519";
+          }
+        ];
+        settings = {
+          PasswordAuthentication = false;
+          PermitRootLogin = "no";
+        };
+      };
+
+      # Printer/host discovery on the LAN. `publish` is what makes `<host>.local`
+      # answer, which is how the justfile's remote recipes reach srv-01.
+      # openFirewall already defaults to true.
+      avahi = {
+        enable = true;
+        nssmdns4 = true;
+        publish = {
+          enable = true;
+          addresses = true;
+          workstation = true;
+        };
+      };
+
+      # Every host is bare metal on btrfs-on-LUKS, srv-01 included.
+      btrfs.autoScrub.enable = true;
+      fwupd.enable = true;
+      smartd.enable = true;
+    };
+  };
+
   nixos.modules.desktop =
     {
       config,
@@ -9,17 +47,11 @@
     }:
     {
       services = {
-        openssh.enable = true;
         # No printer GUI: GNOME's control-center panel is gone and
         # system-config-printer costs ~170 MB. Administer at http://localhost:631.
+        # This is the driverless *client* of srv-01's print server — the driver
+        # and ippeveprinter live in modules/server/printing.nix.
         printing.enable = true;
-        fwupd.enable = true;
-        # Printer/host discovery on the LAN. GNOME used to enable the daemon
-        # itself; only the nsswitch glue was ever set here.
-        avahi = {
-          enable = true;
-          nssmdns4 = true;
-        };
         # Thunderbolt device authorization (griffin's dock); /var/lib/boltd is
         # already preserved.
         hardware.bolt.enable = true;
@@ -27,7 +59,6 @@
         # it goes through pcscd rather than claiming the yubikey itself, leaving the
         # card usable by ykman and age-plugin-yubikey).
         pcscd.enable = true;
-        btrfs.autoScrub.enable = true;
         tailscale = {
           enable = true;
           useRoutingFeatures = "client";

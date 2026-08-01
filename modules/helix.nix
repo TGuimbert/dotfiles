@@ -1,22 +1,60 @@
 { ... }:
 {
+  homeManager.modules.base = {
+    programs.helix = {
+      enable = true;
+
+      ignores = [
+        ".obsidian/"
+        ".direnv/"
+        ".envrc"
+      ];
+
+      settings = {
+        editor = {
+          bufferline = "multiple";
+          color-modes = true;
+          rulers = [ 120 ];
+          line-number = "relative";
+          end-of-line-diagnostics = "hint";
+          cursor-shape = {
+            normal = "block";
+            insert = "bar";
+            select = "underline";
+          };
+          indent-guides.render = true;
+          file-picker.hidden = false;
+          statusline.left = [
+            "mode"
+            "spinner"
+            "version-control"
+            "file-name"
+            "read-only-indicator"
+            "file-modification-indicator"
+          ];
+          inline-diagnostics.cursor-line = "error";
+        };
+      };
+    };
+
+    home.sessionVariables = {
+      EDITOR = "hx";
+      VISUAL = "hx";
+    };
+  };
+
+  # Desktop-only: srv-01 would build ltex-ls (a JRE-backed closure) to run
+  # nothing, and a `languages` block naming absent servers only produces
+  # "language server not found" on every open.
   homeManager.modules.gui =
     { pkgs, ... }:
     {
       programs.helix = {
-        enable = true;
-
         extraPackages = with pkgs; [
           marksman
           ltex-ls
           yaml-language-server
           prettier
-        ];
-
-        ignores = [
-          ".obsidian/"
-          ".direnv/"
-          ".envrc"
         ];
 
         languages = {
@@ -127,37 +165,6 @@
             };
           };
         };
-
-        settings = {
-          editor = {
-            bufferline = "multiple";
-            color-modes = true;
-            rulers = [ 120 ];
-            line-number = "relative";
-            end-of-line-diagnostics = "hint";
-            cursor-shape = {
-              normal = "block";
-              insert = "bar";
-              select = "underline";
-            };
-            indent-guides.render = true;
-            file-picker.hidden = false;
-            statusline.left = [
-              "mode"
-              "spinner"
-              "version-control"
-              "file-name"
-              "read-only-indicator"
-              "file-modification-indicator"
-            ];
-            inline-diagnostics.cursor-line = "error";
-          };
-        };
-      };
-
-      home.sessionVariables = {
-        EDITOR = "hx";
-        VISUAL = "hx";
       };
     };
 }

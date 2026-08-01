@@ -2,14 +2,18 @@
 {
   # /tmp is disk-backed (a preservation bind-mount) rather than tmpfs, so builds
   # don't consume the tmpfs root's RAM; wiped each boot.
-  nixos.modules.base.boot.tmp = {
-    useTmpfs = false;
-    cleanOnBoot = true;
+  nixos.modules.base.boot = {
+    tmp = {
+      useTmpfs = false;
+      cleanOnBoot = true;
+    };
+
+    # Required by the `inInitrd` entries in ./preservation.nix.
+    initrd.systemd.enable = true;
   };
 
   nixos.modules.desktop = {
     boot = {
-      initrd.systemd.enable = true;
       binfmt.emulatedSystems = [ "aarch64-linux" ];
 
       plymouth.enable = true;

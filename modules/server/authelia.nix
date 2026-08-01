@@ -9,6 +9,12 @@
       };
     in
     {
+      # Recorded from `getent passwd`, not chosen — see ../preservation.nix.
+      users = {
+        users.authelia-main.uid = 999;
+        groups.authelia-main.gid = 999;
+      };
+
       sops = {
         secrets = {
           autheliaJwtSecret = sopsConfig;
@@ -109,7 +115,12 @@
 
       preservation.preserveAt."/persistent" = {
         directories = [
-          "/var/lib/authelia-main/"
+          # Ownership spelled out for the same reason as ./traefik.nix.
+          {
+            directory = "/var/lib/authelia-main";
+            inherit (config.services.authelia.instances.main) user group;
+            mode = "0700";
+          }
         ];
       };
     };
