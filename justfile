@@ -45,9 +45,10 @@ deploy host=srv target=(host + ".local"):
 deploy-boot host=srv target=(host + ".local"):
     nh os boot --target-host {{ target }} --hostname {{ host }} .
 
+# -t because sudo needs a terminal to prompt and ssh only allocates one on request
 # Run the server's pull-based upgrade now instead of waiting for tonight's timer
 upgrade-now host=srv target=(host + ".local"):
-    ssh {{ target }} sudo systemctl start nixos-upgrade.service
+    ssh -t {{ target }} sudo systemctl start nixos-upgrade.service
 
 # Show the last pull-based upgrades — spans two nights, so a skipped run shows as an absence
 upgrade-log host=srv target=(host + ".local"):
