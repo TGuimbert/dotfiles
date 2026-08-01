@@ -38,10 +38,6 @@
         xserver.enable = false;
         pipewire.enable = false;
 
-        # How this host is reachable by name: its address is static, so it never
-        # takes a DHCP lease and the router's `lan` zone never learns it —
-        # `srv-01.lan` does not resolve, `srv-01.local` does. Here rather than in
-        # the `printing` aspect so dropping the printer cannot cost it its name.
         avahi = {
           enable = true;
           nssmdns4 = true;
