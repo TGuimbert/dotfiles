@@ -9,12 +9,6 @@
       ...
     }:
     {
-      boot.loader.grub = {
-        enable = true;
-        efiSupport = true;
-        efiInstallAsRemovable = true;
-      };
-
       nix.settings = {
         trusted-users = [
           "root"
@@ -46,7 +40,6 @@
             PermitRootLogin = "no";
           };
         };
-        qemuGuest.enable = true;
         xserver.enable = false;
         pipewire.enable = false;
       };
@@ -63,7 +56,8 @@
 
       networking = {
         networkmanager.enable = false;
-        useDHCP = true;
+        # Servers declare a static address in their own _hosts/<host>/hardware.nix.
+        useDHCP = false;
         firewall = {
           enable = true;
         };

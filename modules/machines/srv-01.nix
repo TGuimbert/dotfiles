@@ -5,6 +5,7 @@
       (with config.nixos.modules; [
         base
         server
+        secureBoot
         traefik
         authelia
         lldap

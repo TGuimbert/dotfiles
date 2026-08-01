@@ -57,15 +57,14 @@ mkpasswd -s > /mnt/persistent/tguimbert-password
 exit
 ```
 
-#### 4. Disable Secure Boot Temporarily
+#### 4. Install Without Secure Boot First
 
-Edit the lanzaboote configuration to use systemd-boot instead for the initial install:
+lanzaboote cannot sign anything until `sbctl create-keys` has produced a PKI
+bundle, which only exists once the machine is up. So install without it: drop
+`secureBoot` from the host's import list in `modules/machines/<hostname>.nix`,
+and add it back in step 6.
 
-```bash
-nano modules/lanzaboote.nix
-```
-
-Comment out lanzaboote settings and ensure systemd-boot is enabled in the configuration.
+Imports are the toggle here — don't edit `modules/secure-boot.nix` to disable it.
 
 #### 5. Install NixOS
 

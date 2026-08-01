@@ -130,15 +130,15 @@ Each host is a thin import list in `modules/machines/<hostname>.nix` — it sets
 **Current hosts**:
 - `leshen`: Desktop system with niri + noctalia, games, podman (`displaysLeshen` for its dual monitors)
 - `griffin`: Lenovo ThinkPad T490 laptop with niri + noctalia, games, podman (`laptop` for lid handling)
-- `srv-01`: Headless server with Traefik, LLDAP, Authelia, Homepage, Restic
+- `srv-01`: Headless bare-metal server with Traefik, LLDAP, Authelia, Homepage, Restic; LUKS unlocked from the TPM (PCR 7)
 
 ### Module Organization
 
 One feature = one capability file holding its NixOS **and** home-manager config together (organized by capability, not by module class). Features contribute to merge points:
 - `nixos.modules.base` — every host (boot, locale, networking, audio, nix settings, services, user, preservation, sops)
-- `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, lanzaboote, firefox, GUI home)
+- `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, firefox, GUI home)
 - `nixos.modules.server` — srv-01 baseline (`modules/server/`)
-- Named opt-in aspects imported only by hosts that want them: `games`, `podman`, `displaysLeshen`, `laptop`, `docker` (no host currently imports it), and the srv-01 services (`traefik`, `authelia`, `lldap`, `homepage`, `restic`, `calibre`, `printing`)
+- Named opt-in aspects imported only by hosts that want them: `secureBoot` (lanzaboote; every host with a bootloader), `games`, `podman`, `displaysLeshen`, `laptop`, `docker` (no host currently imports it), and the srv-01 services (`traefik`, `authelia`, `lldap`, `homepage`, `restic`, `calibre`, `printing`)
 
 Most features are flat `modules/<feature>.nix` files; directories appear only for a cohesive multi-file capability (`desktop/`) or a peer-set (`machines/`, `server/`, `shells/`). Per-user config goes through `homeManager.modules.base` (every host) / `homeManager.modules.gui` (desktop) inside the owning feature file — never `home-manager.users.*` directly (except the wiring in `users.nix`).
 
@@ -217,8 +217,8 @@ The default editor is Helix (`hx`), configured in `modules/features/shell/helix.
 - User is `tguimbert` with UID 1000, immutable users (`mutableUsers = false`)
 - Password stored at `/persistent/tguimbert-password` (hashed)
 - SSH keys are yubikey-based (`sk-ssh-ed25519`)
-- Secure Boot enabled via lanzaboote (PKI bundle in `/etc/secureboot`)
-- All desktop hosts use LUKS encryption with systemd-cryptenroll support (FIDO2/password/recovery)
+- Secure Boot enabled via lanzaboote (`secureBoot` aspect; PKI bundle in `/var/lib/sbctl`, sbctl's own default)
+- All hosts use LUKS encryption with systemd-cryptenroll support (FIDO2/password/recovery on the desktops, TPM 2.0 against PCR 7 on srv-01)
 - Network shares auto-mount from `//nas.lan/` via CIFS with SOPS credentials
 - Tailscale enabled on desktop systems for remote access
 
@@ -246,9 +246,9 @@ Scaffolding files live **flat in `modules/`** (`nixos.nix`, `home-manager.nix`, 
 **Merge points (system-types)** replace a separate profiles layer:
 
 - `nixos.modules.base` — every host (nix settings, locale, networking, audio, services, boot, user, preservation, sops)
-- `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, lanzaboote, firefox, GUI home); also pulls `home.gui`
+- `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, firefox, GUI home); also pulls `home.gui`
 - `nixos.modules.server` — srv-01 baseline
-- Named opt-in aspects: `games`, `podman`, `displaysLeshen`, `laptop`, `docker`, `traefik`, `authelia`, `lldap`, `homepage`, `restic`, `calibre`, `printing`
+- Named opt-in aspects: `secureBoot`, `games`, `podman`, `displaysLeshen`, `laptop`, `docker`, `traefik`, `authelia`, `lldap`, `homepage`, `restic`, `calibre`, `printing`
 
 **Deliberate divergences from mightyiam/infra**: no `flake-file` (inputs stay hand-written in `flake.nix`); inputs stay real flakes (use `inputs.home-manager.nixosModules.home-manager`, not `flake = false`); single user `tguimbert` hardcoded (no multi-user `users` option machinery). Hardware detection uses nixpkgs' `hardware.facter` (report at `modules/_hosts/<host>/facter.json`, must be git-tracked); a slim `hardware.nix` per host keeps `facter.reportPath` + quirks facter can't detect.
 

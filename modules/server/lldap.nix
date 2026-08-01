@@ -20,14 +20,20 @@
         lldap = {
           enable = true;
           environmentFile = config.sops.secrets.lldapEnvironment.path;
+          # Via LLDAP_*, not `settings`: the start script bootstraps its own JWT
+          # secret unless LLDAP_JWT_SECRET[_FILE] is set (it only checks
+          # `settings.jwt_secret`, never `jwt_secret_file`), and the LLDAP_ var it
+          # then exports outranks the config file. The pass-file follows suit.
+          environment = {
+            LLDAP_JWT_SECRET_FILE = config.sops.secrets.lldapJwtSecret.path;
+            LLDAP_LDAP_USER_PASS_FILE = config.sops.secrets.lldapUserPass.path;
+          };
           settings = {
             ldap_base_dn = "dc=guimbert,dc=fr";
-            ldap_user_pass_file = config.sops.secrets.lldapUserPass.path;
             force_ldap_user_pass_reset = "always";
             ldap_host = "127.0.0.1";
             http_host = "127.0.0.1";
             http_url = "https://ldap.${constants.domain}";
-            jwt_secret_file = config.sops.secrets.lldapJwtSecret.path;
             smtp_options = {
               enable_password_reset = true;
             };

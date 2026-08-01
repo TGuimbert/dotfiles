@@ -39,7 +39,6 @@
           "/var/lib/boltd"
           "/var/lib/tailscale"
           "/etc/NetworkManager/system-connections"
-          "/etc/secureboot"
           "/var/lib/systemd/rfkill"
           "/var/lib/power-profiles-daemon"
         ];
