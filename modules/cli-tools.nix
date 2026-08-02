@@ -31,7 +31,11 @@
       ];
 
       programs = {
-        bat.enable = true;
+        bat = {
+          enable = true;
+          # The terminal's own colors off-desktop; ./desktop/noctalia.nix overrides.
+          config.theme = "ansi";
+        };
         eza = {
           enable = true;
           git = true;

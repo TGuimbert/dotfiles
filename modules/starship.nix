@@ -5,8 +5,18 @@
       enable = true;
       enableTransience = true;
       settings = {
+        # `orange`/`base01` come from the palette ./desktop/noctalia.nix renders;
+        # without it starship drops the styles naming them. Slots rather than
+        # hexes, so an ssh'd prompt follows the terminal's own colors and its mode
+        # flips — noctalia publishes these two into 173/237.
+        palette = "terminal";
+        palettes.terminal = {
+          orange = "173";
+          base01 = "237";
+        };
+
         # Based on the gruvbox-rainbow preset
-        format = "[](orange)$os$username$shell[](bg:bright-yellow fg:orange)$directory[](fg:bright-yellow bg:bright-cyan)$git_branch$git_status[](fg:bright-cyan bg:bright-blue)$c$rust$golang$nodejs$php$java$kotlin$haskell$python[](fg:bright-blue bg:bright-black)$docker_context$conda[](fg:bright-black bg:base01)$time[ ](fg:base01)$line_break$character";
+        format = "[](orange)$os$username$hostname$shell[](bg:bright-yellow fg:orange)$directory[](fg:bright-yellow bg:bright-cyan)$git_branch$git_status[](fg:bright-cyan bg:bright-blue)$c$rust$golang$nodejs$php$java$kotlin$haskell$python[](fg:bright-blue bg:bright-black)$docker_context$conda[](fg:bright-black bg:base01)$time[ ](fg:base01)$line_break$character";
         os = {
           disabled = false;
           style = "bg:orange fg:bright-white";
@@ -38,6 +48,11 @@
           style_user = "bg:orange fg:bright-white";
           style_root = "bg:orange fg:bright-white";
           format = "[ $user ]($style)";
+        };
+        hostname = {
+          ssh_only = true;
+          style = "bg:orange fg:bright-white";
+          format = "[@$hostname ]($style)";
         };
         shell = {
           disabled = false;
