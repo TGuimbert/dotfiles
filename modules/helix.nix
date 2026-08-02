@@ -1,8 +1,38 @@
 { ... }:
+let
+  # Reversed, so the mode indicator's text is whatever the terminal's background
+  # is — legible in either mode.
+  mode = fg: {
+    inherit fg;
+    modifiers = [
+      "reversed"
+      "bold"
+    ];
+  };
+in
 {
   homeManager.modules.base = {
     programs.helix = {
       enable = true;
+
+      # Off-desktop the colors have to come from the terminal: helix has no
+      # light/dark switch, and it paints only the rows it draws, so a fixed theme
+      # stands out as bars down the gutter and along the statusline whenever
+      # noctalia is in the other mode. term16_dark leaves the background and the
+      # gutter bare already; the rest of its chrome sits on ANSI 0/8 — greys in
+      # gruvbox-material, not the near-blacks it assumes.
+      themes.term16-flat = {
+        inherits = "term16_dark";
+        "ui.statusline".fg = "white";
+        "ui.statusline.inactive".fg = "gray";
+        "ui.statusline.normal" = mode "green";
+        "ui.statusline.insert" = mode "cyan";
+        "ui.statusline.select" = mode "yellow";
+        # Nothing in 16 colors is close enough to the background to draw these as
+        # the hairlines noctalia's theme does.
+        "ui.gutter.selected" = { };
+        "ui.virtual.ruler" = { };
+      };
 
       ignores = [
         ".obsidian/"
@@ -11,6 +41,9 @@
       ];
 
       settings = {
+        # Off-desktop fallback; ./desktop/noctalia.nix overrides it.
+        theme = "term16-flat";
+
         editor = {
           bufferline = "multiple";
           color-modes = true;

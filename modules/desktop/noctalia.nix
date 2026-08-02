@@ -43,7 +43,7 @@
 
       # foot has no live config reload, so recolor a *running* terminal with OSC
       # escape sequences instead. noctalia renders this template (substituting the
-      # {{colors.terminal_*}} placeholders) to ~/.cache/terminal-sequences and the
+      # {{colors.*}} placeholders) to ~/.cache/terminal-sequences and the
       # post_hook tees it to every PTY. printf emits the raw ESC/BEL bytes at build
       # time; the {{…}} placeholders pass through untouched for noctalia to fill.
       # This covers palette changes; a mode flip goes through foot's own theme switch
@@ -71,6 +71,8 @@
           printf '\033]4;13;{{colors.terminal_bright_magenta.default.hex}}\007'
           printf '\033]4;14;{{colors.terminal_bright_cyan.default.hex}}\007'
           printf '\033]4;15;{{colors.terminal_bright_white.default.hex}}\007'
+          printf '\033]4;173;{{colors.secondary.default.hex}}\007'
+          printf '\033]4;237;{{colors.surface_variant.default.hex}}\007'
         } > $out
       '';
 
@@ -86,7 +88,7 @@
       # explicit .dark/.light refs (mode-independent, like the zellij theme below) and
       # let foot choose: `initial-color-theme` at startup, SIGUSR1/SIGUSR2 for a
       # running server (the post_hook). Keys mirror the upstream builtin template.
-      # `color` resolves a noctalia `terminal_*` name to a bare RRGGBB value, which is
+      # `color` resolves a noctalia color name to a bare RRGGBB value, which is
       # all foot.ini(5) accepts — from a placeholder for noctalia, or from the vendored
       # palette for the fallback below.
       mkFootColors =
@@ -106,15 +108,22 @@
         lib.concatStringsSep "\n" (
           [
             "[colors-${mode}]"
-            "foreground=${color "foreground"}"
-            "background=${color "background"}"
+            "foreground=${color "terminal_foreground"}"
+            "background=${color "terminal_background"}"
           ]
-          ++ lib.imap0 (i: name: "regular${toString i}=${color "normal_${name}"}") ansiNames
-          ++ lib.imap0 (i: name: "bright${toString i}=${color "bright_${name}"}") ansiNames
+          ++ lib.imap0 (i: name: "regular${toString i}=${color "terminal_normal_${name}"}") ansiNames
+          ++ lib.imap0 (i: name: "bright${toString i}=${color "terminal_bright_${name}"}") ansiNames
           ++ [
-            "selection-foreground=${color "selection_fg"}"
-            "selection-background=${color "selection_bg"}"
-            "cursor=${color "cursor_text"} ${color "cursor"}"
+            "selection-foreground=${color "terminal_selection_fg"}"
+            "selection-background=${color "terminal_selection_bg"}"
+            "cursor=${color "terminal_cursor_text"} ${color "terminal_cursor"}"
+            # ../starship.nix needs an orange and a surface tone that ANSI 0-15 has no
+            # room for, and a prompt rendered on srv-01 can only name palette slots.
+            # Also in terminalSequences above, for terminals already running. Both
+            # indices default to a near-identical xterm color, so a terminal without
+            # this file still draws the prompt right.
+            "173=${color "secondary"}"
+            "237=${color "surface_variant"}"
           ]
         );
 
@@ -126,7 +135,7 @@
       '';
 
       footThemeTemplate = pkgs.writeText "noctalia-foot.tmpl" (
-        mkFootTheme "{{ mode }}" (mode: name: "{{colors.terminal_${name}.${mode}.hex_stripped}}")
+        mkFootTheme "{{ mode }}" (mode: name: "{{colors.${name}.${mode}.hex_stripped}}")
       );
 
       # The same file resolved from the vendored palette instead of placeholders,
@@ -140,13 +149,17 @@
           let
             terminal = gruvboxMaterial.${mode}.terminal;
             byName = {
-              inherit (terminal) foreground background cursor;
-              cursor_text = terminal.cursorText;
-              selection_fg = terminal.selectionFg;
-              selection_bg = terminal.selectionBg;
+              terminal_foreground = terminal.foreground;
+              terminal_background = terminal.background;
+              terminal_cursor = terminal.cursor;
+              terminal_cursor_text = terminal.cursorText;
+              terminal_selection_fg = terminal.selectionFg;
+              terminal_selection_bg = terminal.selectionBg;
+              secondary = gruvboxMaterial.${mode}.mSecondary;
+              surface_variant = gruvboxMaterial.${mode}.mSurfaceVariant;
             }
-            // lib.concatMapAttrs (name: hex: { "normal_${name}" = hex; }) terminal.normal
-            // lib.concatMapAttrs (name: hex: { "bright_${name}" = hex; }) terminal.bright;
+            // lib.concatMapAttrs (name: hex: { "terminal_normal_${name}" = hex; }) terminal.normal
+            // lib.concatMapAttrs (name: hex: { "terminal_bright_${name}" = hex; }) terminal.bright;
           in
           name: lib.removePrefix "#" byName.${name}
         )
@@ -590,7 +603,7 @@
         # ourselves keeps it declarative: foot is a user template now, so no apply.sh
         # runs for it; helix has no hook and just loads the named theme.
         foot.settings.main.include = footThemeFile;
-        helix.settings.theme = "noctalia";
+        helix.settings.theme = lib.mkForce "noctalia";
 
         # zellij: `noctalia` is the live-mode block, so a session started at any
         # point opens on the current palette; the dark/light pair is what the
@@ -611,7 +624,7 @@
         # bat: via HM's option rather than nushell's alias, so every shell gets it —
         # and HM owns that config file, so this isn't the in-place apply.sh rewrite we
         # avoid elsewhere. bat is spawned fresh per invocation, so no reload hook.
-        bat.config.theme = "noctalia";
+        bat.config.theme = lib.mkForce "noctalia";
 
         # Claude Code: "custom:<slug>" selects $CLAUDE_CONFIG_DIR/themes/<slug>.json.
         # Set here rather than in modules/claude/claude.nix (into whose settings it
