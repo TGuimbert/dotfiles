@@ -45,6 +45,20 @@
     # Hardware
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
 
+    # Virtualisation
+    #
+    # Declarative libvirt objects (srv-01's Home Assistant guest). The branch,
+    # not the v0.6.0 tag (May 2025, and no newer one): that tag predates the
+    # hostdev `startupPolicy` and graphics `port` attributes used here, and its
+    # XML generator drops unknown attributes *silently* rather than failing, so
+    # pinning it yields a domain quietly missing them. `follows` matters more
+    # than lock hygiene here — NixVirt imports its nixpkgs directly to build the
+    # libvirt it hands to the module.
+    nixvirt = {
+      url = "github:AshleyYakeley/NixVirt";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Desktop & theming
     arkenfox-nix = {
       url = "github:HeitorAugustoLN/arkenfox-nix";

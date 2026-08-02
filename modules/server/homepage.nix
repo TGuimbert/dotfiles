@@ -66,8 +66,6 @@
                     href = "https://homeassistant.${constants.domain}/";
                     siteMonitor = "https://homeassistant.${constants.domain}/";
                     description = "Home automation";
-                    proxmoxNode = "proxmox1";
-                    proxmoxVMID = 100;
                     widget = {
                       type = "homeassistant";
                       url = "https://homeassistant.${constants.domain}";

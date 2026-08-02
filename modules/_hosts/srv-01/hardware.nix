@@ -11,7 +11,12 @@
   };
 
   networking = {
-    interfaces.lan0.ipv4.addresses = [
+    # The host's address sits on a bridge rather than on lan0 directly so the
+    # Home Assistant guest (see ../../server/home-assistant.nix) can be a peer on
+    # the LAN: it needs L2 access for mDNS/SSDP discovery and for the inbound
+    # callbacks half its integrations rely on, neither of which survives NAT.
+    bridges.br0.interfaces = [ "lan0" ];
+    interfaces.br0.ipv4.addresses = [
       {
         address = "10.0.0.57";
         prefixLength = 24;

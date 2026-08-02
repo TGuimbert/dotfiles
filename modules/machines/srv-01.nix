@@ -14,6 +14,7 @@
         restic
         calibre
         printing
+        homeAssistant
       ])
       ++ [
         ../_hosts/srv-01/hardware.nix
