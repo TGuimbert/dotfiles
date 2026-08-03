@@ -121,6 +121,16 @@
                   # Stricter than the `one_factor` access_control rules below, so
                   # a passkey alone does not open Immich.
                   authorization_policy = "two_factor";
+                  # Left unset, `consent_mode` resolves to `explicit` and prompts
+                  # on every login. Pre-configured rather than `implicit` because
+                  # the stored grant is matched with HasExactGrants — a client
+                  # asking for *wider* scopes than were approved gets a consent
+                  # screen, which `implicit` would grant silently. The long
+                  # duration keeps that check while making the prompt a
+                  # once-a-year event. Stored in `oauth2_consent_preconfiguration`,
+                  # so it outlives a restart even though the session does not.
+                  consent_mode = "pre-configured";
+                  pre_configured_consent_duration = "1 year";
                   # Permits PKCE rather than forbidding it; Immich may still send
                   # a challenge.
                   require_pkce = false;
