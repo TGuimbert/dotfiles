@@ -28,13 +28,6 @@
           settings = {
             statusStyle = "dot";
           };
-          proxmox = {
-            proxmox1 = {
-              url = "{{HOMEPAGE_VAR_PROXMOX_URL}}";
-              token = "{{HOMEPAGE_VAR_PROXMOX_TOKEN}}";
-              secret = "{{HOMEPAGE_VAR_PROXMOX_SECRET}}";
-            };
-          };
           widgets = [
             {
               datetime = {
@@ -66,11 +59,6 @@
                     href = "https://homeassistant.${constants.domain}/";
                     siteMonitor = "https://homeassistant.${constants.domain}/";
                     description = "Home automation";
-                    widget = {
-                      type = "homeassistant";
-                      url = "https://homeassistant.${constants.domain}";
-                      key = "{{HOMEPAGE_VAR_HOMEASSISTANT_TOKEN}}";
-                    };
                   };
                 }
                 {
@@ -79,12 +67,6 @@
                     href = "https://immich.${constants.domain}/";
                     siteMonitor = "https://immich.${constants.domain}/";
                     description = "Photo and video management";
-                    widget = {
-                      type = "immich";
-                      url = "https://immich.${constants.domain}/";
-                      key = "{{HOMEPAGE_VAR_IMMICH_TOKEN}}";
-                      version = 2;
-                    };
                   };
                 }
                 {
@@ -93,10 +75,6 @@
                     href = "http://klipper.${constants.domain}";
                     siteMonitor = "http://klipper.${constants.domain}";
                     description = "3D printer management";
-                    widget = {
-                      type = "moonraker";
-                      url = "http://klipper.${constants.domain}";
-                    };
                   };
                 }
                 {
@@ -117,13 +95,6 @@
                     href = "https://truenas.${constants.domain}/";
                     siteMonitor = "https://truenas.${constants.domain}/";
                     description = "Network Attached Storage";
-                    widget = {
-                      type = "truenas";
-                      url = "https://truenas.${constants.domain}";
-                      version = 2;
-                      key = "{{HOMEPAGE_VAR_TRUENAS_TOKEN}}";
-                      enablePools = true;
-                    };
                   };
                 }
                 {
@@ -132,25 +103,22 @@
                     href = "https://openwrt.${constants.domain}/";
                     siteMonitor = "https://openwrt.${constants.domain}/";
                     description = "Router, DHCP and DNS server and Firewall";
-                    widget = {
-                      type = "openwrt";
-                      url = "https://openwrt.${constants.domain}";
-                      username = "homepage";
-                      password = "{{HOMEPAGE_VAR_OPENWRT_PASSWORD}}";
-                    };
                   };
                 }
                 {
-                  Traefik = {
+                  "Traefik srv-01" = {
                     icon = "traefik.png";
-                    href = "https://traefik.${constants.domain}/";
-                    siteMonitor = "https://traefik.${constants.domain}/";
+                    href = "https://traefik.${constants.domain}/dashboard/";
+                    siteMonitor = "https://traefik.${constants.domain}/dashboard/";
                     description = "Reverse proxy";
-                    widget = {
-                      type = "traefik";
-                      url = "https://traefik.${constants.domain}";
-                      headers.Proxy-Authorization = "{{HOMEPAGE_VAR_AUTHELIA_HEADER}}";
-                    };
+                  };
+                }
+                {
+                  "Traefik NAS" = {
+                    icon = "traefik.png";
+                    href = "https://traefik-nas.${constants.domain}/dashboard/";
+                    siteMonitor = "https://traefik-nas.${constants.domain}/dashboard/";
+                    description = "Reverse proxy";
                   };
                 }
                 {
@@ -162,34 +130,11 @@
                   };
                 }
                 {
-                  Zoraxy = {
-                    icon = "zoraxy.png";
-                    href = "https://zoraxy.${constants.domain}";
-                    siteMonitor = "https://zoraxy.${constants.domain}";
-                    description = "Secondary reverse proxy";
-                  };
-                }
-                {
                   Garage = {
                     icon = "garage.png";
                     href = "https://garage-ui.${constants.domain}";
                     siteMonitor = "https://garage-ui.${constants.domain}";
                     description = "S3 Object Storage";
-                  };
-                }
-                {
-                  Proxmox1 = {
-                    icon = "proxmox.png";
-                    href = "https://proxmox1.${constants.domain}:8006/";
-                    siteMonitor = "https://proxmox1.${constants.domain}:8006/";
-                    description = "First PVE node";
-                    widget = {
-                      type = "proxmox";
-                      url = "{{HOMEPAGE_VAR_PROXMOX_URL}}";
-                      username = "{{HOMEPAGE_VAR_PROXMOX_TOKEN}}";
-                      password = "{{HOMEPAGE_VAR_PROXMOX_SECRET}}";
-                      node = "proxmox1";
-                    };
                   };
                 }
               ];
