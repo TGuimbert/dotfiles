@@ -70,9 +70,10 @@
               display_name = "${constants.domain}";
               # 4.39 still counts a passkey as *one* factor, which is exactly what
               # the `one_factor` rules below ask for — so a passkey alone opens
-              # every route, no password. Making one satisfy a `two_factor` rule
-              # is `experimental_enable_passkey_uv_two_factors`, left off while it
-              # carries that prefix.
+              # the forward-auth routes, no password. It is deliberately not
+              # enough for the `two_factor` OIDC client below. Making one satisfy
+              # `two_factor` is `experimental_enable_passkey_uv_two_factors`, left
+              # off while it carries that prefix.
               enable_passkey_login = true;
             };
             password_policy.zxcvbn = {
@@ -127,15 +128,21 @@
                   client_name = "Immich";
                   client_secret = "{{ secret \"${config.sops.secrets.autheliaOidcImmichClientSecretDigest.path}\" }}";
                   public = false;
-                  # Matches the `one_factor` posture of access_control above
-                  # rather than Authelia's stricter suggestion; with passkeys on,
-                  # one factor is already a hardware-bound credential.
-                  authorization_policy = "one_factor";
-                  require_pkce = true;
-                  pkce_challenge_method = "S256";
+                  # Stricter than the `one_factor` access_control rules below.
+                  # Since a passkey counts as one factor in 4.39, this asks for a
+                  # password *plus* a second factor — a passkey alone will not
+                  # open Immich the way it opens the forward-auth routes.
+                  authorization_policy = "two_factor";
+                  # Immich's own integration doc. `false` permits PKCE rather
+                  # than forbidding it, so Immich may still send a challenge.
+                  require_pkce = false;
+                  response_types = [ "code" ];
+                  grant_types = [ "authorization_code" ];
+                  id_token_signed_response_alg = "RS256";
+                  # Immich wants userinfo as a signed JWT, not plain JSON.
+                  userinfo_signed_response_alg = "RS256";
                   # Immich reads the secret from the POST body, not Basic auth.
                   token_endpoint_auth_method = "client_secret_post";
-                  userinfo_signed_response_alg = "none";
                   redirect_uris = [
                     "https://immich.${constants.domain}/auth/login"
                     "https://immich.${constants.domain}/user-settings"
@@ -143,6 +150,13 @@
                     # return to.
                     "app.immich:///oauth-callback"
                   ];
+                  # Immich's doc also shows an `immich_scope` backed by a
+                  # `claims_policy`, carrying `immich_quota` and `immich_role`.
+                  # Both are omitted: they only seed those fields when Immich
+                  # first creates a user and are never resynced afterwards, and
+                  # LLDAP holds no attribute to populate them from. Adding them
+                  # means defining `definitions.user_attributes` expressions —
+                  # worth doing only if roles should come from LDAP groups.
                   scopes = [
                     "openid"
                     "profile"
