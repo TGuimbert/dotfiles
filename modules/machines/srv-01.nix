@@ -11,7 +11,7 @@
         authelia
         lldap
         homepage
-        restic
+        backup
         calibre
         printing
         homeAssistant

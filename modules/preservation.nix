@@ -25,12 +25,13 @@
           # it is regenerated every boot, leaving no incumbent uid to preserve.
           # Prescribed by preservation's own docs.
           #
-          # This covers reboots. Across a *rebuild* there is no map either — it
-          # is not in the restic backup, which stores owners numerically — so
-          # services owning preserved state additionally pin their ids in their
-          # own aspect (server/{traefik,lldap,authelia,calibre}.nix). Those
-          # values are read back from `getent passwd` rather than chosen, so
-          # they cannot collide.
+          # This covers reboots. Across a *rebuild* there is no map either — the
+          # backup in server/backup.nix stages a copy whose ownership is
+          # flattened outright — so services owning preserved state additionally
+          # pin their ids in their own aspect
+          # (server/{traefik,lldap,authelia,calibre}.nix). Those values are read
+          # back from `getent passwd` rather than chosen, so they cannot collide.
+          # Pinning them is also what makes a restore's chown deterministic.
           {
             directory = "/var/lib/nixos";
             inInitrd = true;

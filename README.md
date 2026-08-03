@@ -257,6 +257,34 @@ Override the target as above if multicast is ever in the way (VLANs, AP isolatio
 `nixos` dev shell, which direnv loads in this directory. Because flake refs only see
 git-tracked files, `git add` any brand new module before deploying.
 
+### Restoring srv-01
+
+srv-01 never pushes a backup. A timer stages its service state into `/var/backup/data` at
+01:00 — the lldap and authelia databases go through sqlite's online-backup API, so they are
+consistent rather than caught mid-write — and the TrueNAS pulls that over SFTP an hour later.
+History is the NAS's snapshot schedule, so pick a snapshot there and copy its contents to the
+host first.
+
+Then, on srv-01:
+
+```bash
+systemctl stop lldap authelia-main
+
+rsync -a <pulled>/lldap/ /var/lib/lldap/
+chown -R lldap:lldap /var/lib/lldap && chmod 0750 /var/lib/lldap
+chmod 0400 /var/lib/lldap/server_key
+
+rsync -a <pulled>/authelia-main/ /var/lib/authelia-main/
+chown -R authelia-main:authelia-main /var/lib/authelia-main
+chmod 0700 /var/lib/authelia-main
+
+systemctl start lldap authelia-main
+```
+
+The staged copy is read by a single unprivileged account, so ownership is flattened on the way
+out — hence the chown steps. Traefik is not in the backup and needs nothing: it re-issues the
+wildcard certificate from Cloudflare DNS on first start.
+
 ### Managing Secrets
 
 Secrets are managed with SOPS (uses age encryption):
