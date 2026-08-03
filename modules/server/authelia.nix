@@ -25,16 +25,26 @@
           autheliaSmtpSender = sopsConfig;
           autheliaSmtpPassword = sopsConfig;
           autheliaLdapPassword = sopsConfig;
+          autheliaOidcIssuerPrivateKey = sopsConfig;
+          autheliaOidcHmacSecret = sopsConfig;
+          # Only the digest is read by this host. The plaintext half lives beside
+          # it so the app it belongs to can be configured later without minting a
+          # new pair — `sops -d --extract '["autheliaOidcImmichClientSecret"]'`.
+          autheliaOidcImmichClientSecretDigest = sopsConfig;
         };
       };
       services = {
         authelia.instances.main = {
           enable = true;
+          # Required by every `{{ secret "…" }}` below, and by the JWKS fragment
+          # the module templates out of `oidcIssuerPrivateKeyFile`.
           environmentVariables.X_AUTHELIA_CONFIG_FILTERS = "template";
           secrets = {
             jwtSecretFile = config.sops.secrets.autheliaJwtSecret.path;
             storageEncryptionKeyFile = config.sops.secrets.autheliaStorageEncryptionKey.path;
             sessionSecretFile = config.sops.secrets.autheliaSessionSecret.path;
+            oidcHmacSecretFile = config.sops.secrets.autheliaOidcHmacSecret.path;
+            oidcIssuerPrivateKeyFile = config.sops.secrets.autheliaOidcIssuerPrivateKey.path;
           };
           settings = {
             theme = "auto";
@@ -52,6 +62,16 @@
             totp = {
               disable = false;
               issuer = "${constants.domain}";
+            };
+            webauthn = {
+              disable = false;
+              display_name = "${constants.domain}";
+              # 4.39 counts a passkey as *one* factor, so it satisfies the
+              # `one_factor` rules below but not the `two_factor` OIDC client.
+              # `experimental_enable_passkey_uv_two_factors` would change that; it
+              # is off because its own schema says it WILL be removed, and an
+              # unknown key is a startup error on a host that upgrades unattended.
+              enable_passkey_login = true;
             };
             password_policy.zxcvbn = {
               enabled = true;
@@ -86,6 +106,58 @@
               max_retries = 4;
               find_time = "3m";
               ban_time = "5m";
+            };
+            # For apps that authenticate their own users rather than sitting
+            # behind the forward-auth middleware below. Why LLDAP stays alongside
+            # this: ../../CLAUDE.md, "Authentication on srv-01".
+            identity_providers.oidc = {
+              # Authelia will not start with an empty client list.
+              clients = [
+                {
+                  client_id = "immich";
+                  client_name = "Immich";
+                  client_secret = "{{ secret \"${config.sops.secrets.autheliaOidcImmichClientSecretDigest.path}\" }}";
+                  public = false;
+                  # Stricter than the `one_factor` access_control rules below, so
+                  # a passkey alone does not open Immich.
+                  authorization_policy = "two_factor";
+                  # Left unset, `consent_mode` resolves to `explicit` and prompts
+                  # on every login. Pre-configured rather than `implicit` because
+                  # the stored grant is matched with HasExactGrants — a client
+                  # asking for *wider* scopes than were approved gets a consent
+                  # screen, which `implicit` would grant silently. The long
+                  # duration keeps that check while making the prompt a
+                  # once-a-year event. Stored in `oauth2_consent_preconfiguration`,
+                  # so it outlives a restart even though the session does not.
+                  consent_mode = "pre-configured";
+                  pre_configured_consent_duration = "1 year";
+                  # Permits PKCE rather than forbidding it; Immich may still send
+                  # a challenge.
+                  require_pkce = false;
+                  response_types = [ "code" ];
+                  grant_types = [ "authorization_code" ];
+                  id_token_signed_response_alg = "RS256";
+                  # Both algorithms have to match Immich's own settings, and
+                  # Immich defaults this one to `none` — a mismatch fails login
+                  # with nothing useful in the logs.
+                  userinfo_signed_response_alg = "RS256";
+                  token_endpoint_auth_method = "client_secret_post";
+                  redirect_uris = [
+                    "https://immich.${constants.domain}/auth/login"
+                    "https://immich.${constants.domain}/user-settings"
+                    "app.immich:///oauth-callback"
+                  ];
+                  # Immich's doc also shows an `immich_scope` carrying
+                  # `immich_quota` and `immich_role`. Omitted: Immich reads them
+                  # only when it first creates a user, and LLDAP holds no
+                  # attribute to fill them from.
+                  scopes = [
+                    "openid"
+                    "profile"
+                    "email"
+                  ];
+                }
+              ];
             };
             storage.local.path = "/var/lib/authelia-main/db.sqlite3";
             notifier.smtp = {

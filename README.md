@@ -285,6 +285,11 @@ The staged copy is read by a single unprivileged account, so ownership is flatte
 out — hence the chown steps. Traefik is not in the backup and needs nothing: it re-issues the
 wildcard certificate from Cloudflare DNS on first start.
 
+Registered passkeys, TOTP enrolments and OIDC consent grants all live in the Authelia database
+restored above, so they survive with it. Authelia's OIDC *issuer* key does not — it comes from
+sops (`autheliaOidcIssuerPrivateKey`), so a host rebuilt from this repo keeps the same key and
+existing OIDC clients need no reconfiguration.
+
 ### Managing Secrets
 
 Secrets are managed with SOPS (uses age encryption):

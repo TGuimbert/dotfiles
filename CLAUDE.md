@@ -84,6 +84,37 @@ against PCR 7). Failures are not alerted — check `journalctl -u nixos-upgrade`
 
 **Note**: You typically don't need to run `nix flake update` manually since flake updates are managed by CI.
 
+### Authentication on srv-01
+
+Three ways in, because apps fall into three groups:
+
+- **Forward-auth** (`modules/server/authelia.nix`) — for apps with no login of their own.
+  `mkAutheliaRouter` (`modules/server/traefik-router.nix`) wraps a route in Traefik's
+  `forwardAuth` middleware; Homepage, Calibre-web and the Traefik dashboard use it. Calibre-web
+  additionally reads the `Remote-User` header Authelia sets, so that header contract is
+  load-bearing — see `modules/server/calibre.nix`.
+- **OIDC** — Authelia is also the OIDC provider (`identity_providers.oidc`), for apps that
+  authenticate their own users. Clients are declared in that same file, with the client secret's
+  pbkdf2 digest pulled from sops via `{{ secret "…" }}` rather than committed in cleartext.
+  Discovery lives at `https://auth.<domain>/.well-known/openid-configuration`.
+- **LDAP** (`modules/server/lldap.nix`) — for apps that speak neither. Kept **deliberately**: the
+  Jellyfin OIDC plugin (`9p4/jellyfin-plugin-sso`) was archived upstream in May 2026 with no
+  successor fork, and never completed the flow outside a browser anyway, so LDAP is the only
+  credential its TV and mobile clients can use. Nothing else off-host currently binds `:636`;
+  do not remove LLDAP on that basis alone.
+
+Passkeys are enabled (`webauthn.enable_passkey_login`). Authelia 4.39 counts a passkey as *one*
+factor, so it opens the `one_factor` forward-auth routes on its own, but not an OIDC client set
+to `two_factor` — that still wants a password plus TOTP or a security key.
+
+Sessions are held in memory (no `session.redis`), so restarting Authelia logs everyone out. The
+nightly upgrade restarts it whenever the package or config changes.
+
+Adding an OIDC client: generate a secret with
+`authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72`, put the
+plaintext and the digest in `secrets/srv-01.yaml`, reference the digest from the client entry, and
+hand the plaintext to the app. Authelia refuses to start with an empty client list.
+
 ### Backing up srv-01
 
 srv-01 pushes nothing. The `backup` aspect (`modules/server/backup.nix`) stages the lldap and
@@ -173,7 +204,7 @@ Each host is a thin import list in `modules/machines/<hostname>.nix` — it sets
 **Current hosts**:
 - `leshen`: Desktop system with niri + noctalia, games, podman (`displaysLeshen` for its dual monitors)
 - `griffin`: Lenovo ThinkPad T490 laptop with niri + noctalia, games, podman (`laptop` for lid handling)
-- `srv-01`: Headless bare-metal server with Traefik, LLDAP, Authelia, Homepage, Restic, and a Home Assistant OS libvirt guest bridged onto the LAN via `br0`; LUKS unlocked from the TPM (PCR 7)
+- `srv-01`: Headless bare-metal server with Traefik, LLDAP, Authelia (forward-auth + OIDC provider), Homepage, Calibre-web, and a Home Assistant OS libvirt guest bridged onto the LAN via `br0`; LUKS unlocked from the TPM (PCR 7). Backups are a TrueNAS pull, not a push — see "Backing up srv-01"
 
 ### Module Organization
 
