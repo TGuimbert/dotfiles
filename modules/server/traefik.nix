@@ -29,6 +29,15 @@
             };
             websecure = {
               address = ":443";
+              # The NAS's Traefik reaches Authelia through this one, and an
+              # untrusted peer's X-Forwarded-* is discarded — Authelia would then
+              # see auth.<domain> as the target and answer 400. Both addresses are
+              # the same host. Not a subnet: the trust spans every route here, and
+              # a trusted peer may claim any host.
+              forwardedHeaders.trustedIPs = [
+                "10.0.0.55"
+                "10.0.0.56"
+              ];
               http.tls = {
                 certResolver = "cloudflareDns";
                 # One wildcard instead of the per-router certificate Traefik
