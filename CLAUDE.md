@@ -104,8 +104,11 @@ Three ways in, because apps fall into three groups:
   do not remove LLDAP on that basis alone.
 
 Passkeys are enabled (`webauthn.enable_passkey_login`). Authelia 4.39 counts a passkey as *one*
-factor, which matches the `one_factor` `access_control` rules, so a passkey alone opens every
-route.
+factor, so it opens the `one_factor` forward-auth routes on its own, but not an OIDC client set
+to `two_factor` — that still wants a password plus TOTP or a security key.
+
+Sessions are held in memory (no `session.redis`), so restarting Authelia logs everyone out. The
+nightly upgrade restarts it whenever the package or config changes.
 
 Adding an OIDC client: generate a secret with
 `authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72`, put the
