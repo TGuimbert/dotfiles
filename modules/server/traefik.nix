@@ -29,7 +29,19 @@
             };
             websecure = {
               address = ":443";
-              http.tls.certResolver = "cloudflareDns";
+              http.tls = {
+                certResolver = "cloudflareDns";
+                # One wildcard instead of the per-router certificate Traefik
+                # otherwise infers from each `Host()` rule, so no subdomain
+                # reaches the CT logs. `*.` covers one label and never the
+                # apex, hence the apex as `main` and the wildcard as a SAN.
+                domains = [
+                  {
+                    main = constants.domain;
+                    sans = [ "*.${constants.domain}" ];
+                  }
+                ];
+              };
             };
             ldapsecure = {
               address = ":636";
@@ -66,7 +78,7 @@
               resolver = "cloudflareDns";
               domain = {
                 main = constants.domain;
-                sans = [ "lldap.${constants.domain}" ];
+                sans = [ "*.${constants.domain}" ];
               };
             };
           };

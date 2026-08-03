@@ -75,7 +75,17 @@
                 rule = "HostSNI(`ldap.${constants.domain}`)";
                 entrypoints = [ "ldapsecure" ];
                 service = "lldap-backend";
-                tls.certResolver = "cloudflareDns";
+                # `ldapsecure` has no `http` block to inherit entrypoint TLS
+                # from, so this router repeats the wildcard itself.
+                tls = {
+                  certResolver = "cloudflareDns";
+                  domains = [
+                    {
+                      main = constants.domain;
+                      sans = [ "*.${constants.domain}" ];
+                    }
+                  ];
+                };
               };
               services.lldap-backend.loadBalancer.servers = [ { address = "127.0.0.1:3890"; } ];
             };
