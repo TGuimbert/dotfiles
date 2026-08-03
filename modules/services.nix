@@ -12,6 +12,9 @@
             type = "ed25519";
           }
         ];
+        # Global directives belong here, not in `extraConfig`: server/backup.nix
+        # appends a `Match` block at mkAfter, and a Match captures everything
+        # after it, so an extraConfig directive would apply to that one account.
         settings = {
           PasswordAuthentication = false;
           PermitRootLogin = "no";

@@ -9,7 +9,6 @@
         sd
         dust
         ripgrep
-        restic
         bottom
         htop
         iotop
@@ -20,6 +19,12 @@
         ".local/share/zoxide"
         ".cache/tealdeer"
       ];
+    };
+
+  nixos.modules.desktop =
+    { pkgs, ... }:
+    {
+      environment.systemPackages = [ pkgs.restic ];
     };
 
   homeManager.modules.base =
