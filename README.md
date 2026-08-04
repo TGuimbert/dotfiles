@@ -290,6 +290,41 @@ restored above, so they survive with it. Authelia's OIDC *issuer* key does not �
 sops (`autheliaOidcIssuerPrivateKey`), so a host rebuilt from this repo keeps the same key and
 existing OIDC clients need no reconfiguration.
 
+### Bringing up monitoring
+
+Gatus and the Beszel agent are declared in this repo, but the Beszel **hub** lives on the
+TrueNAS — deliberately, so that whatever reports srv-01 being down is not itself on srv-01.
+That makes the first run a bootstrap, since the agent cannot be configured before the hub
+exists to mint its token:
+
+1. **Pushover** — create an application; note its API token and your user key.
+2. **TrueNAS** — Apps → Discover → install **Beszel Hub** from the Community train, and front
+   it with the NAS's Traefik at `beszel.home.guimbert.fr`. Create the first user. Two
+   requirements on that route, because the agent connects through it:
+   - `beszel` must resolve to the NAS, not to srv-01.
+   - It must **not** sit behind the authelia middleware. A forward-auth redirect on the agent's
+     upgrade request to `/api/beszel/agent-connect` stops it connecting; put the whole route in
+     the clear and rely on Beszel's own login. That also means you can still open the dashboard
+     when srv-01 — and with it Authelia — is the thing that is down.
+3. In the hub, add a system for srv-01 and copy the `KEY` and `TOKEN` it shows. Add a
+   notification URL `pushover://shoutrrr:<api-token>@<user-key>/` and a **Status** alert on
+   that system — this is the alert that fires when srv-01 stops reporting.
+4. **TrueNAS** — System → Alert Settings, and point its **Email** alert service at your inbox.
+   The split is: Gatus watches the NAS's web UI, because a NAS that is down cannot email you
+   that it is down; everything it can report while running — pool degradation, SMART, scrub
+   errors — goes by email and is the one signal that does not arrive on Pushover. Gatus does
+   not poll those: the only HTTP route is the REST API, deprecated in 25.04, removed in 26, and
+   alerted on daily by TrueNAS for merely being used.
+5. `sops secrets/srv-01.yaml` and add:
+   - `gatusEnvironments` — `PUSHOVER_TOKEN`, `PUSHOVER_USER_KEY`, and `GATUS_HEARTBEAT_TOKEN`
+     (`openssl rand -hex 32`).
+   - `beszelAgentEnvironment` — `TOKEN` and `KEY` from step 3.
+6. `just deploy srv-01`, then check `journalctl -u beszel-agent | grep -i 'websocket connected'`
+   and open `https://gatus.home.guimbert.fr`.
+
+To add a check later, edit `modules/server/gatus.nix` and deploy — there is no UI to click,
+which is the trade that keeps the monitor list in git and out of the backups.
+
 ### Managing Secrets
 
 Secrets are managed with SOPS (uses age encryption):

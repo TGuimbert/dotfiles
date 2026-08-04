@@ -34,6 +34,17 @@
         };
       };
 
+      homepageTiles.Admin = [
+        {
+          Lldap = {
+            icon = "lldap.png";
+            href = "https://ldap.${constants.domain}";
+            siteMonitor = "https://ldap.${constants.domain}";
+            description = "LDAP server";
+          };
+        }
+      ];
+
       sops.secrets = {
         lldapEnvironment = sopsConfig;
         lldapUserPass = sopsConfig;

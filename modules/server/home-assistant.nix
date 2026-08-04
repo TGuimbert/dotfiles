@@ -17,6 +17,7 @@ in
   # instance this replaces.
   nixos.modules.homeAssistant =
     {
+      constants,
       pkgs,
       mkRouter,
       ...
@@ -124,6 +125,17 @@ in
     in
     {
       imports = [ inputs.nixvirt.nixosModules.default ];
+
+      homepageTiles.Services = [
+        {
+          HomeAssistant = {
+            icon = "home-assistant.png";
+            href = "https://homeassistant.${constants.domain}/";
+            siteMonitor = "https://homeassistant.${constants.domain}/";
+            description = "Home automation";
+          };
+        }
+      ];
 
       virtualisation = {
         libvirt = {

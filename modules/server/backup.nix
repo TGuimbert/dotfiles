@@ -8,6 +8,7 @@
     {
       config,
       lib,
+      mkHeartbeat,
       pkgs,
       ...
     }:
@@ -67,7 +68,13 @@
             pkgs.rsync
             pkgs.sqlite
           ];
-          serviceConfig.Type = "oneshot";
+          # Reports the outcome to ./gatus.nix, which alerts both when this fails
+          # and when it stops running at all — the NAS mirrors deletions, so a
+          # stage that silently stopped is as bad as one that broke.
+          serviceConfig = {
+            Type = "oneshot";
+          }
+          // mkHeartbeat "backup-stage";
           script = ''
             # sshd refuses a chroot it does not own, so only `data` beneath it
             # belongs to nas-backup.

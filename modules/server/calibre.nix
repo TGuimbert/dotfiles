@@ -3,6 +3,7 @@
   nixos.modules.calibre =
     {
       config,
+      constants,
       mkAutheliaRouter,
       ...
     }:
@@ -15,6 +16,17 @@
         users.calibre-web.uid = 997;
         groups.calibre-web.gid = 997;
       };
+
+      homepageTiles.Services = [
+        {
+          Calibre = {
+            icon = "calibre-web.png";
+            href = "https://calibre.${constants.domain}";
+            siteMonitor = "https://calibre.${constants.domain}";
+            description = "Ebook library";
+          };
+        }
+      ];
 
       sops.secrets.smb-secrets = { };
       services = {
