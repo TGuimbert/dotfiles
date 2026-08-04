@@ -1,8 +1,9 @@
 { ... }:
 {
   # srv-01 backs nothing up itself: it stages a consistent copy of its service
-  # state and the TrueNAS *pulls* that over SFTP, so nothing here holds a
-  # credential that reaches the backups. Retention is the NAS's snapshot task;
+  # state — lldap, authelia, the *arr and jellyfin's config — and the TrueNAS
+  # *pulls* that over SFTP, so nothing here holds a credential that reaches the
+  # backups. The media itself is never in scope: it lives on the NAS already. Retention is the NAS's snapshot task;
   # restores are in ../../README.md.
   nixos.modules.backup =
     {
@@ -25,6 +26,30 @@
       # Read back rather than re-typed, so it cannot drift out of step with the
       # aspect that owns it and leave this dumping a path that no longer exists.
       autheliaDb = config.services.authelia.instances.main.settings.storage.local.path;
+      jellyfinDir = config.services.jellyfin.dataDir;
+
+      # Staged wholesale. Jellyfin is not in the list: most of its data dir is a
+      # metadata image cache, so it gets its own rsync with that excluded.
+      stateDirs = [
+        "/var/lib/lldap"
+        "/var/lib/authelia-main"
+        "/var/lib/sonarr"
+        "/var/lib/radarr"
+        "/var/lib/prowlarr"
+      ];
+
+      # Live sqlite databases: dumped rather than copied, and excluded from the
+      # rsyncs above for the same reason. All sit under /var/lib and the staging
+      # tree mirrors it, so the destinations are derived rather than restated.
+      dumps = [
+        "/var/lib/lldap/users.db"
+        autheliaDb
+        "${config.services.sonarr.dataDir}/sonarr.db"
+        "${config.services.radarr.dataDir}/radarr.db"
+        "${config.services.prowlarr.dataDir}/prowlarr.db"
+        "${jellyfinDir}/data/jellyfin.db"
+        "${jellyfinDir}/data/library.db"
+      ];
     in
     {
       users = {
@@ -84,19 +109,28 @@
             # Live sqlite files are excluded rather than copied — rsync would
             # catch them mid-write. Excluded files are not deleted from the
             # destination either, so the dumps below survive the next run.
-            for src in /var/lib/lldap /var/lib/authelia-main; do
+            for src in ${lib.concatStringsSep " " stateDirs}; do
               rsync -a --delete --chown=nas-backup:nas-backup \
                 --exclude='*.db' --exclude='*.db-*' \
                 --exclude='*.sqlite3' --exclude='*.sqlite3-*' \
                 "$src"/ ${stagingDir}/"$(basename "$src")"/
             done
 
+            # Most of jellyfin's data dir is artwork it re-fetches on demand.
+            # Worth pulling: the config, the plugins, and the two databases
+            # below — users, libraries and watch history.
+            rsync -a --delete --chown=nas-backup:nas-backup \
+              --exclude='metadata/' --exclude='transcodes/' --exclude='log/' \
+              --exclude='*.db' --exclude='*.db-*' \
+              ${jellyfinDir}/ ${stagingDir}/jellyfin/
+
             # .backup rather than a file copy: the online-backup API is the only
             # way to snapshot a database its service holds open.
-            sqlite3 /var/lib/lldap/users.db ".backup '${stagingDir}/lldap/users.db'"
-            sqlite3 ${autheliaDb} ".backup '${stagingDir}/authelia-main/db.sqlite3'"
-            chown nas-backup:nas-backup \
-              ${stagingDir}/lldap/users.db ${stagingDir}/authelia-main/db.sqlite3
+            for db in ${lib.concatStringsSep " " dumps}; do
+              dest=${stagingDir}/''${db#/var/lib/}
+              sqlite3 "$db" ".backup '$dest'"
+              chown nas-backup:nas-backup "$dest"
+            done
           '';
         };
 

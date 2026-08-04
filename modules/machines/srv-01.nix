@@ -17,6 +17,9 @@
         homeAssistant
         gatus
         beszel
+        mediaLibrary
+        jellyfin
+        servarr
       ])
       ++ [
         ../_hosts/srv-01/hardware.nix

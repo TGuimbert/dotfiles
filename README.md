@@ -260,10 +260,9 @@ git-tracked files, `git add` any brand new module before deploying.
 ### Restoring srv-01
 
 srv-01 never pushes a backup. A timer stages its service state into `/var/backup/data` at
-01:00 — the lldap and authelia databases go through sqlite's online-backup API, so they are
-consistent rather than caught mid-write — and the TrueNAS pulls that over SFTP an hour later.
-History is the NAS's snapshot schedule, so pick a snapshot there and copy its contents to the
-host first.
+01:00 — every sqlite database goes through the online-backup API, so they are consistent rather
+than caught mid-write — and the TrueNAS pulls that over SFTP an hour later. History is the NAS's
+snapshot schedule, so pick a snapshot there and copy its contents to the host first.
 
 Then, on srv-01:
 
@@ -280,6 +279,24 @@ chmod 0700 /var/lib/authelia-main
 
 systemctl start lldap authelia-main
 ```
+
+The media services restore the same way — indexers, quality profiles, libraries and watch history,
+none of which is reproducible from a rebuild:
+
+```bash
+systemctl stop jellyfin sonarr radarr prowlarr
+
+for svc in jellyfin sonarr radarr prowlarr; do
+  rsync -a <pulled>/$svc/ /var/lib/$svc/
+  chown -R $svc:$svc /var/lib/$svc
+done
+
+systemctl start jellyfin sonarr radarr prowlarr
+```
+
+Jellyfin's artwork is deliberately not in the backup — it re-fetches it — so expect the libraries
+to look bare until the first metadata scan finishes. The media itself was never at risk: it lives
+on the NAS, and srv-01 only mounts it.
 
 The staged copy is read by a single unprivileged account, so ownership is flattened on the way
 out — hence the chown steps. Traefik is not in the backup and needs nothing: it re-issues the
