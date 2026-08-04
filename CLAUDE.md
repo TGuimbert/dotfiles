@@ -80,7 +80,8 @@ nh os switch
 srv-01 updates itself: the `autoUpgrade` aspect (`modules/auto-upgrade.nix`) pulls
 `github:TGuimbert/dotfiles` nightly at ~03:00 and reboots only for a kernel change, only
 between 03:00 and 05:00 (safe unattended because its LUKS volume unlocks from the TPM
-against PCR 7). Failures are not alerted — check `journalctl -u nixos-upgrade`.
+against PCR 7). A run that fails — or one that stops happening — reaches Pushover through
+Gatus; see "Monitoring srv-01".
 
 **Note**: You typically don't need to run `nix flake update` manually since flake updates are managed by CI.
 
@@ -123,6 +124,50 @@ srv-01 holds no credential that reaches its own backups. Retention is the NAS's 
 snapshot task, not anything here, and `/var/lib/traefik` is deliberately out of scope —
 `acme.json` holds the wildcard cert's private key, which Cloudflare DNS re-issues for free.
 Restores are in README.md.
+
+### Monitoring srv-01
+
+Split across two machines *because* their lifecycles differ, not for convenience. A monitor
+sharing a host with the thing it monitors is silent exactly when that host dies, so the piece
+that watches srv-01 is the piece that does not run on it.
+
+- **Gatus** (`modules/server/gatus.nix`) runs here and is the alert router: it polls every
+  route this host and the NAS serve, asserts the wildcard cert's expiry **once** (every route
+  shares it, so twelve checks would mean twelve notifications), and pings the NAS and the
+  router at layer 3. Routes behind Authelia are checked with `Accept: text/html` and asserted
+  to answer exactly 302: Authelia returns a bare 401 to a client that sends no `Accept` header
+  (Go's default, so Gatus), and following the redirect would record the login page's 200 —
+  green without ever touching the service. Config-as-code, so the monitor list is that file: nothing to
+  preserve, nothing to stage in `backup.nix`, and a restore is a rebuild. Its sqlite store is
+  deliberately *unpreserved* — it exists to survive a service restart, not a reboot.
+- **Beszel** — only the agent is here (`modules/server/beszel.nix`). The hub is a Community-train
+  catalog app on the TrueNAS, which upgrades by hand and does not reboot nightly, so it is the
+  stabler host and it can report that srv-01 stopped answering. The agent dials *out* over a
+  WebSocket, so nothing is opened and no route is exempted from the authelia middleware. No
+  agent runs on the NAS: there is no catalog app for one, SMART and disk I/O are broken there,
+  and Gatus already covers what matters.
+- **Heartbeats.** `mkHeartbeat` (defined in `gatus.nix`, consumed by `backup.nix` and
+  `auto-upgrade.nix`) attaches an `ExecStopPost` that pushes to a Gatus `external-endpoint`.
+  One drop-in covers both failure modes: the job *failed* pushes `success=false` and alerts at
+  once; the job *never ran* pushes nothing and the heartbeat interval expires. That is why
+  those aspects now depend on `gatus` — importing one without it fails to evaluate, which is
+  the loud failure rather than a job reporting nowhere.
+- **The backstop.** Everything routes through Gatus so alerting is configured in one place,
+  with one exception: `notify-pushover@.service` is wired to `gatus.service`'s `OnFailure`,
+  because a dead alert router cannot announce itself.
+
+Adding a monitor is a commit, not a click. Pushover credentials, the heartbeat bearer token
+and the TrueNAS API key live in `gatusEnvironments` (sops), interpolated by Gatus as `${VAR}`
+so none of them reach the store.
+
+Two things deliberately stay outside this. **Pool and SMART health on the NAS** report through
+TrueNAS's own Email alert service rather than Pushover, so Gatus checks only that the NAS's web
+UI is serving — the half TrueNAS cannot report on itself, since a NAS that is down cannot email
+you that it is down. Polling the rest would mean the REST API, which 25.04 deprecated, 26
+removes, and which TrueNAS raises a daily alert for using at all; its WebSocket replacement
+needs a login round trip before the query, which a Gatus websocket endpoint cannot do. And
+**a whole-house power or ISP outage** silences both machines — closing that needs an outbound
+heartbeat to something off-site.
 
 ### Formatting and Linting
 
@@ -204,7 +249,7 @@ Each host is a thin import list in `modules/machines/<hostname>.nix` — it sets
 **Current hosts**:
 - `leshen`: Desktop system with niri + noctalia, games, podman (`displaysLeshen` for its dual monitors)
 - `griffin`: Lenovo ThinkPad T490 laptop with niri + noctalia, games, podman (`laptop` for lid handling)
-- `srv-01`: Headless bare-metal server with Traefik, LLDAP, Authelia (forward-auth + OIDC provider), Homepage, Calibre-web, and a Home Assistant OS libvirt guest bridged onto the LAN via `br0`; LUKS unlocked from the TPM (PCR 7). Backups are a TrueNAS pull, not a push — see "Backing up srv-01"
+- `srv-01`: Headless bare-metal server with Traefik, LLDAP, Authelia (forward-auth + OIDC provider), Homepage, Calibre-web, and a Home Assistant OS libvirt guest bridged onto the LAN via `br0`; LUKS unlocked from the TPM (PCR 7). Backups are a TrueNAS pull, not a push — see "Backing up srv-01"; monitoring is split with the NAS — see "Monitoring srv-01"
 
 ### Module Organization
 
@@ -212,7 +257,26 @@ One feature = one capability file holding its NixOS **and** home-manager config 
 - `nixos.modules.base` — every host (boot, locale, nix settings, disko, user account + nushell login shell, sshd, avahi, fwupd/smartd/btrfs-scrub, cli tools, preservation, sops)
 - `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, firefox, audio, NetworkManager + CIFS, tailscale, printing client, GUI home)
 - `nixos.modules.server` — srv-01 baseline (`modules/server/`); deliberately thin — only the sops file, the headless service disables and static networking
-- Named opt-in aspects imported only by hosts that want them: `secureBoot` (lanzaboote; every host with a bootloader), `autoUpgrade` (pull-based nightly updates; srv-01 only), `games`, `podman`, `displaysLeshen`, `laptop`, `docker` (no host currently imports it), and the srv-01 services (`traefik`, `authelia`, `lldap`, `homepage`, `backup`, `calibre`, `printing`, `homeAssistant`)
+- Named opt-in aspects imported only by hosts that want them: `secureBoot` (lanzaboote; every host with a bootloader), `autoUpgrade` (pull-based nightly updates; srv-01 only), `games`, `podman`, `displaysLeshen`, `laptop`, `docker` (no host currently imports it), and the srv-01 services (`traefik`, `authelia`, `lldap`, `homepage`, `backup`, `calibre`, `printing`, `homeAssistant`, `gatus`, `beszel`)
+
+**Cross-aspect collectors.** A few things are contributed *by* a feature but assembled by
+another. Rather than a central list that drifts, the assembling aspect declares a collector and
+each feature adds to it beside its own config:
+
+- `homepageTiles.<Group>` (declared in `modules/server/homepage.nix`) — a service's dashboard tile
+  lives in that service's file. Keyed by group because `services.homepage-dashboard.services` is a
+  *list* of groups and list definitions concatenate, so two files contributing to `Admin` directly
+  would render two groups called Admin; attrsets merge by key instead. `homepage.nix` keeps the
+  tiles for things that run off this host, the group order, and an assertion that no tile names a
+  group outside it. Tiles are sorted by name within a group, since merge order follows module
+  evaluation rather than intent.
+- `mkRouter` / `mkAutheliaRouter` (`modules/server/traefik-router.nix`) and `mkHeartbeat`
+  (`modules/server/gatus.nix`) are the same idea via `_module.args`: a builder defined once,
+  called by each feature.
+
+Both create a real dependency — an aspect using `homepageTiles` or `mkHeartbeat` will not evaluate
+on a host that omits `homepage` or `gatus`. That is deliberate: a loud eval failure beats a tile
+that renders nowhere or a job that reports to nothing.
 
 Most features are flat `modules/<feature>.nix` files; directories appear only for a cohesive multi-file capability (`desktop/`) or a peer-set (`machines/`, `server/`, `shells/`). Per-user config goes through `homeManager.modules.base` (every host) / `homeManager.modules.gui` (desktop) inside the owning feature file — never `home-manager.users.*` directly (except the wiring in `users.nix`).
 
@@ -332,7 +396,7 @@ Scaffolding files live **flat in `modules/`** (`nixos.nix`, `home-manager.nix`, 
 - `nixos.modules.base` — every host (nix settings, locale, boot, disko, user, sshd/avahi/fwupd/smartd, preservation, sops)
 - `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, firefox, audio, NetworkManager, tailscale); also pulls `home.gui`
 - `nixos.modules.server` — srv-01 baseline
-- Named opt-in aspects: `secureBoot`, `autoUpgrade`, `games`, `podman`, `displaysLeshen`, `laptop`, `docker`, `traefik`, `authelia`, `lldap`, `homepage`, `backup`, `calibre`, `printing`, `homeAssistant`
+- Named opt-in aspects: `secureBoot`, `autoUpgrade`, `games`, `podman`, `displaysLeshen`, `laptop`, `docker`, `traefik`, `authelia`, `lldap`, `homepage`, `backup`, `calibre`, `printing`, `homeAssistant`, `gatus`, `beszel`
 
 **Deliberate divergences from mightyiam/infra**: no `flake-file` (inputs stay hand-written in `flake.nix`); inputs stay real flakes (use `inputs.home-manager.nixosModules.home-manager`, not `flake = false`); single user `tguimbert` hardcoded (no multi-user `users` option machinery). Hardware detection uses nixpkgs' `hardware.facter` (report at `modules/_hosts/<host>/facter.json`, must be git-tracked); a slim `hardware.nix` per host keeps `facter.reportPath` + quirks facter can't detect.
 

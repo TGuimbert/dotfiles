@@ -15,6 +15,8 @@
         calibre
         printing
         homeAssistant
+        gatus
+        beszel
       ])
       ++ [
         ../_hosts/srv-01/hardware.nix
