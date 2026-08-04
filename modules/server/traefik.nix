@@ -9,6 +9,17 @@
         groups.traefik.gid = 988;
       };
 
+      homepageTiles.Admin = [
+        {
+          "Traefik srv-01" = {
+            icon = "traefik.png";
+            href = "https://traefik.${constants.domain}/dashboard/";
+            siteMonitor = "https://traefik.${constants.domain}/dashboard/";
+            description = "Reverse proxy";
+          };
+        }
+      ];
+
       sops.secrets.traefikEnvironments = { };
       services.traefik = {
         enable = true;

@@ -15,6 +15,17 @@
         groups.authelia-main.gid = 999;
       };
 
+      homepageTiles.Services = [
+        {
+          Authelia = {
+            icon = "authelia.png";
+            href = "https://auth.${constants.domain}";
+            siteMonitor = "https://auth.${constants.domain}";
+            description = "Authentication management";
+          };
+        }
+      ];
+
       sops = {
         secrets = {
           autheliaJwtSecret = sopsConfig;
