@@ -188,6 +188,9 @@
               })
               (mkAutheliaHttps { name = "homepage"; })
               (mkAutheliaHttps { name = "calibre"; })
+              (mkAutheliaHttps { name = "sonarr"; })
+              (mkAutheliaHttps { name = "radarr"; })
+              (mkAutheliaHttps { name = "prowlarr"; })
               (mkAutheliaHttps {
                 name = "traefik";
                 path = "/dashboard/";
@@ -197,6 +200,13 @@
                 path = "/dashboard/";
               })
               (mkHttps { name = "homeassistant"; })
+              # Not behind the middleware — it authenticates its own clients —
+              # so this reaches Jellyfin itself, and `/health` answers it
+              # without a session.
+              (mkHttps {
+                name = "jellyfin";
+                path = "/health";
+              })
               (mkHttps { name = "immich"; })
               (mkHttps {
                 name = "garage";

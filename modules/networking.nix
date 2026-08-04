@@ -25,6 +25,9 @@
         "/mnt/documents" = mkCifs "documents" [ ];
         "/mnt/shared" = mkCifs "shared" [ ];
         "/mnt/books" = mkCifs "books" [ "nobrl" ];
+        # The library srv-01 mounts over NFS (server/media-library.nix). The
+        # *arr organise it; the files get there by being copied in from here.
+        "/mnt/video" = mkCifs "video" [ ];
       };
 
       environment.systemPackages = [ pkgs.cifs-utils ];

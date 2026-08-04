@@ -101,8 +101,9 @@ Three ways in, because apps fall into three groups:
 - **LDAP** (`modules/server/lldap.nix`) — for apps that speak neither. Kept **deliberately**: the
   Jellyfin OIDC plugin (`9p4/jellyfin-plugin-sso`) was archived upstream in May 2026 with no
   successor fork, and never completed the flow outside a browser anyway, so LDAP is the only
-  credential its TV and mobile clients can use. Nothing else off-host currently binds `:636`;
-  do not remove LLDAP on that basis alone.
+  credential its TV and mobile clients can use. That is now a live dependency rather than a
+  hypothetical one — see "Media on srv-01". Nothing else off-host currently binds `:636`; do not
+  remove LLDAP on that basis alone.
 
 Passkeys are enabled (`webauthn.enable_passkey_login`). Authelia 4.39 counts a passkey as *one*
 factor, so it opens the `one_factor` forward-auth routes on its own, but not an OIDC client set
@@ -118,9 +119,11 @@ hand the plaintext to the app. Authelia refuses to start with an empty client li
 
 ### Backing up srv-01
 
-srv-01 pushes nothing. The `backup` aspect (`modules/server/backup.nix`) stages the lldap and
-authelia state into `/var/backup/data` at 01:00, and the TrueNAS *pulls* it over SFTP, so
-srv-01 holds no credential that reaches its own backups. Retention is the NAS's periodic
+srv-01 pushes nothing. The `backup` aspect (`modules/server/backup.nix`) stages the lldap,
+authelia, *arr and Jellyfin state into `/var/backup/data` at 01:00, and the TrueNAS *pulls* it
+over SFTP, so srv-01 holds no credential that reaches its own backups. The media is never in
+scope — it lives on the NAS to begin with — and neither is Jellyfin's metadata cache, which is
+artwork it re-fetches on demand. Retention is the NAS's periodic
 snapshot task, not anything here, and `/var/lib/traefik` is deliberately out of scope —
 `acme.json` holds the wildcard cert's private key, which Cloudflare DNS re-issues for free.
 Restores are in README.md.
@@ -168,6 +171,46 @@ removes, and which TrueNAS raises a daily alert for using at all; its WebSocket 
 needs a login round trip before the query, which a Gatus websocket endpoint cannot do. And
 **a whole-house power or ISP outage** silences both machines — closing that needs an outbound
 heartbeat to something off-site.
+
+### Media on srv-01
+
+Three aspects, split along the lines that actually differ:
+
+- **`mediaLibrary`** (`modules/server/media-library.nix`) — the storage, declared once and read by
+  the other two. The bytes live on the NAS (`main/media/video`, sibling of the `books` dataset
+  Calibre-web uses) and reach srv-01 over **NFS**, via a `_lib/nfs.nix` builder mirroring the CIFS
+  one. NFS rather than CIFS because three services share the tree: CIFS fakes ownership with one
+  mount identity for all of them, where NFS carries real uid/gid and does hardlinks and atomic
+  renames — what the *arr do on every import, and what a downloader would need later.
+- **`jellyfin`** (`modules/server/jellyfin.nix`) — transcoding runs here and not on the NAS
+  *because of the silicon*: srv-01's i5-9500T has a UHD 630 that decodes HEVC 10-bit and tone-maps
+  HDR→SDR in fixed-function hardware, against the NAS's Celeron J4125. VAAPI rather than QSV (on
+  Gen9.5 the QSV path wants the legacy libmfx runtime for no gain), and `forceEncodingConfig`
+  makes `encoding.xml` config-as-code — the dashboard's transcoding page is overwritten on every
+  restart, deliberately.
+- **`servarr`** (`modules/server/servarr.nix`) — Sonarr, Radarr and Prowlarr as one aspect
+  driven by a table, since they differ only in name, port and tile. No downloader: imports are
+  manual, so these organise and rename rather than fetch.
+
+Two things are easy to get wrong here:
+
+- **Jellyfin is the one route with no Authelia middleware** (`mkRouter`, not `mkAutheliaRouter`).
+  A TV or phone client cannot complete a browser SSO round trip, so Jellyfin authenticates them
+  itself against LLDAP — that is what LLDAP is *for*. The *arr, browser-only admin UIs, sit behind
+  the middleware and delegate to it entirely (`auth.method = "External"`). Do not "harden" that
+  back to `"Forms"`: these apps only offer the screen that creates their first user while no
+  method is configured, so setting one before first run leaves a login page, an empty user table
+  and no way in.
+- **`UMask = "0002"` on Sonarr and Radarr is load-bearing**, and forced over the modules' 0022.
+  The NAS dataset carries a POSIX default ACL granting the `media` group write, but a default
+  ACL's effective permission is capped by the mask the creation mode implies: a directory created
+  under 0022 lands group `r-x`, and the next writer — a manual copy over SMB from a desktop —
+  cannot write into it. The `media` gid (3006) is **read back from the NAS**, not chosen — TrueNAS
+  allocated it, and a number invented here would put the services in a group matching nothing. The
+  export maps every request to `media:media`, so client *uids* never have to line up.
+
+Prowlarr additionally runs with `DynamicUser` forced off, for the same reason lldap does: a uid
+allocated per boot cannot own preserved state.
 
 ### Formatting and Linting
 
@@ -249,7 +292,7 @@ Each host is a thin import list in `modules/machines/<hostname>.nix` — it sets
 **Current hosts**:
 - `leshen`: Desktop system with niri + noctalia, games, podman (`displaysLeshen` for its dual monitors)
 - `griffin`: Lenovo ThinkPad T490 laptop with niri + noctalia, games, podman (`laptop` for lid handling)
-- `srv-01`: Headless bare-metal server with Traefik, LLDAP, Authelia (forward-auth + OIDC provider), Homepage, Calibre-web, and a Home Assistant OS libvirt guest bridged onto the LAN via `br0`; LUKS unlocked from the TPM (PCR 7). Backups are a TrueNAS pull, not a push — see "Backing up srv-01"; monitoring is split with the NAS — see "Monitoring srv-01"
+- `srv-01`: Headless bare-metal server with Traefik, LLDAP, Authelia (forward-auth + OIDC provider), Homepage, Calibre-web, Jellyfin + the *arr over an NFS library from the NAS, and a Home Assistant OS libvirt guest bridged onto the LAN via `br0`; LUKS unlocked from the TPM (PCR 7). Backups are a TrueNAS pull, not a push — see "Backing up srv-01"; monitoring is split with the NAS — see "Monitoring srv-01"; the media stack is in "Media on srv-01"
 
 ### Module Organization
 
@@ -257,7 +300,7 @@ One feature = one capability file holding its NixOS **and** home-manager config 
 - `nixos.modules.base` — every host (boot, locale, nix settings, disko, user account + nushell login shell, sshd, avahi, fwupd/smartd/btrfs-scrub, cli tools, preservation, sops)
 - `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, firefox, audio, NetworkManager + CIFS, tailscale, printing client, GUI home)
 - `nixos.modules.server` — srv-01 baseline (`modules/server/`); deliberately thin — only the sops file, the headless service disables and static networking
-- Named opt-in aspects imported only by hosts that want them: `secureBoot` (lanzaboote; every host with a bootloader), `autoUpgrade` (pull-based nightly updates; srv-01 only), `games`, `podman`, `displaysLeshen`, `laptop`, `docker` (no host currently imports it), and the srv-01 services (`traefik`, `authelia`, `lldap`, `homepage`, `backup`, `calibre`, `printing`, `homeAssistant`, `gatus`, `beszel`)
+- Named opt-in aspects imported only by hosts that want them: `secureBoot` (lanzaboote; every host with a bootloader), `autoUpgrade` (pull-based nightly updates; srv-01 only), `games`, `podman`, `displaysLeshen`, `laptop`, `docker` (no host currently imports it), and the srv-01 services (`traefik`, `authelia`, `lldap`, `homepage`, `backup`, `calibre`, `printing`, `homeAssistant`, `gatus`, `beszel`, `mediaLibrary`, `jellyfin`, `servarr`)
 
 **Cross-aspect collectors.** A few things are contributed *by* a feature but assembled by
 another. Rather than a central list that drifts, the assembling aspect declares a collector and
@@ -270,12 +313,12 @@ each feature adds to it beside its own config:
   tiles for things that run off this host, the group order, and an assertion that no tile names a
   group outside it. Tiles are sorted by name within a group, since merge order follows module
   evaluation rather than intent.
-- `mkRouter` / `mkAutheliaRouter` (`modules/server/traefik-router.nix`) and `mkHeartbeat`
-  (`modules/server/gatus.nix`) are the same idea via `_module.args`: a builder defined once,
-  called by each feature.
+- `mkRouter` / `mkAutheliaRouter` (`modules/server/traefik-router.nix`), `mkHeartbeat`
+  (`modules/server/gatus.nix`) and `mediaLibrary` (`modules/server/media-library.nix`) are the
+  same idea via `_module.args`: a builder or a constant defined once, read by each feature.
 
-Both create a real dependency — an aspect using `homepageTiles` or `mkHeartbeat` will not evaluate
-on a host that omits `homepage` or `gatus`. That is deliberate: a loud eval failure beats a tile
+Both create a real dependency — an aspect using `homepageTiles`, `mkHeartbeat` or `mediaLibrary`
+will not evaluate on a host that omits `homepage`, `gatus` or `mediaLibrary`. That is deliberate: a loud eval failure beats a tile
 that renders nowhere or a job that reports to nothing.
 
 Most features are flat `modules/<feature>.nix` files; directories appear only for a cohesive multi-file capability (`desktop/`) or a peer-set (`machines/`, `server/`, `shells/`). Per-user config goes through `homeManager.modules.base` (every host) / `homeManager.modules.gui` (desktop) inside the owning feature file — never `home-manager.users.*` directly (except the wiring in `users.nix`).
@@ -396,7 +439,7 @@ Scaffolding files live **flat in `modules/`** (`nixos.nix`, `home-manager.nix`, 
 - `nixos.modules.base` — every host (nix settings, locale, boot, disko, user, sshd/avahi/fwupd/smartd, preservation, sops)
 - `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, firefox, audio, NetworkManager, tailscale); also pulls `home.gui`
 - `nixos.modules.server` — srv-01 baseline
-- Named opt-in aspects: `secureBoot`, `autoUpgrade`, `games`, `podman`, `displaysLeshen`, `laptop`, `docker`, `traefik`, `authelia`, `lldap`, `homepage`, `backup`, `calibre`, `printing`, `homeAssistant`, `gatus`, `beszel`
+- Named opt-in aspects: `secureBoot`, `autoUpgrade`, `games`, `podman`, `displaysLeshen`, `laptop`, `docker`, `traefik`, `authelia`, `lldap`, `homepage`, `backup`, `calibre`, `printing`, `homeAssistant`, `gatus`, `beszel`, `mediaLibrary`, `jellyfin`, `servarr`
 
 **Deliberate divergences from mightyiam/infra**: no `flake-file` (inputs stay hand-written in `flake.nix`); inputs stay real flakes (use `inputs.home-manager.nixosModules.home-manager`, not `flake = false`); single user `tguimbert` hardcoded (no multi-user `users` option machinery). Hardware detection uses nixpkgs' `hardware.facter` (report at `modules/_hosts/<host>/facter.json`, must be git-tracked); a slim `hardware.nix` per host keeps `facter.reportPath` + quirks facter can't detect.
 
