@@ -28,13 +28,14 @@
       completeDir = "${mediaLibrary.dir}/downloads";
 
       # Name → subdirectory of completeDir. Sonarr and Radarr name one of these
-      # when they hand over a release. The `*` entry is the default and has to
-      # exist. (`pp = 3` below is repair + unpack + delete; priority -100 means
-      # "inherit the default category's".)
+      # when they hand over a release, as ./shelfmark.nix does for `books`. The
+      # `*` entry is the default and has to exist. (`pp = 3` below is repair +
+      # unpack + delete; priority -100 means "inherit the default category's".)
       categories = {
         "*" = "";
         tv = "tv";
         movies = "movies";
+        books = "books";
       };
 
       # Placeholder in the generated ini → the sops key holding its value. One

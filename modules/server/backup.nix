@@ -40,6 +40,9 @@
         "/var/lib/bazarr"
         # Requests, and the Jellyfin accounts allowed to make them.
         "/var/lib/jellyseerr"
+        # Everything ./shelfmark.nix cannot express as an environment variable,
+        # plus the users and their requests.
+        "/var/lib/shelfmark"
       ];
       # Not here on purpose: sabnzbd, whose state is a re-downloadable queue, and
       # recyclarr, whose directory is a clone of the TRaSH guides plus a config
@@ -58,7 +61,13 @@
         "${jellyfinDir}/data/library.db"
         "${config.services.bazarr.dataDir}/db/bazarr.db"
         "${config.services.seerr.configDir}/db/db.sqlite3"
+        "/var/lib/shelfmark/users.db"
       ];
+
+      # Grimmory's library metadata, users and OIDC client. The only thing staged
+      # here that is not sqlite, and the only configuration in the backup that a
+      # rebuild cannot reproduce — ../../CLAUDE.md, "Books on srv-01".
+      grimmoryDb = "grimmory";
     in
     {
       users = {
@@ -101,6 +110,11 @@
           path = [
             pkgs.rsync
             pkgs.sqlite
+            # For `mariadb-dump` below — the client half of the same package
+            # ./grimmory.nix runs the server from.
+            config.services.mysql.package
+            # `runuser`, for the same dump.
+            pkgs.util-linux
           ];
           # Reports the outcome to ./gatus.nix, which alerts both when this fails
           # and when it stops running at all — the NAS mirrors deletions, so a
@@ -133,6 +147,16 @@
               --exclude='*.db' --exclude='*.db-*' \
               ${jellyfinDir}/ ${stagingDir}/jellyfin/
 
+            # The smaller half of Grimmory: the library metadata is in the
+            # MariaDB dump below, not here. `images/` is deliberately kept —
+            # unlike jellyfin's artwork above it can hold covers uploaded by
+            # hand, which nothing re-fetches. `bookdrop_temp/` is staging for an
+            # import in flight, and `.hprof` is a heap dump someone enabled to
+            # debug an OOM; neither is worth carrying nightly.
+            rsync -a --delete --chown=nas-backup:nas-backup \
+              --exclude='cache/' --exclude='bookdrop_temp/' --exclude='*.hprof' \
+              /var/lib/grimmory/ ${stagingDir}/grimmory/
+
             # .backup rather than a file copy: the online-backup API is the only
             # way to snapshot a database its service holds open.
             for db in ${lib.concatStringsSep " " dumps}; do
@@ -140,6 +164,17 @@
               sqlite3 "$db" ".backup '$dest'"
               chown nas-backup:nas-backup "$dest"
             done
+
+            # --single-transaction so this can run while Grimmory is serving.
+            # `runuser` because MariaDB's superuser is the *`mysql` OS user*:
+            # unix_socket authenticates whoever opened the socket, so root is
+            # refused. The redirect stays in the root shell, which is what can
+            # write to the destination.
+            install -d -o nas-backup -g nas-backup -m 0750 ${stagingDir}/mysql
+            runuser -u ${config.services.mysql.user} -- \
+              mariadb-dump --single-transaction --databases ${grimmoryDb} \
+              > ${stagingDir}/mysql/${grimmoryDb}.sql
+            chown nas-backup:nas-backup ${stagingDir}/mysql/${grimmoryDb}.sql
           '';
         };
 

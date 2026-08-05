@@ -12,7 +12,6 @@
         lldap
         homepage
         backup
-        calibre
         printing
         homeAssistant
         gatus
@@ -24,6 +23,8 @@
         bazarr
         recyclarr
         jellyseerr
+        grimmory
+        shelfmark
       ])
       ++ [
         ../_hosts/srv-01/hardware.nix

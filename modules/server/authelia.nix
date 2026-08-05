@@ -42,6 +42,7 @@
           # it so the app it belongs to can be configured later without minting a
           # new pair — `sops -d --extract '["autheliaOidcImmichClientSecret"]'`.
           autheliaOidcImmichClientSecretDigest = sopsConfig;
+          autheliaOidcGrimmoryClientSecretDigest = sopsConfig;
         };
       };
       services = {
@@ -168,6 +169,51 @@
                     "email"
                   ];
                 }
+                {
+                  client_id = "grimmory";
+                  client_name = "Grimmory";
+                  client_secret = "{{ secret \"${config.sops.secrets.autheliaOidcGrimmoryClientSecretDigest.path}\" }}";
+                  public = false;
+                  authorization_policy = "two_factor";
+                  consent_mode = "pre-configured";
+                  pre_configured_consent_duration = "1 year";
+                  # Required rather than merely permitted: Grimmory always sends
+                  # a challenge, and its own Authelia guide specifies S256.
+                  require_pkce = true;
+                  pkce_challenge_method = "S256";
+                  response_types = [ "code" ];
+                  # `refresh_token`, with `offline_access` below, so a reader
+                  # left logged in overnight is not sent back through 2FA — the
+                  # device clients are the reason this app uses OIDC at all.
+                  grant_types = [
+                    "authorization_code"
+                    "refresh_token"
+                  ];
+                  id_token_signed_response_alg = "RS256";
+                  token_endpoint_auth_method = "client_secret_post";
+                  # One URI, exactly: Grimmory rejects a mismatch and its logs
+                  # say only that the redirect was invalid.
+                  redirect_uris = [ "https://grimmory.${constants.domain}/oauth2-callback" ];
+                  scopes = [
+                    "openid"
+                    "profile"
+                    "email"
+                    "groups"
+                    "offline_access"
+                  ];
+                  # Unlike Immich, Grimmory reads its claims from the *ID token*
+                  # rather than from userinfo, and Authelia puts only the
+                  # standard subset there by default. Without this its group
+                  # mapping silently does nothing — the login works, the
+                  # permissions never arrive.
+                  claims_policy = "grimmory";
+                }
+              ];
+              claims_policies.grimmory.id_token = [
+                "preferred_username"
+                "email"
+                "name"
+                "groups"
               ];
             };
             storage.local.path = "/var/lib/authelia-main/db.sqlite3";

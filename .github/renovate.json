@@ -11,5 +11,23 @@
 
   "nix" : {
     "enabled": true
-  }
+  },
+
+  "customManagers": [
+    {
+      "description": "Grimmory's container image tag. Nothing in config:best-practices looks for Docker references inside .nix files, so srv-01's one image would otherwise never be offered an update.",
+      "customType": "regex",
+      "managerFilePatterns": ["/^modules/server/grimmory\\.nix$/"],
+      "matchStrings": ["image = \"(?<depName>[^\"]+?):(?<currentValue>[^\"@]+?)(?:@(?<currentDigest>sha256:[0-9a-f]+))?\";"],
+      "datasourceTemplate": "docker"
+    }
+  ],
+
+  "packageRules": [
+    {
+      "description": "Never automerge the container image. :automergeMinor would otherwise merge it on green CI, and CI only builds the closure — it never starts the container, so nothing there can tell a working image from a broken one.",
+      "matchManagers": ["custom.regex"],
+      "automerge": false
+    }
+  ]
 }
