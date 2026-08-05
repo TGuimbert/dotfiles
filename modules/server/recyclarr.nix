@@ -62,6 +62,16 @@
               # the definition above.
               "20e0fc959f1f1704bed501f23bdae76f" # [Anime] Remux-1080p
             ];
+            # The pair only makes sense together: the OLED does Dolby Vision, so
+            # prefer it (+1000), but phones and browsers also play these files,
+            # so reject the single-layer profile 5 releases that carry no HDR10
+            # base layer (-10000) — those render green on anything without DV.
+            # Profile 8.1 keeps both audiences happy from one file, which is
+            # what "fallback" means here; nothing is downloaded twice.
+            custom_format_groups.add = [
+              { trash_id = "e0b2774083df4265f25c9e5bc6c80940"; } # [HDR Formats] DV Boost
+              { trash_id = "d776a1ea912a117d66d83b880ff2055d"; } # [HDR Formats] DV (w/o HDR fallback)
+            ];
           };
           radarr.radarr-main = {
             base_url = "http://localhost:7878";
@@ -70,6 +80,11 @@
             quality_profiles = profiles [
               "d1d67249d3890e49bc12e275d989a7e9" # HD Bluray + WEB
               "64fb5f9858489bdac2af690e27c8f42f" # UHD Bluray + WEB
+            ];
+            # Same pairing as Sonarr's, with Radarr's own ids for the groups.
+            custom_format_groups.add = [
+              { trash_id = "1616617ab3a14397a2b2321bcbda44d1"; } # [HDR Formats] DV Boost
+              { trash_id = "7fc2751eef7e6bdc70b74136e5e35c76"; } # [HDR Formats] DV (w/o HDR fallback)
             ];
           };
         };
