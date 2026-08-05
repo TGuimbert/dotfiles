@@ -6,6 +6,8 @@
       home.packages = with pkgs; [
         discord
         vlc
+        # `jellyfin-media-player` is the same derivation under the pre-2.0 name.
+        jellyfin-desktop
         remmina
         obsidian
         mullvad-browser
@@ -39,5 +41,9 @@
     ".config/Signal"
     ".config/obsidian"
     ".config/sone"
+    # Not .config: it keeps both jellyfin-desktop.conf and the web client's
+    # storage.json here, so without this the server address and login are gone
+    # on every reboot.
+    ".local/share/jellyfin-desktop"
   ];
 }

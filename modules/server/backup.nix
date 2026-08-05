@@ -36,7 +36,14 @@
         "/var/lib/sonarr"
         "/var/lib/radarr"
         "/var/lib/prowlarr"
+        # Language profiles, provider logins and what has already been fetched.
+        "/var/lib/bazarr"
+        # Requests, and the Jellyfin accounts allowed to make them.
+        "/var/lib/jellyseerr"
       ];
+      # Not here on purpose: sabnzbd, whose state is a re-downloadable queue, and
+      # recyclarr, whose directory is a clone of the TRaSH guides plus a config
+      # generated from ./recyclarr.nix. Both rebuild themselves.
 
       # Live sqlite databases: dumped rather than copied, and excluded from the
       # rsyncs above for the same reason. All sit under /var/lib and the staging
@@ -49,6 +56,8 @@
         "${config.services.prowlarr.dataDir}/prowlarr.db"
         "${jellyfinDir}/data/jellyfin.db"
         "${jellyfinDir}/data/library.db"
+        "${config.services.bazarr.dataDir}/db/bazarr.db"
+        "${config.services.seerr.configDir}/db/db.sqlite3"
       ];
     in
     {

@@ -48,7 +48,13 @@
         enable = true;
         extraPackages = with pkgs; [
           intel-media-driver
-          intel-compute-runtime
+          # `-legacy1`, not plain `intel-compute-runtime`: Intel split NEO and
+          # the current one supports 12th Gen and newer only, while this UHD 630
+          # is Gen9.5. The wrong one reads like a missing driver rather than an
+          # unsupported GPU — the ICD installs, ffmpeg loads it, and it then
+          # enumerates nothing (`OpenCL platforms: -1001`), so only the HDR
+          # tone-map path dies. VAAPI is unaffected throughout.
+          intel-compute-runtime-legacy1
         ];
       };
 

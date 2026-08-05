@@ -20,6 +20,10 @@
         mediaLibrary
         jellyfin
         servarr
+        sabnzbd
+        bazarr
+        recyclarr
+        jellyseerr
       ])
       ++ [
         ../_hosts/srv-01/hardware.nix
