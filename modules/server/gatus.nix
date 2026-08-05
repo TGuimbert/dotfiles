@@ -191,6 +191,8 @@
               (mkAutheliaHttps { name = "sonarr"; })
               (mkAutheliaHttps { name = "radarr"; })
               (mkAutheliaHttps { name = "prowlarr"; })
+              (mkAutheliaHttps { name = "sabnzbd"; })
+              (mkAutheliaHttps { name = "bazarr"; })
               (mkAutheliaHttps {
                 name = "traefik";
                 path = "/dashboard/";
@@ -206,6 +208,13 @@
               (mkHttps {
                 name = "jellyfin";
                 path = "/health";
+              })
+              # Exempt from the middleware too, so this reaches Jellyseerr
+              # itself. `/api/v1/status` is registered ahead of its
+              # `isAuthenticated` middleware, so it answers without a session.
+              (mkHttps {
+                name = "jellyseerr";
+                path = "/api/v1/status";
               })
               (mkHttps { name = "immich"; })
               (mkHttps {
@@ -248,6 +257,11 @@
               (mkCron {
                 name = "nixos-upgrade";
                 interval = "30h";
+              })
+              # Daily plus up to 5 min of jitter (./recyclarr.nix).
+              (mkCron {
+                name = "recyclarr";
+                interval = "26h";
               })
             ];
           };

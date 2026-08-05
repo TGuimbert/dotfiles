@@ -174,38 +174,97 @@ heartbeat to something off-site.
 
 ### Media on srv-01
 
-Three aspects, split along the lines that actually differ:
+Seven aspects, split along the lines that actually differ:
 
 - **`mediaLibrary`** (`modules/server/media-library.nix`) — the storage, declared once and read by
-  the other two. The bytes live on the NAS (`main/media/video`, sibling of the `books` dataset
+  the other three. The bytes live on the NAS (`main/media/video`, sibling of the `books` dataset
   Calibre-web uses) and reach srv-01 over **NFS**, via a `_lib/nfs.nix` builder mirroring the CIFS
-  one. NFS rather than CIFS because three services share the tree: CIFS fakes ownership with one
+  one. NFS rather than CIFS because four services share the tree: CIFS fakes ownership with one
   mount identity for all of them, where NFS carries real uid/gid and does hardlinks and atomic
-  renames — what the *arr do on every import, and what a downloader would need later.
+  renames — what the *arr do on every import.
 - **`jellyfin`** (`modules/server/jellyfin.nix`) — transcoding runs here and not on the NAS
   *because of the silicon*: srv-01's i5-9500T has a UHD 630 that decodes HEVC 10-bit and tone-maps
   HDR→SDR in fixed-function hardware, against the NAS's Celeron J4125. VAAPI rather than QSV (on
   Gen9.5 the QSV path wants the legacy libmfx runtime for no gain), and `forceEncodingConfig`
   makes `encoding.xml` config-as-code — the dashboard's transcoding page is overwritten on every
-  restart, deliberately.
+  restart, deliberately. The OpenCL half is **`intel-compute-runtime-legacy1`**, not
+  `intel-compute-runtime`: Intel split NEO and the current package supports 12th Gen and newer,
+  while this Gen9.5 GPU (PCI `0x3e92`) is in the legacy branch with Gen8/Gen11. Picking the wrong
+  one looks like a missing driver rather than an unsupported GPU — the ICD installs, ffmpeg loads
+  it, then enumerates nothing (`Failed to get number of OpenCL platforms: -1001`) and the
+  HDR→SDR tone-map filter's `hwmap` dies with `No such device`. VAAPI keeps working throughout, so
+  only HDR content fails.
 - **`servarr`** (`modules/server/servarr.nix`) — Sonarr, Radarr and Prowlarr as one aspect
-  driven by a table, since they differ only in name, port and tile. No downloader: imports are
-  manual, so these organise and rename rather than fetch.
+  driven by a table, since they differ only in name, port and tile.
+- **`sabnzbd`** (`modules/server/sabnzbd.nix`) — the downloader the *arr hand releases to.
+  Usenet only, so nothing seeds and nothing needs a hardlink to keep a file alive after import.
+  Its two directories are split on purpose: **incomplete is local** (par2 repair and unrar rewrite
+  the same bytes repeatedly, which belongs on the NVMe), **complete is inside the library export**
+  (`/mnt/media/downloads`), so a finished file crosses the network once and the *arr import is a
+  rename within one filesystem. A separate `downloads` dataset on the NAS would undo exactly that
+  — a different dataset is a different filesystem, and `rename(2)` would fall back to a copy.
 
-Two things are easy to get wrong here:
+- **`bazarr`** (`modules/server/bazarr.nix`) — subtitles. It writes `.srt` *beside* each video
+  rather than into a store of its own, so it needs the `media` group and `UMask = "0002"` exactly
+  as the *arr do, and Jellyfin then finds the subtitles with no configuration. Its listen address
+  is `general.ip` in its own config file, not a CLI flag, so unlike everything else here it cannot
+  be bound to the loopback from Nix — the firewall is what keeps it off the LAN.
+- **`recyclarr`** (`modules/server/recyclarr.nix`) — quality profiles as code, synced nightly from
+  the TRaSH guides. Uses the **plain English** profiles rather than the `french-*` ones upstream
+  also ships: they select from the widest pool of releases, which matters when a backbone can be
+  missing most of a release's articles, and `bazarr` supplies French afterwards. 1080p and 2160p
+  profiles are synced side by side. The **only media aspect with no preserved state and no backup
+  entry** — its directory is a clone of the guides plus a config generated from the repo, so it
+  rebuilds itself, which is also why its uid is left unpinned where every sibling has one.
+  Two v8-specific traps, both of which fail misleadingly: **`include:` no longer exists** (the
+  `config-templates` v8 branch ships `includes.json` as `{"radarr": [], "sonarr": []}` and replaced
+  the fragments with whole starter configs, so an include dies with "Unable to find include
+  template with name …" as though it were a typo — profiles are referenced by guide `trash_id`
+  instead), and **instance names must be unique across both services**, not just within one, as
+  must `base_url`s. Naming both instances `main` makes recyclarr log `Duplicate instances` at
+  *debug* level, sync nothing, and **exit 0** — a green timer that never updates anything.
+- **`jellyseerr`** (`modules/server/jellyseerr.nix`) — the request front end. nixpkgs renamed the
+  module to **`services.seerr`** (it serves Plex and Emby too now), so the unit is `seerr.service`
+  while the aspect, route, tile and state directory keep the Jellyseerr name.
 
-- **Jellyfin is the one route with no Authelia middleware** (`mkRouter`, not `mkAutheliaRouter`).
+Three things are easy to get wrong here:
+
+- **Jellyfin and Jellyseerr are the two routes with no Authelia middleware** (`mkRouter`, not
+  `mkAutheliaRouter`).
   A TV or phone client cannot complete a browser SSO round trip, so Jellyfin authenticates them
-  itself against LLDAP — that is what LLDAP is *for*. The *arr, browser-only admin UIs, sit behind
+  itself against LLDAP — that is what LLDAP is *for*. Jellyseerr is exempt by extension: it
+  authenticates against Jellyfin, so the household needs no Authelia account and no second login
+  to request something from a phone. The *arr and Bazarr, browser-only admin UIs, sit behind
   the middleware and delegate to it entirely (`auth.method = "External"`). Do not "harden" that
   back to `"Forms"`: these apps only offer the screen that creates their first user while no
   method is configured, so setting one before first run leaves a login page, an empty user table
   and no way in.
-- **`UMask = "0002"` on Sonarr and Radarr is load-bearing**, and forced over the modules' 0022.
+- **SABnzbd's ini is generated but writable**, and its providers are in sops. `configFile = null`
+  makes `modules/server/sabnzbd.nix` the source of truth; the module merges the existing file
+  *under* the generated one, so every declared key wins on each activation and a UI edit to one
+  survives only until the next deploy. `allowConfigWrite = true` is not laziness — SABnzbd tries
+  to save its config every 30s, and against a read-only file each attempt logs `Cannot write to
+  INI file`, which put 7000 lines into `sabnzbd.log` in under two hours and buried real errors.
+  `misc.config_lock` does not help (only the web UI reads it; `save_config()` checks
+  `is_writable()` unconditionally). The cost: a key *removed* from the Nix file is no longer
+  removed from the ini, so deleting a server section means deleting `/var/lib/sabnzbd/sabnzbd.ini`
+  on the host — safe, since it is regenerated. Both options key off `system.stateVersion` (25.11
+  here), *not* the nixpkgs release, so below 26.05 they default the legacy mutable way and have to
+  be stated. Section names (`[[unlimited]]`, `[[block]]`) are ids: SABnzbd keys servers by section
+  name and connects using `host`, so every provider's hostname, username and password is a sops
+  placeholder and nothing about the accounts reaches the store. **Two backbones, split by role** —
+  the flat-rate `unlimited` at priority 0, the metered `block` at 1 with `required = false`, so
+  the block is spent only on articles the first returns 430 for. One backbone is a single point of
+  *availability*: a 430 is final, and a release arriving 82% missing is what a takedown looks like
+  from the client side, not a misconfiguration. The api and nzb keys come from sops for a duller
+  reason: SABnzbd invents them on first start and writes them back, so without them pinned a
+  restore or a wiped ini would hand the *arr a key that no longer works.
+- **`UMask = "0002"` on Sonarr, Radarr and SABnzbd is load-bearing**, and forced over the *arr
+  modules' 0022 (SABnzbd's module sets none, so that one is a plain assignment).
   The NAS dataset carries a POSIX default ACL granting the `media` group write, but a default
   ACL's effective permission is capped by the mask the creation mode implies: a directory created
-  under 0022 lands group `r-x`, and the next writer — a manual copy over SMB from a desktop —
-  cannot write into it. The `media` gid (3006) is **read back from the NAS**, not chosen — TrueNAS
+  under 0022 lands group `r-x`, and the next writer — the *arr moving a finished download out of
+  it, or a manual copy over SMB from a desktop — cannot write into it. The `media` gid (3006) is **read back from the NAS**, not chosen — TrueNAS
   allocated it, and a number invented here would put the services in a group matching nothing. The
   export maps every request to `media:media`, so client *uids* never have to line up.
 
@@ -292,7 +351,7 @@ Each host is a thin import list in `modules/machines/<hostname>.nix` — it sets
 **Current hosts**:
 - `leshen`: Desktop system with niri + noctalia, games, podman (`displaysLeshen` for its dual monitors)
 - `griffin`: Lenovo ThinkPad T490 laptop with niri + noctalia, games, podman (`laptop` for lid handling)
-- `srv-01`: Headless bare-metal server with Traefik, LLDAP, Authelia (forward-auth + OIDC provider), Homepage, Calibre-web, Jellyfin + the *arr over an NFS library from the NAS, and a Home Assistant OS libvirt guest bridged onto the LAN via `br0`; LUKS unlocked from the TPM (PCR 7). Backups are a TrueNAS pull, not a push — see "Backing up srv-01"; monitoring is split with the NAS — see "Monitoring srv-01"; the media stack is in "Media on srv-01"
+- `srv-01`: Headless bare-metal server with Traefik, LLDAP, Authelia (forward-auth + OIDC provider), Homepage, Calibre-web, Jellyfin + the *arr + SABnzbd over an NFS library from the NAS, and a Home Assistant OS libvirt guest bridged onto the LAN via `br0`; LUKS unlocked from the TPM (PCR 7). Backups are a TrueNAS pull, not a push — see "Backing up srv-01"; monitoring is split with the NAS — see "Monitoring srv-01"; the media stack is in "Media on srv-01"
 
 ### Module Organization
 
@@ -300,7 +359,7 @@ One feature = one capability file holding its NixOS **and** home-manager config 
 - `nixos.modules.base` — every host (boot, locale, nix settings, disko, user account + nushell login shell, sshd, avahi, fwupd/smartd/btrfs-scrub, cli tools, preservation, sops)
 - `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, firefox, audio, NetworkManager + CIFS, tailscale, printing client, GUI home)
 - `nixos.modules.server` — srv-01 baseline (`modules/server/`); deliberately thin — only the sops file, the headless service disables and static networking
-- Named opt-in aspects imported only by hosts that want them: `secureBoot` (lanzaboote; every host with a bootloader), `autoUpgrade` (pull-based nightly updates; srv-01 only), `games`, `podman`, `displaysLeshen`, `laptop`, `docker` (no host currently imports it), and the srv-01 services (`traefik`, `authelia`, `lldap`, `homepage`, `backup`, `calibre`, `printing`, `homeAssistant`, `gatus`, `beszel`, `mediaLibrary`, `jellyfin`, `servarr`)
+- Named opt-in aspects imported only by hosts that want them: `secureBoot` (lanzaboote; every host with a bootloader), `autoUpgrade` (pull-based nightly updates; srv-01 only), `games`, `podman`, `displaysLeshen`, `laptop`, `docker` (no host currently imports it), and the srv-01 services (`traefik`, `authelia`, `lldap`, `homepage`, `backup`, `calibre`, `printing`, `homeAssistant`, `gatus`, `beszel`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`)
 
 **Cross-aspect collectors.** A few things are contributed *by* a feature but assembled by
 another. Rather than a central list that drifts, the assembling aspect declares a collector and
@@ -346,7 +405,7 @@ Defined in `modules/nixpkgs.nix` (`config.flake.overlays.default`): pulls specif
 ### Key Dependencies
 
 Major flake inputs:
-- `nixpkgs`: NixOS 25.11 stable
+- `nixpkgs`: NixOS 26.05 stable
 - `unstable`: nixos-unstable for bleeding-edge packages
 - `home-manager`: User environment management
 - `disko`: Declarative disk partitioning
@@ -439,7 +498,7 @@ Scaffolding files live **flat in `modules/`** (`nixos.nix`, `home-manager.nix`, 
 - `nixos.modules.base` — every host (nix settings, locale, boot, disko, user, sshd/avahi/fwupd/smartd, preservation, sops)
 - `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, firefox, audio, NetworkManager, tailscale); also pulls `home.gui`
 - `nixos.modules.server` — srv-01 baseline
-- Named opt-in aspects: `secureBoot`, `autoUpgrade`, `games`, `podman`, `displaysLeshen`, `laptop`, `docker`, `traefik`, `authelia`, `lldap`, `homepage`, `backup`, `calibre`, `printing`, `homeAssistant`, `gatus`, `beszel`, `mediaLibrary`, `jellyfin`, `servarr`
+- Named opt-in aspects: `secureBoot`, `autoUpgrade`, `games`, `podman`, `displaysLeshen`, `laptop`, `docker`, `traefik`, `authelia`, `lldap`, `homepage`, `backup`, `calibre`, `printing`, `homeAssistant`, `gatus`, `beszel`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`
 
 **Deliberate divergences from mightyiam/infra**: no `flake-file` (inputs stay hand-written in `flake.nix`); inputs stay real flakes (use `inputs.home-manager.nixosModules.home-manager`, not `flake = false`); single user `tguimbert` hardcoded (no multi-user `users` option machinery). Hardware detection uses nixpkgs' `hardware.facter` (report at `modules/_hosts/<host>/facter.json`, must be git-tracked); a slim `hardware.nix` per host keeps `facter.reportPath` + quirks facter can't detect.
 

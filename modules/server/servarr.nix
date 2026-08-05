@@ -2,8 +2,8 @@
 {
   # Sonarr, Radarr and Prowlarr in one aspect: they are deployed together, share
   # the library mount, the sops shape and the Authelia routers, and differ only
-  # in the table below. No downloader — imports are manual for now, so these are
-  # a renamer, a renamer and an indexer manager.
+  # in the table below. The downloader they hand releases to is its own aspect,
+  # ./sabnzbd.nix — it shares none of that shape.
   nixos.modules.servarr =
     {
       config,
@@ -64,13 +64,23 @@
         };
       }) apps;
 
-      # A single `<APP>__AUTH__APIKEY=…` line each — one file per app rather than
-      # a shared blob, so none of them can read another's key. From sops so the
-      # keys survive a restore instead of being regenerated behind Prowlarr's
-      # back.
-      sops.secrets = lib.mapAttrs' (
-        name: _: lib.nameValuePair "${name}Environment" { owner = name; }
-      ) apps;
+      # The key is the secret; the `<APP>__AUTH__APIKEY=…` line these modules
+      # want is *rendered* from it. Storing the env line directly would mean a
+      # second copy of every key as soon as something needs one bare, which
+      # ./recyclarr.nix does — and two copies of a credential drift. One file per
+      # app rather than a shared blob, so none of them can read another's. From
+      # sops so the keys survive a restore instead of being regenerated behind
+      # Prowlarr's back.
+      sops = {
+        secrets = lib.mapAttrs' (name: _: lib.nameValuePair "${name}ApiKey" { owner = name; }) apps;
+        templates = lib.mapAttrs' (
+          name: _:
+          lib.nameValuePair "${name}Environment" {
+            owner = name;
+            content = "${lib.toUpper name}__AUTH__APIKEY=${config.sops.placeholder."${name}ApiKey"}";
+          }
+        ) apps;
+      };
 
       services =
         lib.genAttrs names (name: {
@@ -96,7 +106,7 @@
               required = "Enabled";
             };
           };
-          environmentFiles = [ config.sops.secrets."${name}Environment".path ];
+          environmentFiles = [ config.sops.templates."${name}Environment".path ];
         })
         // {
           traefik.dynamicConfigOptions.http = lib.mkMerge (

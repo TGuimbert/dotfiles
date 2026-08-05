@@ -284,18 +284,23 @@ The media services restore the same way — indexers, quality profiles, librarie
 none of which is reproducible from a rebuild:
 
 ```bash
-systemctl stop jellyfin sonarr radarr prowlarr
+systemctl stop jellyfin sonarr radarr prowlarr bazarr seerr
 
-for svc in jellyfin sonarr radarr prowlarr; do
+for svc in jellyfin sonarr radarr prowlarr bazarr jellyseerr; do
   rsync -a <pulled>/$svc/ /var/lib/$svc/
   chown -R $svc:$svc /var/lib/$svc
 done
 
-systemctl start jellyfin sonarr radarr prowlarr
+systemctl start jellyfin sonarr radarr prowlarr bazarr seerr
 ```
 
+The unit is `seerr.service` while its state lives in `/var/lib/jellyseerr` — nixpkgs renamed the
+module, the directory predates the rename, and the loop above reflects both.
+
 Jellyfin's artwork is deliberately not in the backup — it re-fetches it — so expect the libraries
-to look bare until the first metadata scan finishes. The media itself was never at risk: it lives
+to look bare until the first metadata scan finishes. Neither SABnzbd nor Recyclarr is in the
+backup either: the first holds a re-downloadable queue, the second a clone of the TRaSH guides and
+a config generated from the repo, so both rebuild themselves. The media itself was never at risk: it lives
 on the NAS, and srv-01 only mounts it.
 
 The staged copy is read by a single unprivileged account, so ownership is flattened on the way
