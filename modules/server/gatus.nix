@@ -187,7 +187,7 @@
                 subdomain = "ldap";
               })
               (mkAutheliaHttps { name = "homepage"; })
-              (mkAutheliaHttps { name = "calibre"; })
+              (mkAutheliaHttps { name = "shelfmark"; })
               (mkAutheliaHttps { name = "sonarr"; })
               (mkAutheliaHttps { name = "radarr"; })
               (mkAutheliaHttps { name = "prowlarr"; })
@@ -215,6 +215,13 @@
               (mkHttps {
                 name = "jellyseerr";
                 path = "/api/v1/status";
+              })
+              # Exempt for the same reason as those two. This path answers only
+              # once Spring is serving, where `/` would return the login page
+              # just as happily from a half-started instance.
+              (mkHttps {
+                name = "grimmory";
+                path = "/api/v1/healthcheck";
               })
               (mkHttps { name = "immich"; })
               (mkHttps {

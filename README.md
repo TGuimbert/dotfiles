@@ -297,11 +297,35 @@ systemctl start jellyfin sonarr radarr prowlarr bazarr seerr
 The unit is `seerr.service` while its state lives in `/var/lib/jellyseerr` — nixpkgs renamed the
 module, the directory predates the rename, and the loop above reflects both.
 
+The books half restores differently, because Grimmory's state is not a directory. Its library
+metadata, users and OIDC client are in MariaDB, and `/var/lib/grimmory` holds only covers and
+reader state:
+
+```bash
+systemctl stop podman-grimmory shelfmark
+
+runuser -u mysql -- mariadb < <pulled>/mysql/grimmory.sql
+
+rsync -a <pulled>/grimmory/ /var/lib/grimmory/
+chown -R grimmory:media /var/lib/grimmory && chmod 0750 /var/lib/grimmory
+
+rsync -a <pulled>/shelfmark/ /var/lib/shelfmark/
+chown -R shelfmark:shelfmark /var/lib/shelfmark && chmod 0700 /var/lib/shelfmark
+
+systemctl start podman-grimmory shelfmark
+```
+
+The dump carries its own `CREATE DATABASE`, so it can be replayed into an empty MariaDB — which
+is what a rebuilt host has, since `services.mysql` creates the database but nothing in it. Grimmory
+migrates the schema forward on start, so a dump from an older tag restores into a newer one.
+`runuser` is needed for the same reason it is in the backup job: MariaDB's superuser is the `mysql`
+OS user, authenticated by which account opened the socket.
+
 Jellyfin's artwork is deliberately not in the backup — it re-fetches it — so expect the libraries
 to look bare until the first metadata scan finishes. Neither SABnzbd nor Recyclarr is in the
 backup either: the first holds a re-downloadable queue, the second a clone of the TRaSH guides and
 a config generated from the repo, so both rebuild themselves. The media itself was never at risk: it lives
-on the NAS, and srv-01 only mounts it.
+on the NAS, and srv-01 only mounts it — books included, since they moved into the same export.
 
 The staged copy is read by a single unprivileged account, so ownership is flattened on the way
 out — hence the chown steps. Traefik is not in the backup and needs nothing: it re-issues the

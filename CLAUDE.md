@@ -91,13 +91,19 @@ Three ways in, because apps fall into three groups:
 
 - **Forward-auth** (`modules/server/authelia.nix`) — for apps with no login of their own.
   `mkAutheliaRouter` (`modules/server/traefik-router.nix`) wraps a route in Traefik's
-  `forwardAuth` middleware; Homepage, Calibre-web and the Traefik dashboard use it. Calibre-web
-  additionally reads the `Remote-User` header Authelia sets, so that header contract is
-  load-bearing — see `modules/server/calibre.nix`.
+  `forwardAuth` middleware; Homepage, Shelfmark, the *arr and the Traefik dashboard use it.
+  Shelfmark additionally reads the `Remote-User` header Authelia sets (`AUTH_METHOD = "proxy"`),
+  so that header contract is load-bearing — it was Calibre-web's before, and moved intact to
+  `modules/server/shelfmark.nix` when Calibre-web was removed.
 - **OIDC** — Authelia is also the OIDC provider (`identity_providers.oidc`), for apps that
-  authenticate their own users. Clients are declared in that same file, with the client secret's
-  pbkdf2 digest pulled from sops via `{{ secret "…" }}` rather than committed in cleartext.
-  Discovery lives at `https://auth.<domain>/.well-known/openid-configuration`.
+  authenticate their own users. Clients are declared in that same file (Immich and Grimmory),
+  with the client secret's pbkdf2 digest pulled from sops via `{{ secret "…" }}` rather than
+  committed in cleartext. Discovery lives at
+  `https://auth.<domain>/.well-known/openid-configuration`.
+  The two clients read their claims from different places, which is the trap: Immich uses
+  userinfo, **Grimmory reads the ID token**, and Authelia puts only a standard subset there. So
+  Grimmory needs a `claims_policies` entry naming `preferred_username`, `email`, `name` and
+  `groups` — without it the login succeeds and the group mapping silently does nothing.
 - **LDAP** (`modules/server/lldap.nix`) — for apps that speak neither. Kept **deliberately**: the
   Jellyfin OIDC plugin (`9p4/jellyfin-plugin-sso`) was archived upstream in May 2026 with no
   successor fork, and never completed the flow outside a browser anyway, so LDAP is the only
@@ -120,13 +126,18 @@ hand the plaintext to the app. Authelia refuses to start with an empty client li
 ### Backing up srv-01
 
 srv-01 pushes nothing. The `backup` aspect (`modules/server/backup.nix`) stages the lldap,
-authelia, *arr and Jellyfin state into `/var/backup/data` at 01:00, and the TrueNAS *pulls* it
-over SFTP, so srv-01 holds no credential that reaches its own backups. The media is never in
-scope — it lives on the NAS to begin with — and neither is Jellyfin's metadata cache, which is
-artwork it re-fetches on demand. Retention is the NAS's periodic
+authelia, *arr, Jellyfin, Shelfmark and Grimmory state into `/var/backup/data` at 01:00, and the
+TrueNAS *pulls* it over SFTP, so srv-01 holds no credential that reaches its own backups. The
+media is never in scope — it lives on the NAS to begin with — and neither is Jellyfin's metadata
+cache, which is artwork it re-fetches on demand. Retention is the NAS's periodic
 snapshot task, not anything here, and `/var/lib/traefik` is deliberately out of scope —
 `acme.json` holds the wildcard cert's private key, which Cloudflare DNS re-issues for free.
 Restores are in README.md.
+
+Everything staged is sqlite through the online-backup API, **except Grimmory**, whose library
+metadata, users and OIDC client are in MariaDB and go through `mariadb-dump --single-transaction`.
+That dump is also the only backup of configuration this repo cannot rebuild — see "Books on
+srv-01".
 
 ### Monitoring srv-01
 
@@ -177,11 +188,37 @@ heartbeat to something off-site.
 Seven aspects, split along the lines that actually differ:
 
 - **`mediaLibrary`** (`modules/server/media-library.nix`) — the storage, declared once and read by
-  the other three. The bytes live on the NAS (`main/media/video`, sibling of the `books` dataset
-  Calibre-web uses) and reach srv-01 over **NFS**, via a `_lib/nfs.nix` builder mirroring the CIFS
-  one. NFS rather than CIFS because four services share the tree: CIFS fakes ownership with one
-  mount identity for all of them, where NFS carries real uid/gid and does hardlinks and atomic
-  renames — what the *arr do on every import.
+  everything else here. The bytes live on the NAS and reach srv-01 over **NFS**, via a
+  `_lib/nfs.nix` builder mirroring the CIFS one. NFS rather than CIFS because many services share
+  the tree: CIFS fakes ownership with one mount identity for all of them, where NFS carries real
+  uid/gid and does hardlinks and atomic renames — what the *arr do on every import.
+  **One dataset**, holding `movies/`, `shows/`, `downloads/` and `books/` as plain directories.
+  It was two — `main/media/video` and `main/media/books` — which is a different thing entirely:
+  ZFS makes each a separate filesystem, so `rename(2)` between them copies, and **NFSv4 does not
+  cross a filesystem boundary without `crossmnt`**, which TrueNAS does not expose. Exporting
+  their parent would show srv-01 two empty directories. Flattening is what makes one export
+  serve the whole tree.
+  Getting there meant promoting the video dataset to `main/media` and copying the books in, and
+  three things on the NAS make that harder than it sounds — worth knowing before any similar
+  surgery on this pool:
+  - **The unmount a rename needs is blocked.** Six sandboxed systemd daemons (netdata, auditd,
+    chronyd, udevd, logind, the TrueNAS audit handler) each hold a stale mount-namespace copy
+    pinning the filesystem — invisible to `lsof`/`fuser`, and surviving a restart of all six,
+    `zfs unmount -f` and `umount -f`; the shape of
+    [openzfs#18334](https://github.com/openzfs/zfs/issues/18334). The way through is
+    `zfs set canmount=noauto` on the datasets, reboot, rename while nothing is mounted, then set
+    it back — and *check* it went back, or they silently do not mount at the next boot.
+  - **ZFS refuses to move an encrypted child outside its encryption root.** The video dataset had
+    to be made its own encryption root first, through the **TrueNAS UI** and not `zfs change-key`:
+    TrueNAS keys its key database by *dataset name*, so a rename orphans the key and the dataset
+    comes back locked at the next boot. Reverting the rename does not undo that; the way back is
+    to unlock under the new name with an exported key JSON, which is why exporting keys before
+    and after is mandatory rather than advisable.
+  - **An unmounted mountpoint silently accepts writes** into whatever filesystem owns the
+    directory, and TrueNAS then marks those directories immutable, so the stray data cannot even
+    be deleted without `chattr -i`. `findmnt <path>` before writing anything under `/mnt/main`.
+  The module also publishes `mediaLibrary.books.{library,bookdrop}` so the two aspects on either
+  side of the BookDrop import cannot drift on where it is.
 - **`jellyfin`** (`modules/server/jellyfin.nix`) — transcoding runs here and not on the NAS
   *because of the silicon*: srv-01's i5-9500T has a UHD 630 that decodes HEVC 10-bit and tone-maps
   HDR→SDR in fixed-function hardware, against the NAS's Celeron J4125. VAAPI rather than QSV (on
@@ -229,8 +266,8 @@ Seven aspects, split along the lines that actually differ:
 
 Three things are easy to get wrong here:
 
-- **Jellyfin and Jellyseerr are the two routes with no Authelia middleware** (`mkRouter`, not
-  `mkAutheliaRouter`).
+- **Jellyfin, Jellyseerr and Grimmory are the three routes with no Authelia middleware**
+  (`mkRouter`, not `mkAutheliaRouter`).
   A TV or phone client cannot complete a browser SSO round trip, so Jellyfin authenticates them
   itself against LLDAP — that is what LLDAP is *for*. Jellyseerr is exempt by extension: it
   authenticates against Jellyfin, so the household needs no Authelia account and no second login
@@ -259,8 +296,9 @@ Three things are easy to get wrong here:
   from the client side, not a misconfiguration. The api and nzb keys come from sops for a duller
   reason: SABnzbd invents them on first start and writes them back, so without them pinned a
   restore or a wiped ini would hand the *arr a key that no longer works.
-- **`UMask = "0002"` on Sonarr, Radarr and SABnzbd is load-bearing**, and forced over the *arr
-  modules' 0022 (SABnzbd's module sets none, so that one is a plain assignment).
+- **`UMask = "0002"` on Sonarr, Radarr, SABnzbd, Bazarr, Shelfmark and Grimmory is load-bearing**,
+  and forced over the *arr modules' 0022 and Shelfmark's 0077 (SABnzbd's and Bazarr's modules set
+  none, so those are plain assignments; Grimmory's is podman's `--umask`).
   The NAS dataset carries a POSIX default ACL granting the `media` group write, but a default
   ACL's effective permission is capped by the mask the creation mode implies: a directory created
   under 0022 lands group `r-x`, and the next writer — the *arr moving a finished download out of
@@ -270,6 +308,68 @@ Three things are easy to get wrong here:
 
 Prowlarr additionally runs with `DynamicUser` forced off, for the same reason lldap does: a uid
 allocated per boot cannot own preserved state.
+
+### Books on srv-01
+
+Two aspects replacing Calibre-web, which is gone. The library moved into the media export (see
+"Media on srv-01") because the point of the replacement is that **Grimmory owns the files** —
+move, rename, delete, import — and CIFS could not carry the ownership to do it.
+
+- **`grimmory`** (`modules/server/grimmory.nix`) — the library. It is **the only container on
+  this host**, and the only aspect that is not built from source: Spring Boot on Java plus an
+  Angular frontend, published as an image and requiring MariaDB, with no plausible nixpkgs path.
+  What that costs is stated rather than hidden — the image tag is **pinned and never `latest`**
+  (`autoUpgrade` rebuilds nightly, so a floating tag would make what runs here depend on when
+  podman last pulled), and Renovate bumps it through a `customManagers` regex in
+  `.github/renovate.json`, with automerge **off**: CI builds the closure but never starts the
+  container, so nothing there can tell a working image from a broken one.
+  - **Podman lives in this file**, not in `modules/podman.nix`. That aspect is workstation
+    tooling — a minikube config via home-manager, `podman-compose`, and preservation of
+    tguimbert's *rootless* image store. This runs rootful, so importing it would preserve a
+    directory nothing writes and leave `/var/lib/containers` unpreserved — which on a tmpfs root
+    means re-pulling the image into RAM every boot.
+  - **`--network=host`**, so MariaDB stays on the loopback and Traefik reaches `:6060` there
+    without a bridge, a published port or a second address for the database to listen on. The
+    cost is that Grimmory binds 6060 on every interface; the firewall is what keeps it off the
+    LAN, exactly as for Bazarr.
+  - **`DISK_TYPE = "LOCAL"`.** `NETWORK` is upstream's guard for libraries on a mount that cannot
+    rename, and it disables the UI's move, rename and delete — the operations this whole change
+    exists to enable. It is safe here only because the library and the bookdrop are in one NFS
+    filesystem.
+  - **MariaDB is a NixOS service**, not a second container, so `/var/lib/mysql` is preserved and
+    `backup.nix` can dump it. **`ensureUsers` is unusable**: it identifies users with
+    `unix_socket`, which authenticates the *OS* user on the socket, and the container connects
+    over TCP. A sops-templated `CREATE USER … / ALTER USER … / GRANT` runs on every boot instead
+    — idempotent, and what makes a restore deterministic where `initialScript` (once, at database
+    creation) would not be. The same fact bites in `backup.nix`: MariaDB's superuser is the
+    **`mysql` OS user**, so the dump goes through `runuser`, not root.
+  - **Not config-as-code, and this is the real break from every sibling.** Grimmory's OIDC client,
+    its libraries and their organization mode live in MariaDB and are entered in its UI. Only a
+    handful of env vars are declarative. The mitigation is that the database is in the backup.
+    Two one-time settings are easy to miss: the Authelia issuer takes **no trailing slash**, and
+    **BookDrop's periodic scan must be enabled in Settings → Tasks** — upstream states BookDrop
+    does not reliably see new files on NFS, because network filesystems do not propagate inotify.
+    Without it, Shelfmark's output sits in the bookdrop unnoticed.
+- **`shelfmark`** (`modules/server/shelfmark.nix`) — search, request and download; what Readarr
+  would have been. **In nixpkgs** (`services.shelfmark`), so it is an ordinary native aspect. It
+  reuses this host's Prowlarr and SABnzbd rather than bringing its own, which makes it fail to
+  evaluate without `servarr` and `sabnzbd` — the same deliberate loud failure as `mediaLibrary`.
+  - Its API keys **cannot go in `services.shelfmark.environment`**: the module renders that into
+    the unit's `Environment=`, which reaches the store and the journal. They come from a
+    `sops.templates` file wired as `EnvironmentFile`, reusing the existing `prowlarrApiKey` and
+    `sabnzbdApiKey` rather than making second copies.
+  - **`PrivateUsers` is forced off**, and that is not hardening laziness. As `jellyfin.nix`
+    already notes, a supplementary group outside the unit's uid map grants nothing — so
+    membership of `media` would buy nothing and every write into the bookdrop would fail.
+    `DynamicUser` is forced off for the usual preserved-state reason, and `ProtectSystem =
+    "strict"` needs the bookdrop in `ReadWritePaths`.
+
+The pipeline is SABnzbd's `books` category → `/mnt/media/downloads/books` → Shelfmark renames
+into `books/bookdrop` → Grimmory imports into `books/library`. Only the last hop is a `rename(2)`:
+Shelfmark's transfer method is **Copy**, because upstream is explicit that hardlinking into an
+ingest folder is wrong — Grimmory then moves the file and the hardlink keeps the original alive.
+For an epub that copy is nothing; the one dataset is still what makes the *arr side, and
+Grimmory's own import, free.
 
 ### Formatting and Linting
 
@@ -351,7 +451,7 @@ Each host is a thin import list in `modules/machines/<hostname>.nix` — it sets
 **Current hosts**:
 - `leshen`: Desktop system with niri + noctalia, games, podman (`displaysLeshen` for its dual monitors)
 - `griffin`: Lenovo ThinkPad T490 laptop with niri + noctalia, games, podman (`laptop` for lid handling)
-- `srv-01`: Headless bare-metal server with Traefik, LLDAP, Authelia (forward-auth + OIDC provider), Homepage, Calibre-web, Jellyfin + the *arr + SABnzbd over an NFS library from the NAS, and a Home Assistant OS libvirt guest bridged onto the LAN via `br0`; LUKS unlocked from the TPM (PCR 7). Backups are a TrueNAS pull, not a push — see "Backing up srv-01"; monitoring is split with the NAS — see "Monitoring srv-01"; the media stack is in "Media on srv-01"
+- `srv-01`: Headless bare-metal server with Traefik, LLDAP, Authelia (forward-auth + OIDC provider), Homepage, Jellyfin + the *arr + SABnzbd + Grimmory + Shelfmark over one NFS library from the NAS, and a Home Assistant OS libvirt guest bridged onto the LAN via `br0`; LUKS unlocked from the TPM (PCR 7). Backups are a TrueNAS pull, not a push — see "Backing up srv-01"; monitoring is split with the NAS — see "Monitoring srv-01"; the media stack is in "Media on srv-01" and the ebook one in "Books on srv-01" (which is also the only container on this host)
 
 ### Module Organization
 
@@ -359,7 +459,7 @@ One feature = one capability file holding its NixOS **and** home-manager config 
 - `nixos.modules.base` — every host (boot, locale, nix settings, disko, user account + nushell login shell, sshd, avahi, fwupd/smartd/btrfs-scrub, cli tools, preservation, sops)
 - `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, firefox, audio, NetworkManager + CIFS, tailscale, printing client, GUI home)
 - `nixos.modules.server` — srv-01 baseline (`modules/server/`); deliberately thin — only the sops file, the headless service disables and static networking
-- Named opt-in aspects imported only by hosts that want them: `secureBoot` (lanzaboote; every host with a bootloader), `autoUpgrade` (pull-based nightly updates; srv-01 only), `games`, `podman`, `displaysLeshen`, `laptop`, `docker` (no host currently imports it), and the srv-01 services (`traefik`, `authelia`, `lldap`, `homepage`, `backup`, `calibre`, `printing`, `homeAssistant`, `gatus`, `beszel`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`)
+- Named opt-in aspects imported only by hosts that want them: `secureBoot` (lanzaboote; every host with a bootloader), `autoUpgrade` (pull-based nightly updates; srv-01 only), `games`, `podman`, `displaysLeshen`, `laptop`, `docker` (no host currently imports it), and the srv-01 services (`traefik`, `authelia`, `lldap`, `homepage`, `backup`, `printing`, `homeAssistant`, `gatus`, `beszel`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`, `grimmory`, `shelfmark`)
 
 **Cross-aspect collectors.** A few things are contributed *by* a feature but assembled by
 another. Rather than a central list that drifts, the assembling aspect declares a collector and
@@ -469,7 +569,9 @@ is the login shell: over SSH there is no graphical session to have exported them
 - SSH keys are yubikey-based (`sk-ssh-ed25519`)
 - Secure Boot enabled via lanzaboote (`secureBoot` aspect; PKI bundle in `/var/lib/sbctl`, sbctl's own default)
 - All hosts use LUKS encryption with systemd-cryptenroll support (FIDO2/password/recovery on the desktops, TPM 2.0 against PCR 7 on srv-01)
-- Network shares auto-mount from `//nas.lan/` via CIFS with SOPS credentials
+- Network shares auto-mount from `//nas.lan/` via CIFS with SOPS credentials — **on the desktops
+  only**. srv-01 has no CIFS mount left: it reaches the one `main/media` dataset over NFS instead
+  (`modules/server/media-library.nix`). `/mnt/media` on a desktop is the same tree, over SMB.
 - Tailscale enabled on desktop systems for remote access
 
 ## Dendritic Pattern
@@ -498,7 +600,7 @@ Scaffolding files live **flat in `modules/`** (`nixos.nix`, `home-manager.nix`, 
 - `nixos.modules.base` — every host (nix settings, locale, boot, disko, user, sshd/avahi/fwupd/smartd, preservation, sops)
 - `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, firefox, audio, NetworkManager, tailscale); also pulls `home.gui`
 - `nixos.modules.server` — srv-01 baseline
-- Named opt-in aspects: `secureBoot`, `autoUpgrade`, `games`, `podman`, `displaysLeshen`, `laptop`, `docker`, `traefik`, `authelia`, `lldap`, `homepage`, `backup`, `calibre`, `printing`, `homeAssistant`, `gatus`, `beszel`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`
+- Named opt-in aspects: `secureBoot`, `autoUpgrade`, `games`, `podman`, `displaysLeshen`, `laptop`, `docker`, `traefik`, `authelia`, `lldap`, `homepage`, `backup`, `printing`, `homeAssistant`, `gatus`, `beszel`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`, `grimmory`, `shelfmark`
 
 **Deliberate divergences from mightyiam/infra**: no `flake-file` (inputs stay hand-written in `flake.nix`); inputs stay real flakes (use `inputs.home-manager.nixosModules.home-manager`, not `flake = false`); single user `tguimbert` hardcoded (no multi-user `users` option machinery). Hardware detection uses nixpkgs' `hardware.facter` (report at `modules/_hosts/<host>/facter.json`, must be git-tracked); a slim `hardware.nix` per host keeps `facter.reportPath` + quirks facter can't detect.
 

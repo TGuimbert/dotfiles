@@ -24,10 +24,11 @@
         "/mnt/private" = mkCifs "private" [ ];
         "/mnt/documents" = mkCifs "documents" [ ];
         "/mnt/shared" = mkCifs "shared" [ ];
-        "/mnt/books" = mkCifs "books" [ "nobrl" ];
-        # The library srv-01 mounts over NFS (server/media-library.nix). The
-        # *arr organise it; the files get there by being copied in from here.
-        "/mnt/video" = mkCifs "video" [ ];
+        # One share for the whole media tree — video, books and downloads — so a
+        # desktop sees exactly what srv-01 mounts over NFS
+        # (server/media-library.nix). The *arr and Grimmory organise it; files
+        # get there by being copied in from here.
+        "/mnt/media" = mkCifs "media" [ ];
       };
 
       environment.systemPackages = [ pkgs.cifs-utils ];
