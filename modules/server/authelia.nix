@@ -44,6 +44,7 @@
           autheliaOidcImmichClientSecretDigest = sopsConfig;
           autheliaOidcGrimmoryClientSecretDigest = sopsConfig;
           autheliaOidcPaperlessClientSecretDigest = sopsConfig;
+          autheliaOidcMealieClientSecretDigest = sopsConfig;
         };
       };
       services = {
@@ -244,6 +245,42 @@
                   # userinfo body and a signed JWT is not JSON. No
                   # `claims_policy`: allauth reads userinfo, not the ID token
                   # Grimmory needs one for.
+                }
+                {
+                  client_id = "mealie";
+                  client_name = "Mealie";
+                  client_secret = "{{ secret \"${config.sops.secrets.autheliaOidcMealieClientSecretDigest.path}\" }}";
+                  public = false;
+                  authorization_policy = "two_factor";
+                  consent_mode = "pre-configured";
+                  pre_configured_consent_duration = "1 year";
+                  # Required rather than permitted, as for Grimmory: Mealie's
+                  # authlib client always sends an S256 challenge.
+                  require_pkce = true;
+                  pkce_challenge_method = "S256";
+                  response_types = [ "code" ];
+                  grant_types = [ "authorization_code" ];
+                  id_token_signed_response_alg = "RS256";
+                  # The mirror image of Paperless's line: authlib picks basic
+                  # unless told otherwise, and a mismatch 401s at the token
+                  # exchange with nothing logged either side.
+                  token_endpoint_auth_method = "client_secret_basic";
+                  # Mealie builds this from its own BASE_URL plus `/login`, so it
+                  # has to match ./mealie.nix byte for byte.
+                  redirect_uris = [ "https://mealie.${constants.domain}/login" ];
+                  # `groups` because ./mealie.nix maps OIDC_ADMIN_GROUP onto the
+                  # claim; Mealie asks for the scope only when that is set.
+                  scopes = [
+                    "openid"
+                    "profile"
+                    "email"
+                    "groups"
+                  ];
+                  # Both omissions are load-bearing. No `claims_policy`: Mealie
+                  # reads the ID token *first* and falls back to userinfo, so
+                  # Grimmory's fix is unnecessary. No
+                  # `userinfo_signed_response_alg`: Immich's RS256 would hand that
+                  # fallback a JWT where it expects JSON, as it would Paperless.
                 }
               ];
               claims_policies.grimmory.id_token = [

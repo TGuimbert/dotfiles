@@ -97,25 +97,31 @@ Three ways in, because apps fall into three groups:
   so that header contract is load-bearing — it was Calibre-web's before, and moved intact to
   `modules/server/shelfmark.nix` when Calibre-web was removed.
 - **OIDC** — Authelia is also the OIDC provider (`identity_providers.oidc`), for apps that
-  authenticate their own users. Clients are declared in that same file (Immich, Grimmory and
-  Paperless), with the client secret's pbkdf2 digest pulled from sops via `{{ secret "…" }}`
-  rather than committed in cleartext. Discovery lives at
+  authenticate their own users. Clients are declared in that same file (Immich, Grimmory,
+  Paperless and Mealie), with the client secret's pbkdf2 digest pulled from sops via
+  `{{ secret "…" }}` rather than committed in cleartext. Discovery lives at
   `https://auth.<domain>/.well-known/openid-configuration`.
-  **The three clients differ from each other in ways that all fail misleadingly**, so none of them
+  **The four clients differ from each other in ways that all fail misleadingly**, so none of them
   is a template for the next:
   - *Where the claims come from.* Immich and Paperless read **userinfo**; **Grimmory reads the ID
     token**, where Authelia puts only a standard subset. So Grimmory — and only Grimmory — needs a
     `claims_policies` entry naming `preferred_username`, `email`, `name` and `groups`; without it
-    the login succeeds and the group mapping silently does nothing.
+    the login succeeds and the group mapping silently does nothing. Mealie reads the ID token
+    **and falls back to userinfo** when a claim is missing, which is why it needs no policy despite
+    mapping groups the way Grimmory does.
   - *How userinfo is signed.* Immich needs `userinfo_signed_response_alg = "RS256"`. Copying that
     line to **Paperless breaks login outright**: django-allauth calls `.json()` on the userinfo
-    body, and a signed JWT is not JSON. Authelia's default of `none` is the correct one there.
+    body, and a signed JWT is not JSON. Authelia's default of `none` is the correct one there, and
+    for Mealie, whose fallback would meet the same JWT.
   - *Token endpoint auth.* Paperless states `client_secret_post` because allauth reads
     `token_endpoint_auth_methods_supported` from discovery and prefers it whenever advertised; a
     client left on basic auth 401s at the token exchange with nothing useful logged either side.
+    Mealie is the one client that states `client_secret_basic`, because authlib picks that unless
+    told otherwise — the same failure, mirrored.
   Paperless's redirect URI is derived from the `provider_id` in its sops-templated
-  `PAPERLESS_SOCIALACCOUNT_PROVIDERS` (`/accounts/oidc/<provider_id>/login/callback/`), so those
-  two files have to agree byte for byte — a mismatch is reported only as an invalid redirect.
+  `PAPERLESS_SOCIALACCOUNT_PROVIDERS` (`/accounts/oidc/<provider_id>/login/callback/`), and
+  Mealie's from its own `BASE_URL` plus `/login`, so in both cases two files have to agree byte for
+  byte — a mismatch is reported only as an invalid redirect.
 - **LDAP** (`modules/server/lldap.nix`) — for apps that speak neither. Kept **deliberately**: the
   Jellyfin OIDC plugin (`9p4/jellyfin-plugin-sso`) was archived upstream in May 2026 with no
   successor fork, and never completed the flow outside a browser anyway, so LDAP is the only
@@ -138,7 +144,7 @@ hand the plaintext to the app. Authelia refuses to start with an empty client li
 ### Backing up srv-01
 
 srv-01 pushes nothing. The `backup` aspect (`modules/server/backup.nix`) stages the lldap,
-authelia, *arr, Jellyfin, Shelfmark and Grimmory state into `/var/backup/data` at 01:00, and the
+authelia, *arr, Jellyfin, Shelfmark, Grimmory and Mealie state into `/var/backup/data` at 01:00, and the
 TrueNAS *pulls* it over SFTP, so srv-01 holds no credential that reaches its own backups. The
 media is never in scope — it lives on the NAS to begin with — and neither is Jellyfin's metadata
 cache, which is artwork it re-fetches on demand. Retention is the NAS's periodic
@@ -482,6 +488,42 @@ Anything worth keeping is either sent to Paperless, which is in the backup, or d
 scanned photo belongs in Immich on the NAS. Preserving it is also why `scanservjs`'s uid is pinned
 where `recyclarr`'s is not.
 
+### Recipes on srv-01
+
+`mealie` (`modules/server/mealie.nix`) — recipes and meal planning. Another **ordinary nixpkgs
+module** (`services.mealie`), so the `paperless` shape rather than the `grimmory` one: no image tag
+to pin, no Renovate `customManagers` entry, the weekly lockfile PR covers it. Four things are
+easy to get wrong:
+
+- **SQLite, not the PostgreSQL the module can bring up.** `database.createLocally = true` would
+  reuse the cluster `paperless` starts, but `/var/lib/postgresql` is preserved *in
+  `paperless.nix`*, so `mealie` would silently depend on that aspect being imported — the opposite
+  of the loud eval failure `mediaLibrary` and `mkHeartbeat` are built for. As one file at
+  `/var/lib/mealie/mealie.db` it instead falls into `backup.nix`'s existing online-backup loop
+  beside every other sqlite service here.
+- **`settings` is rendered into `Environment=`,** which reaches the store *and* the journal, so the
+  OIDC client secret goes through the module's `credentialsFile` from a sops template — the same
+  split `shelfmark.nix` makes for its API keys. Note also that the module passes every `settings`
+  value through `toString`, and Nix's `toString false` is the **empty string**: booleans have to be
+  written `"true"`/`"false"` or they are silently unset.
+- **`DynamicUser` is forced off** and uid/gid 360 pinned, for the reason `lldap.nix` gives — a uid
+  allocated per boot cannot own preserved state, and it moves the state out of
+  `/var/lib/private/mealie`. What is preserved is the database, the recipe images, and the app
+  secret Mealie generates on first start and signs its tokens with.
+- **The seeded first user is `changeme@example.com` / `MyPassword`, and cannot be configured
+  away.** The env vars behind it are `_DEFAULT_EMAIL`/`_DEFAULT_PASSWORD` — pydantic *private*
+  attributes, which upstream documents as no longer settable by end users. Deleting that account
+  once the first Authelia login has created a real admin is a mandatory bootstrap step, not
+  hygiene; the route carries no Authelia middleware. See README.md, "Bringing up Mealie".
+
+The route is `mkRouter`, not `mkAutheliaRouter`, joining Jellyfin, Jellyseerr, Grimmory and
+Paperless: Mealie has no proxy-header auth mode to delegate to the way the *arr do, and its REST
+API is a client a browser SSO round trip cannot serve. Access is gated instead on the LLDAP groups
+`mealie-users`/`mealie-admins` via `OIDC_USER_GROUP`/`OIDC_ADMIN_GROUP` — and setting either is
+*also* what makes Mealie ask Authelia for the `groups` scope at all, so dropping them would quietly
+take the claim with them. `OIDC_AUTO_REDIRECT` stays off for Paperless's reason: the local login is
+the way in when Authelia is the thing that is down.
+
 ### Formatting and Linting
 
 ```bash
@@ -562,7 +604,7 @@ Each host is a thin import list in `modules/machines/<hostname>.nix` — it sets
 **Current hosts**:
 - `leshen`: Desktop system with niri + noctalia, games, podman (`displaysLeshen` for its dual monitors)
 - `griffin`: Lenovo ThinkPad T490 laptop with niri + noctalia, games, podman (`laptop` for lid handling)
-- `srv-01`: Headless bare-metal server with Traefik, LLDAP, Authelia (forward-auth + OIDC provider), Homepage, Jellyfin + the *arr + SABnzbd + Grimmory + Shelfmark over one NFS library from the NAS, Paperless-ngx fed by the multifunction printer's scanner, and a Home Assistant OS libvirt guest bridged onto the LAN via `br0`; LUKS unlocked from the TPM (PCR 7). Backups are a TrueNAS pull, not a push — see "Backing up srv-01"; monitoring is split with the NAS — see "Monitoring srv-01"; the media stack is in "Media on srv-01", the ebook one in "Books on srv-01" (which is also the only container on this host), and Paperless plus the scanner in "Documents on srv-01"
+- `srv-01`: Headless bare-metal server with Traefik, LLDAP, Authelia (forward-auth + OIDC provider), Homepage, Jellyfin + the *arr + SABnzbd + Grimmory + Shelfmark over one NFS library from the NAS, Paperless-ngx fed by the multifunction printer's scanner, Mealie, and a Home Assistant OS libvirt guest bridged onto the LAN via `br0`; LUKS unlocked from the TPM (PCR 7). Backups are a TrueNAS pull, not a push — see "Backing up srv-01"; monitoring is split with the NAS — see "Monitoring srv-01"; the media stack is in "Media on srv-01", the ebook one in "Books on srv-01" (which is also the only container on this host), Paperless plus the scanner in "Documents on srv-01", and Mealie in "Recipes on srv-01"
 
 ### Module Organization
 
@@ -570,7 +612,7 @@ One feature = one capability file holding its NixOS **and** home-manager config 
 - `nixos.modules.base` — every host (boot, locale, nix settings, disko, user account + nushell login shell, sshd, avahi, fwupd/smartd/btrfs-scrub, cli tools, preservation, sops)
 - `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, firefox, audio, NetworkManager + CIFS, tailscale, printing client, GUI home)
 - `nixos.modules.server` — srv-01 baseline (`modules/server/`); deliberately thin — only the sops file, the headless service disables and static networking
-- Named opt-in aspects imported only by hosts that want them: `secureBoot` (lanzaboote; every host with a bootloader), `autoUpgrade` (pull-based nightly updates; srv-01 only), `games`, `podman`, `displaysLeshen`, `laptop`, `docker` (no host currently imports it), and the srv-01 services (`traefik`, `authelia`, `lldap`, `homepage`, `backup`, `printScan`, `homeAssistant`, `gatus`, `beszel`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`, `grimmory`, `shelfmark`, `paperless`)
+- Named opt-in aspects imported only by hosts that want them: `secureBoot` (lanzaboote; every host with a bootloader), `autoUpgrade` (pull-based nightly updates; srv-01 only), `games`, `podman`, `displaysLeshen`, `laptop`, `docker` (no host currently imports it), and the srv-01 services (`traefik`, `authelia`, `lldap`, `homepage`, `backup`, `printScan`, `homeAssistant`, `gatus`, `beszel`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`, `grimmory`, `shelfmark`, `paperless`, `mealie`)
 
 **Cross-aspect collectors.** A few things are contributed *by* a feature but assembled by
 another. Rather than a central list that drifts, the assembling aspect declares a collector and
@@ -746,7 +788,7 @@ Scaffolding files live **flat in `modules/`** (`nixos.nix`, `home-manager.nix`, 
 - `nixos.modules.base` — every host (nix settings, locale, boot, disko, user, sshd/avahi/fwupd/smartd, preservation, sops)
 - `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, firefox, audio, NetworkManager, tailscale); also pulls `home.gui`
 - `nixos.modules.server` — srv-01 baseline
-- Named opt-in aspects: `secureBoot`, `autoUpgrade`, `games`, `podman`, `displaysLeshen`, `laptop`, `docker`, `traefik`, `authelia`, `lldap`, `homepage`, `backup`, `printScan`, `homeAssistant`, `gatus`, `beszel`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`, `grimmory`, `shelfmark`, `paperless`
+- Named opt-in aspects: `secureBoot`, `autoUpgrade`, `games`, `podman`, `displaysLeshen`, `laptop`, `docker`, `traefik`, `authelia`, `lldap`, `homepage`, `backup`, `printScan`, `homeAssistant`, `gatus`, `beszel`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`, `grimmory`, `shelfmark`, `paperless`, `mealie`
 
 **Deliberate divergences from mightyiam/infra**: no `flake-file` (inputs stay hand-written in `flake.nix`); inputs stay real flakes (use `inputs.home-manager.nixosModules.home-manager`, not `flake = false`); single user `tguimbert` hardcoded (no multi-user `users` option machinery). Hardware detection uses nixpkgs' `hardware.facter` (report at `modules/_hosts/<host>/facter.json`, must be git-tracked); a slim `hardware.nix` per host keeps `facter.reportPath` + quirks facter can't detect.
 

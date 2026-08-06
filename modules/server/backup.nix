@@ -44,6 +44,9 @@
         # Everything ./shelfmark.nix cannot express as an environment variable,
         # plus the users and their requests.
         "/var/lib/shelfmark"
+        # Recipes, their images, and the app secret Mealie signs tokens with —
+        # lose that and a restore invalidates every session it issued.
+        "/var/lib/mealie"
       ];
       # Not here on purpose: sabnzbd, whose state is a re-downloadable queue, and
       # recyclarr, whose directory is a clone of the TRaSH guides plus a config
@@ -66,6 +69,7 @@
         "${config.services.bazarr.dataDir}/db/bazarr.db"
         "${config.services.seerr.configDir}/db/db.sqlite3"
         "/var/lib/shelfmark/users.db"
+        "/var/lib/mealie/mealie.db"
       ];
 
       # Grimmory's library metadata, users and OIDC client. The only thing staged
