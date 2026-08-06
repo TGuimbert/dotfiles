@@ -27,6 +27,7 @@
         shelfmark
         paperless
         mealie
+        radicale
       ])
       ++ [
         ../_hosts/srv-01/hardware.nix

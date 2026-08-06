@@ -126,8 +126,10 @@ Three ways in, because apps fall into three groups:
   Jellyfin OIDC plugin (`9p4/jellyfin-plugin-sso`) was archived upstream in May 2026 with no
   successor fork, and never completed the flow outside a browser anyway, so LDAP is the only
   credential its TV and mobile clients can use. That is now a live dependency rather than a
-  hypothetical one — see "Media on srv-01". Nothing else off-host currently binds `:636`; do not
-  remove LLDAP on that basis alone.
+  hypothetical one — see "Media on srv-01" — and Radicale is a second one, for the same reason on
+  different clients: CalDAV and CardDAV speak HTTP Basic, so DAVx5 and Thunderbird cannot complete
+  a browser SSO round trip either (see "Calendars and contacts on srv-01"). Nothing else off-host
+  currently binds `:636`; do not remove LLDAP on that basis alone.
 
 Passkeys are enabled (`webauthn.enable_passkey_login`). Authelia 4.39 counts a passkey as *one*
 factor, so it opens the `one_factor` forward-auth routes on its own, but not an OIDC client set
@@ -144,7 +146,7 @@ hand the plaintext to the app. Authelia refuses to start with an empty client li
 ### Backing up srv-01
 
 srv-01 pushes nothing. The `backup` aspect (`modules/server/backup.nix`) stages the lldap,
-authelia, *arr, Jellyfin, Shelfmark, Grimmory and Mealie state into `/var/backup/data` at 01:00, and the
+authelia, *arr, Jellyfin, Shelfmark, Grimmory, Mealie and Radicale state into `/var/backup/data` at 01:00, and the
 TrueNAS *pulls* it over SFTP, so srv-01 holds no credential that reaches its own backups. The
 media is never in scope — it lives on the NAS to begin with — and neither is Jellyfin's metadata
 cache, which is artwork it re-fetches on demand. Retention is the NAS's periodic
@@ -152,7 +154,7 @@ snapshot task, not anything here, and `/var/lib/traefik` is deliberately out of 
 `acme.json` holds the wildcard cert's private key, which Cloudflare DNS re-issues for free.
 Restores are in README.md.
 
-Everything staged is sqlite through the online-backup API, **except Grimmory**, whose library
+Every database staged is sqlite through the online-backup API, **except Grimmory**, whose library
 metadata, users and OIDC client are in MariaDB and go through `mariadb-dump --single-transaction`.
 That dump is also the only backup of configuration this repo cannot rebuild — see "Books on
 srv-01".
@@ -524,6 +526,56 @@ API is a client a browser SSO round trip cannot serve. Access is gated instead o
 take the claim with them. `OIDC_AUTO_REDIRECT` stays off for Paperless's reason: the local login is
 the way in when Authelia is the thing that is down.
 
+### Calendars and contacts on srv-01
+
+`radicale` (`modules/server/radicale.nix`) — CalDAV and CardDAV. The `paperless`/`mealie` shape
+again (`services.radicale`, an ordinary nixpkgs module), and the only aspect here whose backup
+needs no dump of any kind: collections are plain `.ics`/`.vcf` files written by atomic rename, so
+`backup.nix` stages `/var/lib/radicale` with the same rsync as everything else.
+
+**It authenticates against LLDAP, and that is the second live reason LLDAP stays.** CalDAV and
+CardDAV clients send HTTP Basic; DAVx5 and Thunderbird can no more complete a browser SSO round
+trip than a TV can, so `auth.type = "ldap"` and the route is `mkRouter` — joining Jellyfin,
+Jellyseerr, Grimmory, Paperless and Mealie. Access is gated on the LLDAP group `radicale-users`
+through a `memberOf` clause in `ldap_filter`, the way Mealie gates on `mealie-users`. Bootstrap
+(the group, and the read-only bind account LLDAP requires because it refuses anonymous search) is
+in README.md, "Bringing up Radicale".
+
+Four things fail misleadingly:
+
+- **`server.hosts` is deliberately not set.** nixpkgs derives `bindLocalhost` from that key being
+  *absent* and keys `IPAddressAllow = "localhost"` / `IPAddressDeny = "any"` off it, so declaring
+  it — even to restate the default — silently drops the filter and buys back only a systemd block
+  restoring it. The `port` in the `let` therefore *matches* Radicale's default rather than
+  asserting it; it exists for `mkRouter`, and the comment on it says so.
+- **`ldap_base` must be `ou=people,…`, not the root DN.** LLDAP evaluates `memberOf` as a *person*
+  attribute; a search based anywhere else logs `Ignoring unknown group attribute "memberof" in
+  filter`, matches nothing, and surfaces only as "no unique DN found" and a 401 for every user. The
+  filter value must also be the group's full DN, not `cn=radicale-users` alone. `ldap_filter` is
+  `str.format`ted for `{0}`, so any other brace in it raises at login time.
+- **`ldap_user_attribute = "uid"` pins the collection path.** It is what Radicale uses as the login
+  once the bind succeeds, and `rights.type = "owner_only"` derives `/<user>/` from that. Without
+  it the path is whatever the client typed, so a differently-cased login silently gets a second,
+  empty tree.
+- **`auth.type` is not optional.** Radicale 3.5.0 changed its default from `none` to `denyall`, and
+  the nixpkgs module asserts the key is set rather than letting a host come up refusing everyone.
+
+`cache_logins` is on because Radicale otherwise binds to LDAP *twice per request* and DAV clients
+poll; the expiry defaults (15s success, 90s failure) are left alone so removing someone from the
+group still takes effect in seconds.
+
+**The Gatus check is a `PROPFIND`, and a GET cannot replace it.** `GET /` 302s to `/.web` — the
+login UI, which Radicale serves *unauthenticated* — so a GET check follows the redirect and records
+that page's 200 without ever touching auth or a collection, the same trap `mkAutheliaHttps` avoids
+by refusing its redirect. PROPFIND is what the DAV clients actually issue and what `owner_only`
+refuses to an empty user, so asserting **401** on it says Radicale is serving *and* enforcing,
+where a 200 or a 207 would mean auth had fallen away. (`/.web` being public is a login form, not an
+exposure: no collection is readable without credentials.)
+
+The uid is pinned (361) for `lldap.nix`'s reason — nixpkgs has allocated radicale's
+dynamically since 2021 — and the sops secret is reached by `owner` rather than a supplementary
+group, because the module's unit runs with `PrivateUsers`.
+
 ### Formatting and Linting
 
 ```bash
@@ -604,7 +656,7 @@ Each host is a thin import list in `modules/machines/<hostname>.nix` — it sets
 **Current hosts**:
 - `leshen`: Desktop system with niri + noctalia, games, podman (`displaysLeshen` for its dual monitors)
 - `griffin`: Lenovo ThinkPad T490 laptop with niri + noctalia, games, podman (`laptop` for lid handling)
-- `srv-01`: Headless bare-metal server with Traefik, LLDAP, Authelia (forward-auth + OIDC provider), Homepage, Jellyfin + the *arr + SABnzbd + Grimmory + Shelfmark over one NFS library from the NAS, Paperless-ngx fed by the multifunction printer's scanner, Mealie, and a Home Assistant OS libvirt guest bridged onto the LAN via `br0`; LUKS unlocked from the TPM (PCR 7). Backups are a TrueNAS pull, not a push — see "Backing up srv-01"; monitoring is split with the NAS — see "Monitoring srv-01"; the media stack is in "Media on srv-01", the ebook one in "Books on srv-01" (which is also the only container on this host), Paperless plus the scanner in "Documents on srv-01", and Mealie in "Recipes on srv-01"
+- `srv-01`: Headless bare-metal server with Traefik, LLDAP, Authelia (forward-auth + OIDC provider), Homepage, Jellyfin + the *arr + SABnzbd + Grimmory + Shelfmark over one NFS library from the NAS, Paperless-ngx fed by the multifunction printer's scanner, Mealie, Radicale, and a Home Assistant OS libvirt guest bridged onto the LAN via `br0`; LUKS unlocked from the TPM (PCR 7). Backups are a TrueNAS pull, not a push — see "Backing up srv-01"; monitoring is split with the NAS — see "Monitoring srv-01"; the media stack is in "Media on srv-01", the ebook one in "Books on srv-01" (which is also the only container on this host), Paperless plus the scanner in "Documents on srv-01", Mealie in "Recipes on srv-01", and Radicale in "Calendars and contacts on srv-01"
 
 ### Module Organization
 
@@ -612,7 +664,7 @@ One feature = one capability file holding its NixOS **and** home-manager config 
 - `nixos.modules.base` — every host (boot, locale, nix settings, disko, user account + nushell login shell, sshd, avahi, fwupd/smartd/btrfs-scrub, cli tools, preservation, sops)
 - `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, firefox, audio, NetworkManager + CIFS, tailscale, printing client, GUI home)
 - `nixos.modules.server` — srv-01 baseline (`modules/server/`); deliberately thin — only the sops file, the headless service disables and static networking
-- Named opt-in aspects imported only by hosts that want them: `secureBoot` (lanzaboote; every host with a bootloader), `autoUpgrade` (pull-based nightly updates; srv-01 only), `games`, `podman`, `displaysLeshen`, `laptop`, `docker` (no host currently imports it), and the srv-01 services (`traefik`, `authelia`, `lldap`, `homepage`, `backup`, `printScan`, `homeAssistant`, `gatus`, `beszel`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`, `grimmory`, `shelfmark`, `paperless`, `mealie`)
+- Named opt-in aspects imported only by hosts that want them: `secureBoot` (lanzaboote; every host with a bootloader), `autoUpgrade` (pull-based nightly updates; srv-01 only), `games`, `podman`, `displaysLeshen`, `laptop`, `docker` (no host currently imports it), and the srv-01 services (`traefik`, `authelia`, `lldap`, `homepage`, `backup`, `printScan`, `homeAssistant`, `gatus`, `beszel`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`, `grimmory`, `shelfmark`, `paperless`, `mealie`, `radicale`)
 
 **Cross-aspect collectors.** A few things are contributed *by* a feature but assembled by
 another. Rather than a central list that drifts, the assembling aspect declares a collector and
@@ -788,7 +840,7 @@ Scaffolding files live **flat in `modules/`** (`nixos.nix`, `home-manager.nix`, 
 - `nixos.modules.base` — every host (nix settings, locale, boot, disko, user, sshd/avahi/fwupd/smartd, preservation, sops)
 - `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, firefox, audio, NetworkManager, tailscale); also pulls `home.gui`
 - `nixos.modules.server` — srv-01 baseline
-- Named opt-in aspects: `secureBoot`, `autoUpgrade`, `games`, `podman`, `displaysLeshen`, `laptop`, `docker`, `traefik`, `authelia`, `lldap`, `homepage`, `backup`, `printScan`, `homeAssistant`, `gatus`, `beszel`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`, `grimmory`, `shelfmark`, `paperless`, `mealie`
+- Named opt-in aspects: `secureBoot`, `autoUpgrade`, `games`, `podman`, `displaysLeshen`, `laptop`, `docker`, `traefik`, `authelia`, `lldap`, `homepage`, `backup`, `printScan`, `homeAssistant`, `gatus`, `beszel`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`, `grimmory`, `shelfmark`, `paperless`, `mealie`, `radicale`
 
 **Deliberate divergences from mightyiam/infra**: no `flake-file` (inputs stay hand-written in `flake.nix`); inputs stay real flakes (use `inputs.home-manager.nixosModules.home-manager`, not `flake = false`); single user `tguimbert` hardcoded (no multi-user `users` option machinery). Hardware detection uses nixpkgs' `hardware.facter` (report at `modules/_hosts/<host>/facter.json`, must be git-tracked); a slim `hardware.nix` per host keeps `facter.reportPath` + quirks facter can't detect.
 
