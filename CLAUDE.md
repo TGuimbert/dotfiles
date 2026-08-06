@@ -55,7 +55,7 @@ Every remote recipe takes the same `<host> [target]` arguments, and `srv-01` is 
 both. `<host>` is the `nixosConfigurations` name; `<target>` defaults to `<host>.local` — mDNS, because
 srv-01's address is static and never registered by DHCP, so `srv-01.lan` does not resolve.
 The avahi daemon that publishes it lives in `modules/server/base.nix` (deliberately not in the
-`printing` aspect). `just --list` shows the rest (`check`, `fmt`, `build <host>`, `switch`,
+`printScan` aspect). `just --list` shows the rest (`check`, `fmt`, `build <host>`, `switch`,
 `update`). `just` ships in the `nixos` dev shell. Flake refs only see git-tracked files, so
 `git add` a new module before deploying.
 
@@ -91,19 +91,31 @@ Three ways in, because apps fall into three groups:
 
 - **Forward-auth** (`modules/server/authelia.nix`) — for apps with no login of their own.
   `mkAutheliaRouter` (`modules/server/traefik-router.nix`) wraps a route in Traefik's
-  `forwardAuth` middleware; Homepage, Shelfmark, the *arr and the Traefik dashboard use it.
+  `forwardAuth` middleware; Homepage, Shelfmark, the *arr, the scanner UI and the Traefik
+  dashboard use it.
   Shelfmark additionally reads the `Remote-User` header Authelia sets (`AUTH_METHOD = "proxy"`),
   so that header contract is load-bearing — it was Calibre-web's before, and moved intact to
   `modules/server/shelfmark.nix` when Calibre-web was removed.
 - **OIDC** — Authelia is also the OIDC provider (`identity_providers.oidc`), for apps that
-  authenticate their own users. Clients are declared in that same file (Immich and Grimmory),
-  with the client secret's pbkdf2 digest pulled from sops via `{{ secret "…" }}` rather than
-  committed in cleartext. Discovery lives at
+  authenticate their own users. Clients are declared in that same file (Immich, Grimmory and
+  Paperless), with the client secret's pbkdf2 digest pulled from sops via `{{ secret "…" }}`
+  rather than committed in cleartext. Discovery lives at
   `https://auth.<domain>/.well-known/openid-configuration`.
-  The two clients read their claims from different places, which is the trap: Immich uses
-  userinfo, **Grimmory reads the ID token**, and Authelia puts only a standard subset there. So
-  Grimmory needs a `claims_policies` entry naming `preferred_username`, `email`, `name` and
-  `groups` — without it the login succeeds and the group mapping silently does nothing.
+  **The three clients differ from each other in ways that all fail misleadingly**, so none of them
+  is a template for the next:
+  - *Where the claims come from.* Immich and Paperless read **userinfo**; **Grimmory reads the ID
+    token**, where Authelia puts only a standard subset. So Grimmory — and only Grimmory — needs a
+    `claims_policies` entry naming `preferred_username`, `email`, `name` and `groups`; without it
+    the login succeeds and the group mapping silently does nothing.
+  - *How userinfo is signed.* Immich needs `userinfo_signed_response_alg = "RS256"`. Copying that
+    line to **Paperless breaks login outright**: django-allauth calls `.json()` on the userinfo
+    body, and a signed JWT is not JSON. Authelia's default of `none` is the correct one there.
+  - *Token endpoint auth.* Paperless states `client_secret_post` because allauth reads
+    `token_endpoint_auth_methods_supported` from discovery and prefers it whenever advertised; a
+    client left on basic auth 401s at the token exchange with nothing useful logged either side.
+  Paperless's redirect URI is derived from the `provider_id` in its sops-templated
+  `PAPERLESS_SOCIALACCOUNT_PROVIDERS` (`/accounts/oidc/<provider_id>/login/callback/`), so those
+  two files have to agree byte for byte — a mismatch is reported only as an invalid redirect.
 - **LDAP** (`modules/server/lldap.nix`) — for apps that speak neither. Kept **deliberately**: the
   Jellyfin OIDC plugin (`9p4/jellyfin-plugin-sso`) was archived upstream in May 2026 with no
   successor fork, and never completed the flow outside a browser anyway, so LDAP is the only
@@ -371,6 +383,105 @@ ingest folder is wrong — Grimmory then moves the file and the hardlink keeps t
 For an epub that copy is nothing; the one dataset is still what makes the *arr side, and
 Grimmory's own import, free.
 
+### Documents on srv-01
+
+Paperwork — bills, contracts, warranties — in `paperless` and `printScan`, which between them turn
+the multifunction printer already attached to this host into an intake pipeline.
+
+- **`paperless`** (`modules/server/paperless.nix`) — the archive. An **ordinary nixpkgs module**
+  (`services.paperless`), which is the whole contrast with `grimmory`: no image tag to pin, no
+  Renovate `customManagers` entry, and the weekly lockfile PR covers it.
+  - **PostgreSQL, not the default sqlite** (`database.createLocally = true`). Four units — granian
+    plus three celery processes — write concurrently, which is where sqlite starts returning
+    `database is locked`. It is the second engine on this host after Grimmory's MariaDB; that costs
+    nothing in `backup.nix`, because the exporter below makes the engine invisible there.
+    `/var/lib/postgresql` is preserved as the **parent**, not `dataDir` — the latter carries the
+    major version, so pinning it would silently land the next cluster on the tmpfs root.
+  - **Backed up by its own tooling.** `services.paperless.exporter` runs `document_exporter` at
+    00:30 into `/var/lib/paperless/export`, and `backup.nix` rsyncs *that* — not the media
+    directory and not a database dump. The export is self-contained (originals, archive PDFs, a
+    manifest carrying every piece of metadata) and restores with `document_importer`, which is
+    upstream's supported path and engine-agnostic. It is the only entry in the backup staged this
+    way. The exporter `Conflicts` the four paperless units while it runs, so there is a minute or
+    two of nightly downtime — inside Gatus's 3-failure × 2-minute threshold, but that is why the
+    two numbers are related.
+  - **Local storage, deliberately.** `/var/lib/paperless` is on the NVMe rather than the NFS
+    export, which keeps the module's `PrivateUsers = true` sandbox intact and — the real reason —
+    keeps inotify consumption working. On a network filesystem it would not, the same fact that
+    forces Grimmory's BookDrop into a polled scan.
+  - **The consume directory is 0777** (`consumptionDirIsPublic`) *and* `scanservjs` is in the
+    `paperless` group. It takes both, which is the trap: `dataDir` is preserved at **0750**, so a
+    mode on the leaf is worth nothing without search permission on the way to it. Miss the group
+    and the scanservjs action fails with `EACCES` on a directory `ls` shows as `drwxrwxrwx` — the
+    permission that is missing is on the *parent*. The alternative, widening `dataDir` to 0755,
+    was rejected: document *files* are 0600 under the module's `UMask = 0066`, but the filenames
+    under `media/` would become listable by every local account.
+    Note the group is on **scanservjs**, whose unit sets no `PrivateUsers` — the trick
+    `jellyfin.nix` warns about (a supplementary group outside the unit's uid map granting nothing)
+    would apply if this were on one of paperless's own units, and it is not.
+  - **The password login stays enabled.** `PAPERLESS_DISABLE_REGULAR_LOGIN` and
+    `PAPERLESS_REDIRECT_LOGIN_TO_SSO` are both left off on purpose: it is the way in when Authelia
+    is the thing that is down (the argument README.md makes for keeping the Beszel hub off this
+    host), and `/accounts/login/` rendering a 200 is what makes the Gatus check meaningful —
+    `/api/status/` needs a staff session. Bootstrapping is: `passwordFile` creates the superuser
+    named `PAPERLESS_ADMIN_USER`, you log in with it, and you **link** the Authelia identity from
+    the user menu → **My Profile** → *Connect new social account* — not from Settings, which has
+    no such page. allauth deliberately does not auto-link by email, and
+    `PAPERLESS_SOCIALACCOUNT_ALLOW_SIGNUPS = false` stops any other Authelia user
+    self-provisioning. Note that paperless's `urls.py` includes only allauth's provider,
+    signup and error routes — **not** `socialaccount_connections` — so the linking flow really is
+    that dialog (backed by `/api/profile/social_account_providers/`, whose login URLs carry
+    `process=connect`) and there is no `/accounts/3rdparty/` page to fall back to.
+- **`printScan`** (`modules/server/print-scan.nix`) — the Samsung M2070 on the USB port, **both
+  halves**. This was `printing`; it was renamed rather than split because one device on one cable
+  with one proprietary driver derivation is one capability. `samsung-unified-linux-driver_1_00_37`
+  was already loaded as a CUPS driver and *also* ships `libsane-smfp`, its `dll.d` entry and its
+  udev rules, so the scanner half costs no new package — only `hardware.sane.extraBackends` and
+  `services.scanservjs`. Note that CUPS and SANE contend for the same USB interface: an in-flight
+  print job can make `scanimage -L` find nothing.
+  - **`ippeveprinter` is driven by `-a printerAttrs`, not `-M`/`-m`/`-f`, and that is about paper
+    size.** In its legacy mode — the one those three flags select — the media list is hardcoded and
+    `media-default` is always `na_letter_8.5x11in`; no flag changes it, so a phone rasterised at
+    Letter geometry however much `lp -o media=A4` was passed afterwards. Only `-a` (or `-P`) can
+    override it, and ippeveprinter **refuses to combine either with `-M`, `-m` or `-f`**, so the
+    whole capability set had to move into the file. It was captured from a live instance running
+    the old flags (`ipptool … get-printer-attributes`) and edited, not invented.
+    The cost is `application/pdf` and `image/jpeg` leaving `document-format-supported`:
+    `create_printer()` builds that from the `-f` list unconditionally with no `ippFindAttribute`
+    guard, so declaring it in the file emits a *duplicate* attribute rather than replacing it.
+    Acceptable because every client here is Android and Mopria sends PWG Raster or URF. Verify
+    changes with `ipptool -tv … ipp-everywhere.test` against a local `ippeveprinter -a` before
+    deploying — that is how the two remaining conformance gaps were shown to be pre-existing
+    (`overrides-supported`, a CUPS quirk) or accepted (`image/jpeg`).
+  - **GrapheneOS phones need Mopria Print Service**; AOSP's built-in `com.android.bips` reports the
+    printer as "blocked / waiting to send" against this proxy even though it discovers it and shows
+    A4 correctly. Not a printer-description problem: a stock Android phone on Mopria prints the same
+    attributes fine, and the same GrapheneOS handset works once Mopria replaces the built-in
+    service. `printer-supply`/`printer-input-tray` levels are the tempting suspect — bips maps them
+    onto `BLOCKED_REASON_OUT_OF_PAPER`/`OUT_OF_TONER` — but the block survives setting them to
+    upstream's invented values, so they stay at `-2` ("unknown"), which is the truth for a proxy.
+
+**A scan is not automatically a document, and that is the design.** Pointing scanservjs's
+`outputDirectory` at the consume directory would file everything — a photo, a drawing, a page
+scanned to email someone. Instead its output directory is an **inbox**, and `paperless.nix`
+contributes a *Send to Paperless* action to the scanservjs UI. Two consequences worth knowing:
+
+- The dependency runs the way the aspect layout wants it. `print-scan.nix` knows nothing about
+  Paperless; `paperless.nix` appends to `services.scanservjs.extraActions`, an upstream **list**
+  option, so definitions concatenate across modules — the same collector idiom as `homepageTiles`,
+  on an option nixpkgs already provides. On a host with `paperless` and no scanner the action is
+  simply never rendered, so unlike `mediaLibrary` or `mkHeartbeat` this one wants no loud failure.
+- That action uses `require('fs').copyFileSync`, **not** scanservjs's own `Process` helper: the
+  nixpkgs module renders `config.local.js` into the store, where upstream's
+  `require.resolve('./server/classes/process', { paths: ['/usr/lib/scanservjs'] })` resolves
+  nothing. Node builtins resolve from anywhere. A copy and not a move, so the scan survives in the
+  inbox and filing the wrong page costs nothing.
+
+`/var/lib/scanservjs` is therefore **preserved but not backed up** — an inbox, not an archive.
+Anything worth keeping is either sent to Paperless, which is in the backup, or downloaded; a
+scanned photo belongs in Immich on the NAS. Preserving it is also why `scanservjs`'s uid is pinned
+where `recyclarr`'s is not.
+
 ### Formatting and Linting
 
 ```bash
@@ -451,7 +562,7 @@ Each host is a thin import list in `modules/machines/<hostname>.nix` — it sets
 **Current hosts**:
 - `leshen`: Desktop system with niri + noctalia, games, podman (`displaysLeshen` for its dual monitors)
 - `griffin`: Lenovo ThinkPad T490 laptop with niri + noctalia, games, podman (`laptop` for lid handling)
-- `srv-01`: Headless bare-metal server with Traefik, LLDAP, Authelia (forward-auth + OIDC provider), Homepage, Jellyfin + the *arr + SABnzbd + Grimmory + Shelfmark over one NFS library from the NAS, and a Home Assistant OS libvirt guest bridged onto the LAN via `br0`; LUKS unlocked from the TPM (PCR 7). Backups are a TrueNAS pull, not a push — see "Backing up srv-01"; monitoring is split with the NAS — see "Monitoring srv-01"; the media stack is in "Media on srv-01" and the ebook one in "Books on srv-01" (which is also the only container on this host)
+- `srv-01`: Headless bare-metal server with Traefik, LLDAP, Authelia (forward-auth + OIDC provider), Homepage, Jellyfin + the *arr + SABnzbd + Grimmory + Shelfmark over one NFS library from the NAS, Paperless-ngx fed by the multifunction printer's scanner, and a Home Assistant OS libvirt guest bridged onto the LAN via `br0`; LUKS unlocked from the TPM (PCR 7). Backups are a TrueNAS pull, not a push — see "Backing up srv-01"; monitoring is split with the NAS — see "Monitoring srv-01"; the media stack is in "Media on srv-01", the ebook one in "Books on srv-01" (which is also the only container on this host), and Paperless plus the scanner in "Documents on srv-01"
 
 ### Module Organization
 
@@ -459,7 +570,7 @@ One feature = one capability file holding its NixOS **and** home-manager config 
 - `nixos.modules.base` — every host (boot, locale, nix settings, disko, user account + nushell login shell, sshd, avahi, fwupd/smartd/btrfs-scrub, cli tools, preservation, sops)
 - `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, firefox, audio, NetworkManager + CIFS, tailscale, printing client, GUI home)
 - `nixos.modules.server` — srv-01 baseline (`modules/server/`); deliberately thin — only the sops file, the headless service disables and static networking
-- Named opt-in aspects imported only by hosts that want them: `secureBoot` (lanzaboote; every host with a bootloader), `autoUpgrade` (pull-based nightly updates; srv-01 only), `games`, `podman`, `displaysLeshen`, `laptop`, `docker` (no host currently imports it), and the srv-01 services (`traefik`, `authelia`, `lldap`, `homepage`, `backup`, `printing`, `homeAssistant`, `gatus`, `beszel`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`, `grimmory`, `shelfmark`)
+- Named opt-in aspects imported only by hosts that want them: `secureBoot` (lanzaboote; every host with a bootloader), `autoUpgrade` (pull-based nightly updates; srv-01 only), `games`, `podman`, `displaysLeshen`, `laptop`, `docker` (no host currently imports it), and the srv-01 services (`traefik`, `authelia`, `lldap`, `homepage`, `backup`, `printScan`, `homeAssistant`, `gatus`, `beszel`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`, `grimmory`, `shelfmark`, `paperless`)
 
 **Cross-aspect collectors.** A few things are contributed *by* a feature but assembled by
 another. Rather than a central list that drifts, the assembling aspect declares a collector and
@@ -539,6 +650,41 @@ To persist new directories/files, add them to the owning feature's NixOS aspect:
 
 Entries are bare path strings, or `{ directory|file; user; group; mode; how; inInitrd; }` when a non-default owner/mode is needed (e.g. `.ssh`/`.gnupg` use `mode = "0700"`; ssh host keys use `how = "symlink"`). Remember: Only explicitly listed paths persist across reboots.
 
+**The tmpfiles race on the first switch — known, deliberately not fixed in Nix.** Preservation
+orders its bind-mounts `Before=systemd-tmpfiles-setup.service`, the *boot* unit. A `switch` never
+runs that one; it runs `systemd-tmpfiles-resetup.service`, ordered only after `local-fs.target` and
+knowing nothing about `preservation.target`. So on the activation that **first** introduces a
+preserved directory the two race, tmpfiles usually wins, and it creates the contents on the tmpfs
+root — where the bind-mount then goes on top and hides them. The service comes up against an empty
+directory, and the *same* config is fine after a reboot, which makes it easy to misdiagnose as a
+flaky service.
+
+The fix is one command, on the host, with the mounts already up:
+
+```bash
+sudo systemd-tmpfiles --create
+```
+
+It is idempotent, and it repairs ownership and modes too — so it also cleans up after a directory
+someone created by hand with the wrong owner.
+
+Only services whose state directory *contents* come from tmpfiles rules are affected; anything
+using `StateDirectory=` is immune, because systemd creates that at service start, long after the
+mounts. That is why nothing hit it until `paperless` and `printScan` (Paperless's `consume`/`media`,
+and scanservjs's `data/preview/default.jpg`, which is an `L+` symlink — its absence shows up as
+`ENOENT: no such file or directory, open 'data/preview/default.jpg'`).
+
+Two tempting fixes that do **not** work, so nobody re-derives them:
+
+- Ordering `systemd-tmpfiles-resetup.service` after `preservation.target`. systemd applies an
+  ordering dependency only when *both* units are being started; on an incremental switch the target
+  is already active and only the new mount unit starts, so the edge never bites.
+- An `ExecStartPre` on the service running `systemd-tmpfiles --create --prefix=…`. NixOS renders
+  `preStart` as the *first* `ExecStartPre`, so a repair appended in `serviceConfig` runs after the
+  module's own pre-start — which for Paperless is the `migrate` that needs the directories.
+  It would need `mkBefore`, at which point the machinery outweighs a one-command, once-per-service
+  papercut.
+
 ## Editor Configuration
 
 The default editor is Helix (`hx`), configured in `modules/helix.nix`. The editor and its `settings`
@@ -600,7 +746,7 @@ Scaffolding files live **flat in `modules/`** (`nixos.nix`, `home-manager.nix`, 
 - `nixos.modules.base` — every host (nix settings, locale, boot, disko, user, sshd/avahi/fwupd/smartd, preservation, sops)
 - `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, firefox, audio, NetworkManager, tailscale); also pulls `home.gui`
 - `nixos.modules.server` — srv-01 baseline
-- Named opt-in aspects: `secureBoot`, `autoUpgrade`, `games`, `podman`, `displaysLeshen`, `laptop`, `docker`, `traefik`, `authelia`, `lldap`, `homepage`, `backup`, `printing`, `homeAssistant`, `gatus`, `beszel`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`, `grimmory`, `shelfmark`
+- Named opt-in aspects: `secureBoot`, `autoUpgrade`, `games`, `podman`, `displaysLeshen`, `laptop`, `docker`, `traefik`, `authelia`, `lldap`, `homepage`, `backup`, `printScan`, `homeAssistant`, `gatus`, `beszel`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`, `grimmory`, `shelfmark`, `paperless`
 
 **Deliberate divergences from mightyiam/infra**: no `flake-file` (inputs stay hand-written in `flake.nix`); inputs stay real flakes (use `inputs.home-manager.nixosModules.home-manager`, not `flake = false`); single user `tguimbert` hardcoded (no multi-user `users` option machinery). Hardware detection uses nixpkgs' `hardware.facter` (report at `modules/_hosts/<host>/facter.json`, must be git-tracked); a slim `hardware.nix` per host keeps `facter.reportPath` + quirks facter can't detect.
 

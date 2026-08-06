@@ -27,6 +27,7 @@
       # aspect that owns it and leave this dumping a path that no longer exists.
       autheliaDb = config.services.authelia.instances.main.settings.storage.local.path;
       jellyfinDir = config.services.jellyfin.dataDir;
+      paperlessExport = config.services.paperless.exporter.directory;
 
       # Staged wholesale. Jellyfin is not in the list: most of its data dir is a
       # metadata image cache, so it gets its own rsync with that excluded.
@@ -46,7 +47,10 @@
       ];
       # Not here on purpose: sabnzbd, whose state is a re-downloadable queue, and
       # recyclarr, whose directory is a clone of the TRaSH guides plus a config
-      # generated from ./recyclarr.nix. Both rebuild themselves.
+      # generated from ./recyclarr.nix. Both rebuild themselves. Nor scanservjs,
+      # whose directory is an inbox rather than an archive — ./print-scan.nix.
+      # Paperless is here, but through its own exporter rather than a copy; see
+      # the rsync below.
 
       # Live sqlite databases: dumped rather than copied, and excluded from the
       # rsyncs above for the same reason. All sit under /var/lib and the staging
@@ -156,6 +160,13 @@
             rsync -a --delete --chown=nas-backup:nas-backup \
               --exclude='cache/' --exclude='bookdrop_temp/' --exclude='*.hprof' \
               /var/lib/grimmory/ ${stagingDir}/grimmory/
+
+            # The only thing staged by its own tooling rather than copied.
+            # ./paperless.nix's 00:30 exporter leaves a self-contained tree, so
+            # neither the media directory nor the PostgreSQL database needs
+            # staging and the restore is `document_importer`, not a chown.
+            rsync -a --delete --chown=nas-backup:nas-backup \
+              ${paperlessExport}/ ${stagingDir}/paperless/
 
             # .backup rather than a file copy: the online-backup API is the only
             # way to snapshot a database its service holds open.

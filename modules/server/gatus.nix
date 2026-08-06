@@ -193,6 +193,7 @@
               (mkAutheliaHttps { name = "prowlarr"; })
               (mkAutheliaHttps { name = "sabnzbd"; })
               (mkAutheliaHttps { name = "bazarr"; })
+              (mkAutheliaHttps { name = "scan"; })
               (mkAutheliaHttps {
                 name = "traefik";
                 path = "/dashboard/";
@@ -222,6 +223,15 @@
               (mkHttps {
                 name = "grimmory";
                 path = "/api/v1/healthcheck";
+              })
+              # Exempt from the middleware for the same reason as those three, so
+              # this reaches Paperless itself. Its own /api/status/ needs a staff
+              # session, which leaves the login page as the unauthenticated proof
+              # that Django, PostgreSQL and granian are all up — and it renders
+              # only because ./paperless.nix keeps the password login enabled.
+              (mkHttps {
+                name = "paperless";
+                path = "/accounts/login/";
               })
               (mkHttps { name = "immich"; })
               (mkHttps {
@@ -268,6 +278,13 @@
               # Daily plus up to 5 min of jitter (./recyclarr.nix).
               (mkCron {
                 name = "recyclarr";
+                interval = "26h";
+              })
+              # 00:30 daily (./paperless.nix), ahead of ./backup.nix's stage —
+              # which copies what this produces, so a silent failure here would
+              # leave the backup mirroring a stale export.
+              (mkCron {
+                name = "paperless-exporter";
                 interval = "26h";
               })
             ];
