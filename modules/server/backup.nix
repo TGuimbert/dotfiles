@@ -47,6 +47,10 @@
         # Recipes, their images, and the app secret Mealie signs tokens with —
         # lose that and a restore invalidates every session it issued.
         "/var/lib/mealie"
+        # The one entry needing no dump of any kind: ./radicale.nix stores
+        # calendars and address books as plain .ics/.vcf files written by atomic
+        # rename, so the rsync below is already consistent.
+        "/var/lib/radicale"
       ];
       # Not here on purpose: sabnzbd, whose state is a re-downloadable queue, and
       # recyclarr, whose directory is a clone of the TRaSH guides plus a config

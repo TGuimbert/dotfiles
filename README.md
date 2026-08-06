@@ -355,6 +355,21 @@ chown -R mealie:mealie /var/lib/mealie && chmod 0700 /var/lib/mealie
 systemctl start mealie
 ```
 
+Radicale is the simplest restore here, and the only one with no database at all — the collections
+are plain `.ics` and `.vcf` files, and the accounts that own them live in LLDAP, restored above:
+
+```bash
+systemctl stop radicale
+
+rsync -a <pulled>/radicale/ /var/lib/radicale/
+chown -R radicale:radicale /var/lib/radicale && chmod 0750 /var/lib/radicale
+
+systemctl start radicale
+```
+
+`.Radicale.cache` comes back with it and is harmless; Radicale rebuilds it if it is stale or
+missing. The collection paths are LLDAP `uid`s, so they line up as long as the same accounts exist.
+
 Jellyfin's artwork is deliberately not in the backup — it re-fetches it — so expect the libraries
 to look bare until the first metadata scan finishes. Neither SABnzbd nor Recyclarr is in the
 backup either: the first holds a re-downloadable queue, the second a clone of the TRaSH guides and
@@ -425,6 +440,28 @@ step 4 is not optional:
 4. Settings → Users → **delete `changeme@example.com`**. Mealie seeds that account with the
    password `MyPassword` and offers no way to configure it away, and this route carries no
    Authelia middleware. It is reachable from the LAN only, but the window should be minutes.
+
+### Bringing up Radicale
+
+Radicale authenticates its own clients against LLDAP, because CalDAV and CardDAV clients send
+HTTP Basic and cannot complete a browser SSO round trip. Neither the group it gates on nor the
+account it binds with can come from this repo, so the first run is a short bootstrap:
+
+1. **LLDAP** (`https://ldap.home.guimbert.fr`) — create the group `radicale-users` and add
+   yourself. Then create a user `radicale` with a generated password and add it to
+   `lldap_strict_readonly`: LLDAP refuses anonymous search, and Radicale always searches for a
+   user's DN before binding as them, so the read-only account is what makes any login work at
+   all.
+2. `sops secrets/srv-01.yaml` and add `radicaleLdapPassword` — that account's password, which
+   `modules/server/radicale.nix` hands to Radicale as `ldap_secret_file`.
+3. `just deploy srv-01`, then open `https://radicale.home.guimbert.fr` and log in with your
+   **LLDAP** credentials (not an Authelia session — this route carries no middleware). Create a
+   calendar and an address book from the web UI; Radicale creates no collections on its own.
+4. Point clients at `https://radicale.home.guimbert.fr` — DAVx5 and Thunderbird discover the
+   collections through `/.well-known/{caldav,carddav}`, which Radicale redirects to `/`.
+
+Access is the group, so revoking someone is removing them from `radicale-users`; it takes
+effect within the 15 seconds `cache_logins` holds a successful login for.
 
 ### Managing Secrets
 

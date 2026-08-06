@@ -31,6 +31,7 @@
           path ? "",
           status ? 200,
           conditions ? [ ],
+          method ? null,
         }:
         {
           inherit name;
@@ -38,7 +39,8 @@
           url = "https://${subdomain}.${constants.domain}${path}";
           interval = "2m";
           conditions = [ "[STATUS] == ${toString status}" ] ++ conditions;
-        };
+        }
+        // lib.optionalAttrs (method != null) { inherit method; };
 
       # A route behind the authelia middleware never reaches its backend, and what
       # the middleware answers depends on the request's Accept header: a client
@@ -239,6 +241,19 @@
               (mkHttps {
                 name = "mealie";
                 path = "/api/app/about";
+              })
+              # Exempt from the middleware too — its clients speak Basic auth
+              # against LLDAP — so this has to reach Radicale's own auth. A GET
+              # cannot: `/` redirects to `/.web`, the login UI, which Radicale
+              # serves unauthenticated, and following that records its 200 the
+              # same way ./homepage.nix's portal would. PROPFIND is the method
+              # the DAV clients actually use, and it is refused without
+              # credentials, so 401 here says Radicale is serving *and*
+              # enforcing where a 200 or a 207 would mean auth had fallen away.
+              (mkHttps {
+                name = "radicale";
+                method = "PROPFIND";
+                status = 401;
               })
               (mkHttps { name = "immich"; })
               (mkHttps {
