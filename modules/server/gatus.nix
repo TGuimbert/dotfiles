@@ -233,6 +233,13 @@
                 name = "paperless";
                 path = "/accounts/login/";
               })
+              # Exempt for the same reason again. This path answers without a
+              # session, where `/` serves the frontend shell just as happily
+              # from an instance whose database is gone.
+              (mkHttps {
+                name = "mealie";
+                path = "/api/app/about";
+              })
               (mkHttps { name = "immich"; })
               (mkHttps {
                 name = "garage";

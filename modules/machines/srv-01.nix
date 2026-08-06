@@ -26,6 +26,7 @@
         grimmory
         shelfmark
         paperless
+        mealie
       ])
       ++ [
         ../_hosts/srv-01/hardware.nix

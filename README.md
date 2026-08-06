@@ -342,6 +342,19 @@ The superuser comes back from sops on first start either way; the Authelia ident
 linked again from the user menu → My Profile → *Connect new social account*, since that link lives
 in the database this replaces.
 
+Mealie is an ordinary directory again, and the one place its restore differs is what is *in* the
+directory: alongside the recipes and their images sits the app secret it signs tokens with, so a
+restore keeps existing sessions valid rather than logging everyone out.
+
+```bash
+systemctl stop mealie
+
+rsync -a <pulled>/mealie/ /var/lib/mealie/
+chown -R mealie:mealie /var/lib/mealie && chmod 0700 /var/lib/mealie
+
+systemctl start mealie
+```
+
 Jellyfin's artwork is deliberately not in the backup — it re-fetches it — so expect the libraries
 to look bare until the first metadata scan finishes. Neither SABnzbd nor Recyclarr is in the
 backup either: the first holds a re-downloadable queue, the second a clone of the TRaSH guides and
@@ -391,6 +404,27 @@ exists to mint its token:
 
 To add a check later, edit `modules/server/gatus.nix` and deploy — there is no UI to click,
 which is the trade that keeps the monitor list in git and out of the backups.
+
+### Bringing up Mealie
+
+Mealie authenticates against Authelia over OIDC, and gates on LLDAP group membership. Neither the
+groups nor the first admin can come from this repo, so the first run is a short bootstrap — and
+step 4 is not optional:
+
+1. **LLDAP** (`https://ldap.home.guimbert.fr`) — create the groups `mealie-users` and
+   `mealie-admins`, and add yourself to both. Check the account has an email set: Mealie refuses
+   any OIDC login whose `email_verified` claim is absent, and Authelia sources both from LLDAP.
+2. `sops secrets/srv-01.yaml` and add a pair generated with
+   `authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72`:
+   - `autheliaOidcMealieClientSecret` — the plaintext, which `modules/server/mealie.nix` renders
+     into Mealie's environment file.
+   - `autheliaOidcMealieClientSecretDigest` — the digest, which `modules/server/authelia.nix`
+     reads.
+3. `just deploy srv-01`, open `https://mealie.home.guimbert.fr` and use **Login with Authelia**.
+   The account is created on the spot, with admin rights taken from the group claim.
+4. Settings → Users → **delete `changeme@example.com`**. Mealie seeds that account with the
+   password `MyPassword` and offers no way to configure it away, and this route carries no
+   Authelia middleware. It is reachable from the LAN only, but the window should be minutes.
 
 ### Managing Secrets
 
