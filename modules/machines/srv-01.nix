@@ -12,7 +12,7 @@
         lldap
         homepage
         backup
-        printing
+        printScan
         homeAssistant
         gatus
         beszel
@@ -25,6 +25,7 @@
         jellyseerr
         grimmory
         shelfmark
+        paperless
       ])
       ++ [
         ../_hosts/srv-01/hardware.nix

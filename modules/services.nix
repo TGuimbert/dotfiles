@@ -53,7 +53,7 @@
         # No printer GUI: GNOME's control-center panel is gone and
         # system-config-printer costs ~170 MB. Administer at http://localhost:631.
         # This is the driverless *client* of srv-01's print server — the driver
-        # and ippeveprinter live in modules/server/printing.nix.
+        # and ippeveprinter live in modules/server/print-scan.nix.
         printing.enable = true;
         # Thunderbolt device authorization (griffin's dock); /var/lib/boltd is
         # already preserved.

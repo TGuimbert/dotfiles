@@ -43,6 +43,7 @@
           # new pair — `sops -d --extract '["autheliaOidcImmichClientSecret"]'`.
           autheliaOidcImmichClientSecretDigest = sopsConfig;
           autheliaOidcGrimmoryClientSecretDigest = sopsConfig;
+          autheliaOidcPaperlessClientSecretDigest = sopsConfig;
         };
       };
       services = {
@@ -207,6 +208,42 @@
                   # mapping silently does nothing — the login works, the
                   # permissions never arrive.
                   claims_policy = "grimmory";
+                }
+                {
+                  client_id = "paperless";
+                  client_name = "Paperless";
+                  client_secret = "{{ secret \"${config.sops.secrets.autheliaOidcPaperlessClientSecretDigest.path}\" }}";
+                  public = false;
+                  authorization_policy = "two_factor";
+                  consent_mode = "pre-configured";
+                  pre_configured_consent_duration = "1 year";
+                  # Permitted rather than required: django-allauth's OIDC
+                  # provider does not send a challenge.
+                  require_pkce = false;
+                  response_types = [ "code" ];
+                  grant_types = [ "authorization_code" ];
+                  id_token_signed_response_alg = "RS256";
+                  # Stated, not defaulted: allauth reads
+                  # `token_endpoint_auth_methods_supported` from discovery and
+                  # prefers this whenever advertised, so a client left on basic
+                  # auth 401s at the token exchange with nothing useful logged.
+                  token_endpoint_auth_method = "client_secret_post";
+                  # `authelia` is the `provider_id` in ./paperless.nix's
+                  # environment template; the path is derived from it.
+                  redirect_uris = [
+                    "https://paperless.${constants.domain}/accounts/oidc/authelia/login/callback/"
+                  ];
+                  scopes = [
+                    "openid"
+                    "profile"
+                    "email"
+                  ];
+                  # Two omissions that read as oversights next to the clients
+                  # above. No `userinfo_signed_response_alg`: copying Immich's
+                  # RS256 breaks login, because allauth calls `.json()` on the
+                  # userinfo body and a signed JWT is not JSON. No
+                  # `claims_policy`: allauth reads userinfo, not the ID token
+                  # Grimmory needs one for.
                 }
               ];
               claims_policies.grimmory.id_token = [

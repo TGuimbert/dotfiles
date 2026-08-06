@@ -321,6 +321,27 @@ migrates the schema forward on start, so a dump from an older tag restores into 
 `runuser` is needed for the same reason it is in the backup job: MariaDB's superuser is the `mysql`
 OS user, authenticated by which account opened the socket.
 
+Paperless restores differently again, because it is the one service backed up by its own tooling.
+What the NAS holds is a `document_exporter` tree — the originals, the archive PDFs and a manifest
+carrying every tag, correspondent and date — rather than a copy of `/var/lib/paperless` and a
+PostgreSQL dump:
+
+```bash
+systemctl stop paperless-{scheduler,web,consumer,task-queue}
+
+rsync -a <pulled>/paperless/ /var/lib/paperless/export/
+chown -R paperless:paperless /var/lib/paperless/export
+
+systemctl start paperless-scheduler
+paperless-manage document_importer /var/lib/paperless/export
+```
+
+`document_importer` refuses to run against an instance that already holds documents, so a rebuilt
+host — where the migrations have run and nothing has been ingested — is exactly the right target.
+The superuser comes back from sops on first start either way; the Authelia identity has to be
+linked again from the user menu → My Profile → *Connect new social account*, since that link lives
+in the database this replaces.
+
 Jellyfin's artwork is deliberately not in the backup — it re-fetches it — so expect the libraries
 to look bare until the first metadata scan finishes. Neither SABnzbd nor Recyclarr is in the
 backup either: the first holds a re-downloadable queue, the second a clone of the TRaSH guides and
