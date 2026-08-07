@@ -120,7 +120,7 @@
             # nightly, and a floating tag would make what runs here depend on
             # when podman last pulled. Renovate bumps it — see
             # ../../.github/renovate.json.
-            image = "ghcr.io/grimmory-tools/grimmory:v3.2.4";
+            image = "ghcr.io/grimmory-tools/grimmory:v3.3.0";
             environmentFiles = [ config.sops.templates.grimmoryEnvironment.path ];
             environment = {
               USER_ID = toString config.users.users.grimmory.uid;
