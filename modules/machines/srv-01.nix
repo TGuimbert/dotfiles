@@ -16,6 +16,7 @@
         homeAssistant
         gatus
         beszel
+        ups
         mediaLibrary
         jellyfin
         servarr

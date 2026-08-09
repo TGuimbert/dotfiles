@@ -203,6 +203,54 @@ needs a login round trip before the query, which a Gatus websocket endpoint cann
 **a whole-house power or ISP outage** silences both machines — closing that needs an outbound
 heartbeat to something off-site.
 
+### Power on srv-01
+
+`ups` (`modules/server/ups.nix`) — a NUT **secondary**, nothing more. The UPS hangs off the
+TrueNAS's USB port and the NAS runs `upsd` as the primary, so `mode = "netclient"` and the module
+leaves `upsd`, `upsdrv` and `ups-killpower` all disabled: no driver here, no port opened, and the
+power is something this host learns about from the machine that can see it. The same split as
+`beszel` — the thing with the sensor is the thing that reports — and the same NAS address
+`gatus.nix` pings, deliberately an **address and not `nas.lan`**: this is the one client that has
+to keep working while the LAN is losing power, and the router answering DNS may not be on the UPS.
+
+**It shuts srv-01 down ten minutes into any outage, rather than riding the battery down.** The
+remaining runtime is worth more to the NAS, which is where the bytes are, and going first also gets
+this host off the NFS export before the server holding it disappears — a `hard` mount whose server
+is gone hangs the unmount. That is the whole of `upssched.conf`: `START-TIMER` on ONBATT,
+`CANCEL-TIMER` on ONLINE. The low-battery path underneath it needs no rule and is deliberately
+left alone — LOWBATT, or an FSD declared by the NAS, runs `SHUTDOWNCMD` at once whatever the timer
+is doing, which is what covers an outage starting on an already-drained battery.
+
+Three things fail misleadingly:
+
+- **`upssched`'s `CMDSCRIPT` runs unprivileged, so NUT's own idiom for this does not work.** upsmon
+  forks: the root parent exists only to run `SHUTDOWNCMD`, and the monitoring child drops to
+  `nutmon` before it ever execs `NOTIFYCMD`. So `upsmon -c fsd` from the command script dies with
+  EPERM — it signals a root-owned pid. The script drops a marker in `/run/upssched` instead, and a
+  `systemd.paths` unit whose `Unit` is `poweroff.target` does the rest — cheaper than a polkit
+  rule, much cheaper than setting `upsmon.user = "root"` (the thing that fork exists to avoid), and
+  with no service in between to be stopped by the transaction it just asked for. That directory is
+  its own and not `/run/nut`, which the module's `ExecStartPre` creates root-owned.
+- **`type` must be stated.** The nixpkgs default is `"master"`, and the NAS grants this account
+  `upsmon secondary`, so leaving it logs "Primary privileges unavailable" on every poll.
+- **`passwordFile` must be stated too.** It defaults to `power.ups.users.<user>.passwordFile`, and
+  that attrset exists to generate `upsd.users` — the primary's file, which this host does not have.
+  Left out, the host fails to evaluate rather than failing at runtime, which is the good half of
+  the trap.
+
+`PIPEFN` also has to precede the `AT` lines in `upssched.conf`, or upssched refuses to parse it.
+
+Two things are documented rather than fixed. **srv-01 does not come back by itself**: an early
+shutdown happens while the UPS still has charge, so its outlet is never de-energized — it needs a
+manual power-on, or a BIOS "restore on AC power loss" plus an outage long enough that the UPS
+actually drops the outlet. And **a secondary is blind if the primary dies**: if the NAS goes away
+rather than the mains, upsmon logs `COMMBAD`/`NOCOMM` and keeps running. Power events go to the
+journal and nowhere else; there is no Pushover route and no Gatus endpoint here.
+
+One setting on the NAS is load-bearing from here: its **Shutdown Mode must stay "UPS reaches low
+battery"**. On "UPS goes on battery" it declares FSD immediately, which takes srv-01 down with it
+and makes the ten-minute timer dead config. Bring-up is in README.md, "Bringing up the UPS client".
+
 ### Media on srv-01
 
 Seven aspects, split along the lines that actually differ:
@@ -737,7 +785,7 @@ Each host is a thin import list in `modules/machines/<hostname>.nix` — it sets
 **Current hosts**:
 - `leshen`: Desktop system with niri + noctalia, games, podman (`displaysLeshen` for its dual monitors)
 - `griffin`: Lenovo ThinkPad T490 laptop with niri + noctalia, games, podman (`laptop` for lid handling)
-- `srv-01`: Headless bare-metal server with Traefik, LLDAP, Authelia (forward-auth + OIDC provider), Homepage, Jellyfin + the *arr + SABnzbd + Grimmory + Shelfmark over one NFS library from the NAS, Paperless-ngx fed by the multifunction printer's scanner, Mealie, Radicale, CouchDB, and a Home Assistant OS libvirt guest bridged onto the LAN via `br0`; LUKS unlocked from the TPM (PCR 7). Backups are a TrueNAS pull, not a push — see "Backing up srv-01"; monitoring is split with the NAS — see "Monitoring srv-01"; the media stack is in "Media on srv-01", the ebook one in "Books on srv-01" (which is also the only container on this host), Paperless plus the scanner in "Documents on srv-01", Mealie in "Recipes on srv-01", Radicale in "Calendars and contacts on srv-01", and CouchDB in "Obsidian sync on srv-01"
+- `srv-01`: Headless bare-metal server with Traefik, LLDAP, Authelia (forward-auth + OIDC provider), Homepage, Jellyfin + the *arr + SABnzbd + Grimmory + Shelfmark over one NFS library from the NAS, Paperless-ngx fed by the multifunction printer's scanner, Mealie, Radicale, CouchDB, and a Home Assistant OS libvirt guest bridged onto the LAN via `br0`; LUKS unlocked from the TPM (PCR 7). Backups are a TrueNAS pull, not a push — see "Backing up srv-01"; monitoring is split with the NAS — see "Monitoring srv-01"; it is a NUT secondary of the UPS on the NAS — see "Power on srv-01"; the media stack is in "Media on srv-01", the ebook one in "Books on srv-01" (which is also the only container on this host), Paperless plus the scanner in "Documents on srv-01", Mealie in "Recipes on srv-01", Radicale in "Calendars and contacts on srv-01", and CouchDB in "Obsidian sync on srv-01"
 
 ### Module Organization
 
@@ -745,7 +793,7 @@ One feature = one capability file holding its NixOS **and** home-manager config 
 - `nixos.modules.base` — every host (boot, locale, nix settings, disko, user account + nushell login shell, sshd, avahi, fwupd/smartd/btrfs-scrub, cli tools, preservation, sops)
 - `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, firefox, audio, NetworkManager + CIFS, tailscale, printing client, GUI home)
 - `nixos.modules.server` — srv-01 baseline (`modules/server/`); deliberately thin — only the sops file, the headless service disables and static networking
-- Named opt-in aspects imported only by hosts that want them: `secureBoot` (lanzaboote; every host with a bootloader), `autoUpgrade` (pull-based nightly updates; srv-01 only), `games`, `podman`, `displaysLeshen`, `laptop`, `docker` (no host currently imports it), and the srv-01 services (`traefik`, `authelia`, `lldap`, `homepage`, `backup`, `printScan`, `homeAssistant`, `gatus`, `beszel`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`, `grimmory`, `shelfmark`, `paperless`, `mealie`, `radicale`, `couchdb`)
+- Named opt-in aspects imported only by hosts that want them: `secureBoot` (lanzaboote; every host with a bootloader), `autoUpgrade` (pull-based nightly updates; srv-01 only), `games`, `podman`, `displaysLeshen`, `laptop`, `docker` (no host currently imports it), and the srv-01 services (`traefik`, `authelia`, `lldap`, `homepage`, `backup`, `printScan`, `homeAssistant`, `gatus`, `beszel`, `ups`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`, `grimmory`, `shelfmark`, `paperless`, `mealie`, `radicale`, `couchdb`)
 
 **Cross-aspect collectors.** A few things are contributed *by* a feature but assembled by
 another. Rather than a central list that drifts, the assembling aspect declares a collector and
@@ -921,7 +969,7 @@ Scaffolding files live **flat in `modules/`** (`nixos.nix`, `home-manager.nix`, 
 - `nixos.modules.base` — every host (nix settings, locale, boot, disko, user, sshd/avahi/fwupd/smartd, preservation, sops)
 - `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, firefox, audio, NetworkManager, tailscale); also pulls `home.gui`
 - `nixos.modules.server` — srv-01 baseline
-- Named opt-in aspects: `secureBoot`, `autoUpgrade`, `games`, `podman`, `displaysLeshen`, `laptop`, `docker`, `traefik`, `authelia`, `lldap`, `homepage`, `backup`, `printScan`, `homeAssistant`, `gatus`, `beszel`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`, `grimmory`, `shelfmark`, `paperless`, `mealie`, `radicale`, `couchdb`
+- Named opt-in aspects: `secureBoot`, `autoUpgrade`, `games`, `podman`, `displaysLeshen`, `laptop`, `docker`, `traefik`, `authelia`, `lldap`, `homepage`, `backup`, `printScan`, `homeAssistant`, `gatus`, `beszel`, `ups`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`, `grimmory`, `shelfmark`, `paperless`, `mealie`, `radicale`, `couchdb`
 
 **Deliberate divergences from mightyiam/infra**: no `flake-file` (inputs stay hand-written in `flake.nix`); inputs stay real flakes (use `inputs.home-manager.nixosModules.home-manager`, not `flake = false`); single user `tguimbert` hardcoded (no multi-user `users` option machinery). Hardware detection uses nixpkgs' `hardware.facter` (report at `modules/_hosts/<host>/facter.json`, must be git-tracked); a slim `hardware.nix` per host keeps `facter.reportPath` + quirks facter can't detect.
 

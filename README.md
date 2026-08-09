@@ -541,6 +541,64 @@ Two things the non-admin account cannot do, both by design:
 
 Routine compaction needs neither: CouchDB's smoosh daemon compacts on its own by default.
 
+### Bringing up the UPS client
+
+The UPS is on the TrueNAS's USB port and the NAS runs NUT's `upsd` as the primary;
+`modules/server/ups.nix` makes srv-01 a **secondary** that shuts itself down ten minutes into an
+outage, handing the rest of the battery to the NAS. The account it authenticates with lives in the
+NAS's `upsd.users` and cannot come from this repo, so the first run is a short bootstrap:
+
+1. **TrueNAS** — System Settings → Services → **UPS**. Confirm the **Identifier** (`ups` is the
+   default, and what `modules/server/ups.nix` expects) and that the local side works: `upsc ups`
+   on the NAS should print the UPS's variables.
+2. Tick **Remote Monitor**. That toggle and nothing else is what turns `LISTEN 127.0.0.1` into
+   `LISTEN 0.0.0.0 3493` — the docs describe it as also setting a well-known user and password,
+   which is stale: those are just the default values of the *Monitor User*/*Monitor Password*
+   fields. Leave those as the NAS's own; srv-01 does not reuse them.
+3. **Extra Users** — this field is pasted into `upsd.users` verbatim, so put a dedicated account
+   for srv-01 in it:
+
+   ```
+   [srv-01]
+       password = <a generated alphanumeric password>
+       upsmon secondary
+   ```
+
+   No leading tab on the `[srv-01]` line, and leave a trailing newline: NAS-121082 is an open bug
+   where stray whitespace in this field makes the account silently fail to authenticate.
+   `secondary` and not `master` — this host runs nothing that another waits on.
+4. **Shutdown Mode** must stay **"UPS reaches low battery"**. On "UPS goes on battery" the NAS
+   declares FSD the moment the power fails, which takes srv-01 down with it and makes the
+   ten-minute timer dead config. Restart the UPS service.
+5. `sops secrets/srv-01.yaml` and add `upsMonitorPassword` — the same password, which
+   `modules/server/ups.nix` hands to upsmon through `LoadCredential`. Avoid a literal `"`: the
+   generated `MONITOR` line quotes it.
+6. `just deploy srv-01`, then check from srv-01:
+
+   ```bash
+   upsc ups@10.0.0.55 ups.status     # OL
+   journalctl -u upsmon -n 50        # no "Login failed", no "Primary privileges unavailable"
+   systemctl status ups-early-shutdown.path
+   ```
+
+To exercise the timer without pulling the mains lead, inject the notification upsmon would send —
+`upssched` is a daemon holding a timer, so this is the only way to test it end to end:
+
+```bash
+sudo -u nutmon env NUT_CONFPATH=/etc/nut UPSNAME=ups@10.0.0.55 NOTIFYTYPE=ONBATT upssched
+sudo -u nutmon env NUT_CONFPATH=/etc/nut UPSNAME=ups@10.0.0.55 NOTIFYTYPE=ONLINE upssched
+```
+
+The first starts the **real** 600-second timer; run the second, or the host powers off in ten
+minutes. To confirm the privileged half on its own, `sudo -u nutmon touch
+/run/upssched/early-shutdown` — srv-01 should power off immediately.
+
+Two things to expect from a real outage. srv-01 **does not come back by itself**: it powers off
+while the UPS still has charge, so its outlet is never de-energized, and it needs a manual
+power-on unless the BIOS is set to restore on AC power loss *and* the outage outlasts the battery.
+And if the **NAS** is what dies rather than the mains, srv-01 has no other source of UPS state — it
+logs `COMMBAD`/`NOCOMM` and keeps running.
+
 ### Managing Secrets
 
 Secrets are managed with SOPS (uses age encryption):
