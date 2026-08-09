@@ -576,6 +576,87 @@ The uid is pinned (361) for `lldap.nix`'s reason — nixpkgs has allocated radic
 dynamically since 2021 — and the sops secret is reached by `owner` rather than a supplementary
 group, because the module's unit runs with `PrivateUsers`.
 
+### Obsidian sync on srv-01
+
+`couchdb` (`modules/server/couchdb.nix`) — the remote database the Obsidian **Self-hosted
+LiveSync** plugin replicates a vault through. The `paperless`/`mealie`/`radicale` shape
+(`services.couchdb`, an ordinary nixpkgs module), and `mkRouter` rather than `mkAutheliaRouter`,
+joining Jellyfin, Jellyseerr, Grimmory, Paperless, Mealie and Radicale: a phone's webview cannot
+complete a browser SSO round trip, and replication is a REST client besides.
+
+**It is the one service here that cannot delegate its auth anywhere.** CouchDB speaks no LDAP, so
+LLDAP is not an option the way it is for Radicale, and the credential is local to CouchDB. What
+that is made to cost as little as possible: sops holds a **server admin** (`couchdb-admin`), used
+only to bootstrap and to maintain, and the account the plugin carries is a **non-admin `_users`
+account** granted `member` on the vault's database through an `obsidian-livesync` *role* — created
+by hand, since neither it nor the database can come from Nix (README.md, "Bringing up CouchDB").
+Granting by role rather than by name is what keeps a second vault from needing the `_security` doc
+edited; `members` with both `names` and `roles` empty would open the database to every
+authenticated user, so the role is load-bearing, not decoration. One account per **vault**, not per
+device — every device on a vault targets the same database, so per-device accounts would be members
+of the same database with identical rights.
+
+The plugin tolerates that, but two of its flows do not, and both fail as a bare 403:
+
+- **"Check and fix CouchDB issues"** reads `/_node/_local/_config`, which is server-admin only
+  (upstream issue #988). That is *wanted* here: the "fix" button writes `local.ini`, which outranks
+  the generated config — see below.
+- **"Rebuild everything" / reset-remote** does `DELETE` then `PUT` on the bare database name, which
+  `chttpd_auth_request.erl` gates on server admin. Paste the admin credential in for that one
+  operation.
+
+Routine compaction needs neither: smoosh's `db_channels` default compacts on its own.
+
+Four things fail misleadingly:
+
+- **The generated config is writable, the `sabnzbd.nix` situation.** The module passes
+  `-couch_ini default.ini <store ini> <the sops one> /var/lib/couchdb/local.ini`, and CouchDB
+  persists every runtime change to the **last** of those. So a Fauxton edit outranks the Nix file
+  from then on, and a key *removed* from Nix is not removed from `local.ini`. Deleting
+  `/var/lib/couchdb/local.ini` is the escape hatch; it is regenerated. The same fact makes
+  **rotating `couchdbAdminPassword` in sops a no-op on its own**: CouchDB hashes the cleartext into
+  `local.ini` on first start, and the merged view then shows only the hash. Rotation is edit sops,
+  delete `local.ini`, restart.
+- **`require_valid_user` and `require_valid_user_except_for_up` are both set.** Neither implies the
+  other: `chttpd_auth.erl` gates every other path on `RequireValidUser orelse
+  RequireValidUserExceptUp` and `/_up` on `RequireValidUser andalso not RequireValidUserExceptUp`.
+  Dropping the second closes `/_up` and the Gatus check goes permanently red; dropping the first
+  changes nothing, because the second already covers it.
+- **CORS survives `require_valid_user` only because of ordering.** `chttpd.erl` answers the
+  preflight *before* authenticating, so the credential-less `OPTIONS` a webview sends is not met
+  with a 401. That is why no Traefik CORS middleware is wired in front of this route — a second
+  `Access-Control-Allow-Origin` would make the browser reject the response outright.
+- **The plugin's remote URI must be `https://`, and getting that wrong looks exactly like a CORS
+  misconfiguration.** Traefik's `web` entrypoint 308-redirects to `websecure`, and the CORS spec
+  forbids following a redirect on a *preflight* — so a `http://` URI is killed by the browser with
+  `Redirect is not allowed for a preflight request` before CouchDB is ever reached, while
+  Obsidian's `requestUrl` API follows the redirect happily. That is what produces the plugin's
+  "the request was successful by API. But the native fetch API failed! Please check CORS settings"
+  warning, and no amount of `[cors]` tuning fixes it. This applies to every route on this host, but
+  only here does a client speak CORS. Check the scheme in the console error *first*; the origin and
+  header theories are much more expensive to chase.
+- **Four keys upstream's provisioning script sets are deliberately absent**, each checked against
+  couchdb 3.5.1's source: `chttpd.max_http_request_size` is already the code default;
+  `chttpd_auth.require_valid_user` is never read (both call sites go through
+  `get_chttpd_config_boolean`, which is `[chttpd]` falling back to `[httpd]`);
+  `httpd.WWW-Authenticate` only changes the realm string, which `require_valid_user` already emits;
+  and `cors.headers`/`cors.methods` left unset yield `chttpd_cors.erl`'s built-in lists, which
+  cover everything the plugin sends — pouchdb sets only `Accept`, `Authorization` and
+  `Content-Type`. Stating either **replaces** the built-in list rather than extending it, so the
+  short list the older upstream docs give would *narrow* it and drop `content-length`,
+  `destination`, `if-match` and `x-couch-full-commit`. That matters if a custom header is ever
+  configured in the plugin: it has to be added, and the value then has to be the whole built-in
+  list plus that header. CouchDB does not **reject** a preflight naming a header outside the list —
+  it declines to handle the preflight at all, falls through to the normal request path, and
+  `require_valid_user` answers 401 with no `Access-Control-Allow-Headers`, so one unknown header
+  poisons the whole preflight.
+
+`backup.nix` stages `/var/lib/couchdb` with a plain rsync and no dump of any kind: the file format
+is append-only, so upstream's own backup docs bless a copy taken while CouchDB is serving, and the
+one ordering rule they give — secondary indexes before the databases — falls out of rsync's sorted
+walk, since `.shards/` precedes `shards/`. The uid is *not* pinned, unlike every sibling here:
+nixpkgs gives couchdb a static id (106).
+
 ### Formatting and Linting
 
 ```bash
@@ -656,7 +737,7 @@ Each host is a thin import list in `modules/machines/<hostname>.nix` — it sets
 **Current hosts**:
 - `leshen`: Desktop system with niri + noctalia, games, podman (`displaysLeshen` for its dual monitors)
 - `griffin`: Lenovo ThinkPad T490 laptop with niri + noctalia, games, podman (`laptop` for lid handling)
-- `srv-01`: Headless bare-metal server with Traefik, LLDAP, Authelia (forward-auth + OIDC provider), Homepage, Jellyfin + the *arr + SABnzbd + Grimmory + Shelfmark over one NFS library from the NAS, Paperless-ngx fed by the multifunction printer's scanner, Mealie, Radicale, and a Home Assistant OS libvirt guest bridged onto the LAN via `br0`; LUKS unlocked from the TPM (PCR 7). Backups are a TrueNAS pull, not a push — see "Backing up srv-01"; monitoring is split with the NAS — see "Monitoring srv-01"; the media stack is in "Media on srv-01", the ebook one in "Books on srv-01" (which is also the only container on this host), Paperless plus the scanner in "Documents on srv-01", Mealie in "Recipes on srv-01", and Radicale in "Calendars and contacts on srv-01"
+- `srv-01`: Headless bare-metal server with Traefik, LLDAP, Authelia (forward-auth + OIDC provider), Homepage, Jellyfin + the *arr + SABnzbd + Grimmory + Shelfmark over one NFS library from the NAS, Paperless-ngx fed by the multifunction printer's scanner, Mealie, Radicale, CouchDB, and a Home Assistant OS libvirt guest bridged onto the LAN via `br0`; LUKS unlocked from the TPM (PCR 7). Backups are a TrueNAS pull, not a push — see "Backing up srv-01"; monitoring is split with the NAS — see "Monitoring srv-01"; the media stack is in "Media on srv-01", the ebook one in "Books on srv-01" (which is also the only container on this host), Paperless plus the scanner in "Documents on srv-01", Mealie in "Recipes on srv-01", Radicale in "Calendars and contacts on srv-01", and CouchDB in "Obsidian sync on srv-01"
 
 ### Module Organization
 
@@ -664,7 +745,7 @@ One feature = one capability file holding its NixOS **and** home-manager config 
 - `nixos.modules.base` — every host (boot, locale, nix settings, disko, user account + nushell login shell, sshd, avahi, fwupd/smartd/btrfs-scrub, cli tools, preservation, sops)
 - `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, firefox, audio, NetworkManager + CIFS, tailscale, printing client, GUI home)
 - `nixos.modules.server` — srv-01 baseline (`modules/server/`); deliberately thin — only the sops file, the headless service disables and static networking
-- Named opt-in aspects imported only by hosts that want them: `secureBoot` (lanzaboote; every host with a bootloader), `autoUpgrade` (pull-based nightly updates; srv-01 only), `games`, `podman`, `displaysLeshen`, `laptop`, `docker` (no host currently imports it), and the srv-01 services (`traefik`, `authelia`, `lldap`, `homepage`, `backup`, `printScan`, `homeAssistant`, `gatus`, `beszel`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`, `grimmory`, `shelfmark`, `paperless`, `mealie`, `radicale`)
+- Named opt-in aspects imported only by hosts that want them: `secureBoot` (lanzaboote; every host with a bootloader), `autoUpgrade` (pull-based nightly updates; srv-01 only), `games`, `podman`, `displaysLeshen`, `laptop`, `docker` (no host currently imports it), and the srv-01 services (`traefik`, `authelia`, `lldap`, `homepage`, `backup`, `printScan`, `homeAssistant`, `gatus`, `beszel`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`, `grimmory`, `shelfmark`, `paperless`, `mealie`, `radicale`, `couchdb`)
 
 **Cross-aspect collectors.** A few things are contributed *by* a feature but assembled by
 another. Rather than a central list that drifts, the assembling aspect declares a collector and
@@ -840,7 +921,7 @@ Scaffolding files live **flat in `modules/`** (`nixos.nix`, `home-manager.nix`, 
 - `nixos.modules.base` — every host (nix settings, locale, boot, disko, user, sshd/avahi/fwupd/smartd, preservation, sops)
 - `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, firefox, audio, NetworkManager, tailscale); also pulls `home.gui`
 - `nixos.modules.server` — srv-01 baseline
-- Named opt-in aspects: `secureBoot`, `autoUpgrade`, `games`, `podman`, `displaysLeshen`, `laptop`, `docker`, `traefik`, `authelia`, `lldap`, `homepage`, `backup`, `printScan`, `homeAssistant`, `gatus`, `beszel`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`, `grimmory`, `shelfmark`, `paperless`, `mealie`, `radicale`
+- Named opt-in aspects: `secureBoot`, `autoUpgrade`, `games`, `podman`, `displaysLeshen`, `laptop`, `docker`, `traefik`, `authelia`, `lldap`, `homepage`, `backup`, `printScan`, `homeAssistant`, `gatus`, `beszel`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`, `grimmory`, `shelfmark`, `paperless`, `mealie`, `radicale`, `couchdb`
 
 **Deliberate divergences from mightyiam/infra**: no `flake-file` (inputs stay hand-written in `flake.nix`); inputs stay real flakes (use `inputs.home-manager.nixosModules.home-manager`, not `flake = false`); single user `tguimbert` hardcoded (no multi-user `users` option machinery). Hardware detection uses nixpkgs' `hardware.facter` (report at `modules/_hosts/<host>/facter.json`, must be git-tracked); a slim `hardware.nix` per host keeps `facter.reportPath` + quirks facter can't detect.
 

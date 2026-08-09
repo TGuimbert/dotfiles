@@ -255,6 +255,15 @@
                 method = "PROPFIND";
                 status = 401;
               })
+              # Exempt from the middleware for the same reason again. `/_up` is
+              # the one path ./couchdb.nix leaves open, so this needs no
+              # credential; asserting the body keeps a 200 from anything other
+              # than CouchDB from counting.
+              (mkHttps {
+                name = "couchdb";
+                path = "/_up";
+                conditions = [ "[BODY].status == ok" ];
+              })
               (mkHttps { name = "immich"; })
               (mkHttps {
                 name = "garage";
