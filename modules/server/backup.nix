@@ -51,6 +51,12 @@
         # calendars and address books as plain .ics/.vcf files written by atomic
         # rename, so the rsync below is already consistent.
         "/var/lib/radicale"
+        # The Obsidian vaults, their `_users` accounts and each database's
+        # `_security` doc. Needs no dump either: the file format is append-only,
+        # so upstream blesses a copy taken while CouchDB is serving, and their one
+        # ordering rule — secondary indexes first — falls out of rsync's sorted
+        # walk, since `.shards/` precedes `shards/`.
+        "/var/lib/couchdb"
       ];
       # Not here on purpose: sabnzbd, whose state is a re-downloadable queue, and
       # recyclarr, whose directory is a clone of the TRaSH guides plus a config

@@ -370,6 +370,25 @@ systemctl start radicale
 `.Radicale.cache` comes back with it and is harmless; Radicale rebuilds it if it is stale or
 missing. The collection paths are LLDAP `uid`s, so they line up as long as the same accounts exist.
 
+CouchDB is an ordinary directory too, and needs no dump either — its file format is append-only,
+so the nightly copy is valid even though it was taken while CouchDB was serving:
+
+```bash
+systemctl stop couchdb
+
+rsync -a <pulled>/couchdb/ /var/lib/couchdb/
+chown -R couchdb:couchdb /var/lib/couchdb && chmod 0750 /var/lib/couchdb
+
+systemctl start couchdb
+```
+
+What comes back is the vaults, the `_users` accounts the Obsidian clients authenticate with and
+each database's `_security` doc — none of which this repo can reproduce. `local.ini` and
+`.erlang.cookie` come back with it: the cookie is harmless on a single node, but `local.ini`
+carries the *hashed* admin password as it was, and outranks the sops one. If `couchdbAdminPassword`
+has changed since the backup, `rm /var/lib/couchdb/local.ini` before starting and CouchDB will
+re-hash from sops.
+
 Jellyfin's artwork is deliberately not in the backup — it re-fetches it — so expect the libraries
 to look bare until the first metadata scan finishes. Neither SABnzbd nor Recyclarr is in the
 backup either: the first holds a re-downloadable queue, the second a clone of the TRaSH guides and
@@ -462,6 +481,65 @@ account it binds with can come from this repo, so the first run is a short boots
 
 Access is the group, so revoking someone is removing them from `radicale-users`; it takes
 effect within the 15 seconds `cache_logins` holds a successful login for.
+
+### Bringing up CouchDB
+
+CouchDB exists for one thing: the remote database the Obsidian **Self-hosted LiveSync** plugin
+replicates a vault through. It has no LDAP of any kind, so unlike Radicale it cannot delegate to
+LLDAP — the credential is local to CouchDB. `modules/server/couchdb.nix` declares the server
+config and a **server admin** from sops; the account the plugin carries is a **non-admin** one
+created here, so a credential sitting in plaintext on a phone cannot rewrite the server's
+configuration or delete the database.
+
+`couchdbAdminPassword` is already in `secrets/srv-01.yaml`; read it back with
+`sops -d secrets/srv-01.yaml`. Then, after `just deploy srv-01`:
+
+1. Create the vault's database. `PUT /<db>` is server-admin only, which is exactly why the
+   plugin's account cannot do it:
+   ```bash
+   curl -su couchdb-admin:<admin-pw> -X PUT https://couchdb.home.guimbert.fr/<vault>
+   ```
+2. Create the account the clients will use. The password is sent in the clear and CouchDB hashes
+   it on save:
+   ```bash
+   curl -su couchdb-admin:<admin-pw> -X PUT \
+     https://couchdb.home.guimbert.fr/_users/org.couchdb.user:<name> \
+     -H 'Content-Type: application/json' \
+     -d '{"name":"<name>","password":"<pw>","roles":["obsidian-livesync"],"type":"user"}'
+   ```
+3. Grant it by **role**, not by name, so a second vault later needs no edit to this document:
+   ```bash
+   curl -su couchdb-admin:<admin-pw> -X PUT \
+     https://couchdb.home.guimbert.fr/<vault>/_security \
+     -H 'Content-Type: application/json' \
+     -d '{"admins":{"names":[],"roles":[]},"members":{"names":[],"roles":["obsidian-livesync"]}}'
+   ```
+   `members` with *both* lists empty would make the database readable by every authenticated user;
+   the role is what prevents that.
+4. In Obsidian, install **Self-hosted LiveSync**, pick manual setup, and enter
+   `https://couchdb.home.guimbert.fr`, the account from step 2 and the database from step 1.
+   The **`https://` is load-bearing**: Traefik 308-redirects `http://`, and a CORS preflight may
+   not follow a redirect, so an `http://` URI fails with *"the request was successful by API. But
+   the native fetch API failed! Please check CORS settings"* — which sends you hunting through
+   `[cors]` for a problem that is not there. **Skip "Check and fix CouchDB issues"** — see below.
+   Generate a Setup URI on that device and import it on the others.
+
+**One account per vault, not per device.** Every device on a vault must point at the same
+database, and a database's grant is its `_security` doc, so per-device accounts would all be
+members of the same database with identical rights — no isolation, three Setup URIs to mint. A
+*second vault* is what justifies a second account: it is a second database, and step 2's role
+already covers it.
+
+Two things the non-admin account cannot do, both by design:
+
+- **"Check and fix CouchDB issues"** (in the setup wizard and the settings pane) reads
+  `/_node/_local/_config`, which is admin-only, and returns 403. Nothing here needs it: those
+  settings are declared in `modules/server/couchdb.nix`, and the "fix" button would write them to
+  `/var/lib/couchdb/local.ini`, which outranks the generated config from then on.
+- **"Rebuild everything" / reset-remote** deletes and recreates the database, also admin-only.
+  Paste the admin credential into the plugin for that one operation, then put the account back.
+
+Routine compaction needs neither: CouchDB's smoosh daemon compacts on its own by default.
 
 ### Managing Secrets
 
