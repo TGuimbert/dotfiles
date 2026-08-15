@@ -4,7 +4,6 @@
     { lib, pkgs, ... }:
     {
       home.packages = with pkgs; [
-        discord
         vlc
         # `jellyfin-media-player` is the same derivation under the pre-2.0 name.
         jellyfin-desktop
@@ -22,6 +21,21 @@
         gnome-system-monitor # processes (bottom is the CLI equivalent)
       ];
 
+      # In place of the official `discord`, for two independent reasons no flag
+      # fixes: its Electron is too old to drive the ScreenCast portal from a native
+      # Wayland session (niri's portal stack is fine — it serves OBS and Firefox),
+      # and the Linux client cannot share application audio, the sound of the
+      # window being streamed, at all. Vesktop is Electron 43 and captures that
+      # through the venmic PipeWire module it bundles. Enabling the module installs
+      # the package as an .override resolving to the same derivation, so it stays
+      # cached — don't also list it above.
+      #
+      # `settings` / `vencord.settings` are left undeclared deliberately: the
+      # module renders them as store symlinks under ~/.config/vesktop, and Vesktop
+      # silently falls back to defaults rather than read a symlinked settings file
+      # (Vencord/Vesktop#1136). So the config stays mutable and is preserved below.
+      programs.vesktop.enable = true;
+
       # Image viewer, in place of loupe.
       programs.swayimg.enable = true;
 
@@ -37,7 +51,8 @@
     };
 
   nixos.modules.desktop.preservation.preserveAt."/persistent".users.tguimbert.directories = [
-    ".config/discord"
+    # Session token, Vencord settings and cache; mutable by design (see above).
+    ".config/vesktop"
     ".config/Signal"
     ".config/obsidian"
     ".config/sone"
