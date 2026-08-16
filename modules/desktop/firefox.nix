@@ -83,6 +83,7 @@
               # noctalia native-messaging host whose manifest is installed by the
               # `noctaliaFirefoxHost` activation script in modules/niri.nix.
               pywalfox
+              readeck
             ];
           };
         };

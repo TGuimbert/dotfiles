@@ -590,6 +590,48 @@ for a user or a multireddit, as do YouTube channels. A **403** from Reddit is it
 fetcher's user agent, not a misconfiguration — set a per-feed **User Agent** in the feed's
 settings.
 
+### Bringing up Readeck
+
+Readeck is the bookmark and read-later library — the other end of Miniflux. It authenticates over
+OIDC against Authelia, and access is gated on an **LLDAP group**, because Readeck's own group
+mapping only chooses a role and cannot refuse anyone. Neither the groups nor the first account can
+come from this repo, so the first run is a short bootstrap:
+
+1. **LLDAP** (`https://ldap.home.guimbert.fr`) — create two groups and add yourself to both:
+   - `readeck-users` — the gate. `modules/server/authelia.nix` refuses anyone outside it, through
+     a custom `authorization_policies.readeck` entry rather than an `access_control` rule; an OIDC
+     route carries no forward-auth middleware, so those rules never apply to it.
+   - `readeck-admins` — the role. `modules/server/readeck.nix` maps it onto Readeck's `admin`
+     group. **Not optional if you want to be an admin**: the map is re-applied on every login, so
+     an account outside this group is set back to `user` each time it signs in.
+2. `sops secrets/srv-01.yaml` and add three values:
+   - `readeckSecretKey` — 48 random bytes, base64: `openssl rand -base64 48`. Readeck derives its
+     session, token and TOTP keys from it. **Do not skip it and do not rotate it casually**: left
+     unset, Readeck tries to write a generated key into its config file, which is a store path, and
+     the service fails to start; changing it later invalidates every session and API token.
+   - `autheliaOidcReadeckClientSecret` and `autheliaOidcReadeckClientSecretDigest` — a pair from
+     `authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72`, exactly
+     as for Mealie and Miniflux: the plaintext goes into Readeck's environment file, the digest
+     into `modules/server/authelia.nix`.
+3. `just deploy srv-01`, then open `https://readeck.home.guimbert.fr`. With no users yet it
+   redirects to **`/onboarding`**, which creates the first account with a local password.
+   **Use the same username and email as your Authelia identity**, and keep that password in your
+   password manager.
+4. Sign out, then sign back in with **Sign in with Authelia**. Readeck matches on username or
+   email and **links** the OIDC identity onto the account from step 3 rather than creating a
+   second one — so you keep the local password, which is the way in when Authelia is the thing
+   that is down. Confirm the role stuck: an admin sees the *Administration* section.
+   A wrong issuer URL fails **here, at the first login**, not at startup — unlike Miniflux — so
+   check `ssh srv-01.local journalctl -u readeck` at this step rather than after the deploy.
+5. Wire up Miniflux: **Settings → Integrations → Readeck**, with
+   `https://readeck.home.guimbert.fr` and an API token minted in Readeck under **Profile → API
+   tokens**. *Save entry* on an article then files it into the library. The same token works for
+   the browser extension, and OPDS readers point at `/opds` — none of which would work behind the
+   Authelia middleware, which is why this route carries none.
+
+Revoking someone is removing them from `readeck-users`; their existing bookmarks stay, and the
+account is refused at the Authelia consent step on the next login.
+
 ### Bringing up the UPS client
 
 The UPS is on the TrueNAS's USB port and the NAS runs NUT's `upsd` as the primary;

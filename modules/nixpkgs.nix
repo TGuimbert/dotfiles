@@ -22,6 +22,17 @@ let
         claude-code
         ;
 
+      # The one override here that is not a "newer is nicer" desktop package, and
+      # so the only one with an expiry: 26.05 carries 0.22.3, whose `auth.forwarded`
+      # upstream removed in 0.23 in favour of the `auth.oidc` ./server/readeck.nix
+      # configures. Only the package is overridden; that file explains why pairing
+      # it with 26.05's module is safe. A warning and not an assertion, because
+      # failing eval would block the very lockfile PR that carries the fix.
+      readeck =
+        prev.lib.warnIf (prev.lib.versionAtLeast prev.readeck.version "0.23")
+          "nixpkgs now carries readeck ${prev.readeck.version}; drop this override and modules/server/readeck.nix's note about it"
+          unstable.readeck;
+
       nushellPlugins.formats = unstable.nushellPlugins.formats;
 
       azure-cli = unstable.azure-cli.withExtensions [

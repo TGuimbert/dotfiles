@@ -46,6 +46,7 @@
           autheliaOidcPaperlessClientSecretDigest = sopsConfig;
           autheliaOidcMealieClientSecretDigest = sopsConfig;
           autheliaOidcMinifluxClientSecretDigest = sopsConfig;
+          autheliaOidcReadeckClientSecretDigest = sopsConfig;
         };
       };
       services = {
@@ -317,7 +318,53 @@
                   # `token_endpoint_auth_method`: golang.org/x/oauth2
                   # auto-detects, trying basic — Authelia's default — first.
                 }
+                {
+                  client_id = "readeck";
+                  client_name = "Readeck";
+                  client_secret = "{{ secret \"${config.sops.secrets.autheliaOidcReadeckClientSecretDigest.path}\" }}";
+                  public = false;
+                  # The one client not on a built-in policy: readeck's own group
+                  # map assigns a role and cannot refuse anyone, so the gate has
+                  # to be the policy defined below.
+                  authorization_policy = "readeck";
+                  consent_mode = "pre-configured";
+                  pre_configured_consent_duration = "1 year";
+                  # Required rather than permitted: readeck sends a challenge
+                  # whenever discovery advertises the method, which Authelia does.
+                  require_pkce = true;
+                  pkce_challenge_method = "S256";
+                  response_types = [ "code" ];
+                  grant_types = [ "authorization_code" ];
+                  id_token_signed_response_alg = "RS256";
+                  # Built from ./readeck.nix's `server.base_url` plus the route
+                  # readeck mounts its callback on, so the two have to match.
+                  redirect_uris = [ "https://readeck.${constants.domain}/login/oidc" ];
+                  # Exactly what readeck hardcodes into its oauth2 config, so
+                  # `groups` cannot be trimmed even though it maps only a role.
+                  scopes = [
+                    "openid"
+                    "profile"
+                    "email"
+                    "groups"
+                  ];
+                  # No `claims_policy` and no `userinfo_signed_response_alg`,
+                  # both for Mealie's reasons above: readeck reads the ID token
+                  # first and falls back to userinfo.
+                }
               ];
+              # The gate for ./readeck.nix. `access_control` cannot do this job —
+              # an OIDC route carries no forward-auth middleware and so never
+              # reaches those rules — and `default_policy` is what makes it a gate
+              # rather than a preference.
+              authorization_policies.readeck = {
+                default_policy = "deny";
+                rules = [
+                  {
+                    policy = "two_factor";
+                    subject = [ "group:readeck-users" ];
+                  }
+                ];
+              };
               claims_policies.grimmory.id_token = [
                 "preferred_username"
                 "email"

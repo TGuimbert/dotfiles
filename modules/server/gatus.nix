@@ -273,6 +273,16 @@
                 path = "/_up";
                 conditions = [ "[BODY].status == ok" ];
               })
+              # Exempt from the middleware for the same reason again. `/api/info`
+              # is the one route readeck mounts outside its authenticated router,
+              # but it renders from build info alone — so unlike miniflux's
+              # `/healthcheck` this stays green with the database gone. There is
+              # no unauthenticated path that touches sqlite.
+              (mkHttps {
+                name = "readeck";
+                path = "/api/info";
+                conditions = [ "len([BODY].version.release) > 0" ];
+              })
               (mkHttps { name = "immich"; })
               (mkHttps {
                 name = "garage";
