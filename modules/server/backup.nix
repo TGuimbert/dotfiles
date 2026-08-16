@@ -57,6 +57,9 @@
         # ordering rule — secondary indexes first — falls out of rsync's sorted
         # walk, since `.shards/` precedes `shards/`.
         "/var/lib/couchdb"
+        # `bookmarks/`, the extracted article archives — the half of
+        # ./readeck.nix nothing can re-fetch once the original page is gone.
+        "/var/lib/readeck"
       ];
       # Not here on purpose: sabnzbd, whose state is a re-downloadable queue, and
       # recyclarr, whose directory is a clone of the TRaSH guides plus a config
@@ -80,6 +83,9 @@
         "${config.services.seerr.configDir}/db/db.sqlite3"
         "/var/lib/shelfmark/users.db"
         "/var/lib/mealie/mealie.db"
+        # Bookmarks, labels and highlights; the archives they point at are in
+        # the rsync above.
+        "/var/lib/readeck/db.sqlite3"
       ];
 
       # Grimmory's library metadata, users and OIDC client. The only thing staged

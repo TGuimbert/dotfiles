@@ -32,6 +32,7 @@
         radicale
         couchdb
         miniflux
+        readeck
       ])
       ++ [
         ../_hosts/srv-01/hardware.nix

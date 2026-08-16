@@ -98,11 +98,12 @@ Three ways in, because apps fall into three groups:
   `modules/server/shelfmark.nix` when Calibre-web was removed.
 - **OIDC** — Authelia is also the OIDC provider (`identity_providers.oidc`), for apps that
   authenticate their own users. Clients are declared in that same file (Immich, Grimmory,
-  Paperless and Mealie), with the client secret's pbkdf2 digest pulled from sops via
-  `{{ secret "…" }}` rather than committed in cleartext. Discovery lives at
+  Paperless, Mealie, Miniflux and Readeck), with the client secret's pbkdf2 digest pulled from sops
+  via `{{ secret "…" }}` rather than committed in cleartext. Discovery lives at
   `https://auth.<domain>/.well-known/openid-configuration`.
-  **The four clients differ from each other in ways that all fail misleadingly**, so none of them
-  is a template for the next:
+  **The clients differ from each other in ways that all fail misleadingly**, so none of them
+  is a template for the next — Miniflux's four differences are in "News on srv-01" and Readeck's
+  in "Read-later on srv-01"; the ones the first four disagree on are:
   - *Where the claims come from.* Immich and Paperless read **userinfo**; **Grimmory reads the ID
     token**, where Authelia puts only a standard subset. So Grimmory — and only Grimmory — needs a
     `claims_policies` entry naming `preferred_username`, `email`, `name` and `groups`; without it
@@ -122,6 +123,11 @@ Three ways in, because apps fall into three groups:
   `PAPERLESS_SOCIALACCOUNT_PROVIDERS` (`/accounts/oidc/<provider_id>/login/callback/`), and
   Mealie's from its own `BASE_URL` plus `/login`, so in both cases two files have to agree byte for
   byte — a mismatch is reported only as an invalid redirect.
+  One thing is *not* per-client: `authorization_policy`. Five clients use the built-in
+  `two_factor`, which lets in every Authelia user; **Readeck is the only one on a custom
+  `identity_providers.oidc.authorization_policies` entry**, because it is the only app here whose
+  own group mapping cannot refuse anyone. Reach for that mechanism — not `access_control`, which
+  an OIDC route never passes through — whenever a client needs gating on a group.
 - **LDAP** (`modules/server/lldap.nix`) — for apps that speak neither. Kept **deliberately**: the
   Jellyfin OIDC plugin (`9p4/jellyfin-plugin-sso`) was archived upstream in May 2026 with no
   successor fork, and never completed the flow outside a browser anyway, so LDAP is the only
@@ -767,6 +773,82 @@ the Authelia identity is *linked* onto the existing account from the settings pa
 self-provisioned, and the password login is the way in when Authelia is the thing that is down.
 Bring-up is in README.md, "Bringing up Miniflux".
 
+### Read-later on srv-01
+
+`readeck` (`modules/server/readeck.nix`) — bookmarks and saved articles: extraction into a
+readable copy, highlights, labels, collections, EPUB export and an OPDS catalogue. The natural
+other end of `miniflux`, which ships a Readeck integration, so *Save entry* in the reader files
+into the library. Everything is in one sqlite database plus a `bookmarks/` tree of extracted
+archives, so it falls into `backup.nix`'s existing online-backup loop beside every other sqlite
+service here.
+
+The route is `mkRouter`, not `mkAutheliaRouter`, joining Jellyfin, Jellyseerr, Grimmory,
+Paperless, Mealie, Radicale, CouchDB and Miniflux: the browser authenticates over OIDC, and the
+browser extension, the OPDS readers and the API all carry **Readeck's own Bearer tokens** — which
+the forward-auth middleware would reject outright, since `authelia.nix` gives it a
+`HeaderAuthorization` strategy that reads the very same header.
+
+**It is the only aspect here whose package comes from `unstable`.** 26.05 carries **0.22.3**,
+whose sole delegated auth is `auth.forwarded` — proxy headers, which upstream **removed** in 0.23
+and replaced with `auth.oidc`. Writing against the stable version would mean building on a
+mechanism that no longer exists. Only the *package* is overlaid (`modules/nixpkgs.nix`); the
+NixOS module stays 26.05's, and the one hunk the two module versions differ in is neutralised by
+the secret key below. **The override announces its own expiry**: it is wrapped in a `warnIf` that
+fires once stable carries ≥ 0.23, so the weekly lockfile PR's CI run is what tells you to drop it
+— a warning and not an assertion, because failing eval would block the very PR carrying the fix.
+
+Five things fail misleadingly:
+
+- **`READECK_SECRET_KEY` is not optional, and omitting it fails differently on each module
+  version.** Readeck derives its session, token and TOTP keys from `main.secret_key`, and when
+  that is empty it *generates* one and **writes it back into the config file**. Under the 26.05
+  module that file is a store path, so the write fails and the service never starts. Under the
+  unstable module — which copies the config into the state directory first — it would instead mint
+  a **new key on every start**, silently invalidating every API token and session on each nightly
+  restart, with nothing in the journal to say so. Supplying it from sops is what stops readeck
+  writing at all, and is what makes the mixed module/package pairing above safe.
+- **The client secret gets in through an index, not a key.** `settings` renders into the store, so
+  it cannot hold the secret; readeck merges `READECK_AUTH_OIDC_PROVIDERS_<n>_<PROP>` into the
+  provider declared at **index `<n>`** of the config file's list rather than appending a new one,
+  so `…_0_CLIENT_SECRET` completes the entry declared in Nix. Get the index wrong and you get a
+  second, half-configured provider rather than an error.
+- **Readeck's `groups` map cannot refuse anyone.** It maps an OIDC group onto one of readeck's own
+  (`user`, `staff`, `admin`) and falls through to `user` when nothing matches — so it is a *role*
+  map, and the access gate has to be Authelia's. That is the custom
+  `identity_providers.oidc.authorization_policies.readeck` entry, with `default_policy = "deny"`;
+  the `access_control` rules cannot do it, because a route with no forward-auth middleware never
+  reaches them. Getting this wrong looks like nothing at all — every Authelia user simply has an
+  account.
+- **The group map is re-applied on every login, and order decides ties.** First match wins, so
+  `readeck-admins` must precede `readeck-users` or someone in both is mapped to `user`. And
+  because it is re-applied rather than applied once, removing the admins entry — or dropping
+  someone from that LLDAP group — *demotes* the existing account rather than leaving it be. The
+  same re-application is what makes the local account created at onboarding pick up its role.
+- **A wrong issuer fails at the first login, not at startup** — the opposite of Miniflux, whose
+  `OAUTH2_OIDC_DISCOVERY_ENDPOINT` is resolved eagerly. Readeck loads the provider lazily, so a
+  bad `url` leaves a clean journal until someone actually tries to sign in. It is the issuer, with
+  neither the `/.well-known/openid-configuration` suffix nor a trailing slash: go-oidc appends the
+  suffix and compares the issuer it gets back byte for byte.
+
+`server.base_url` is required rather than cosmetic: readeck builds its OIDC redirect URI as
+`<base_url>/login/oidc`, and without it that comes from the proxy headers — so the URI
+`authelia.nix` registers could not be guaranteed to match. The uid is pinned (362) for `lldap.nix`'s
+reason, and `DynamicUser` forced off, since the module defaults it on and a uid allocated per boot
+cannot own preserved state.
+
+**Readeck auto-links an OIDC identity onto an existing local account** by matching username or
+email — which Paperless deliberately does not do. That is what makes the bring-up work: create the
+first account through readeck's onboarding screen, using the same username and email as the
+Authelia identity, and the first OIDC login adopts it rather than making a second. Doing it that
+way is also what leaves a **local password** on the account, which an OIDC-provisioned one never
+has (readeck gives those a random 64-character password nobody knows) — so it is the way in when
+Authelia is the thing that is down, the argument `paperless.nix` and `miniflux.nix` both make.
+
+The Gatus check is weaker than its siblings and deliberately so: `/api/info` is the one route
+readeck mounts outside its authenticated router, and it renders from build info alone, so it would
+stay green with the database gone. There is no unauthenticated path that touches sqlite.
+Bring-up is in README.md, "Bringing up Readeck".
+
 ### Formatting and Linting
 
 ```bash
@@ -847,7 +929,7 @@ Each host is a thin import list in `modules/machines/<hostname>.nix` — it sets
 **Current hosts**:
 - `leshen`: Desktop system with niri + noctalia, games, podman (`displaysLeshen` for its dual monitors)
 - `griffin`: Lenovo ThinkPad T490 laptop with niri + noctalia, games, podman (`laptop` for lid handling)
-- `srv-01`: Headless bare-metal server with Traefik, LLDAP, Authelia (forward-auth + OIDC provider), Homepage, Jellyfin + the *arr + SABnzbd + Grimmory + Shelfmark over one NFS library from the NAS, Paperless-ngx fed by the multifunction printer's scanner, Mealie, Radicale, CouchDB, Miniflux, and a Home Assistant OS libvirt guest bridged onto the LAN via `br0`; LUKS unlocked from the TPM (PCR 7). Backups are a TrueNAS pull, not a push — see "Backing up srv-01"; monitoring is split with the NAS — see "Monitoring srv-01"; it is a NUT secondary of the UPS on the NAS — see "Power on srv-01"; the media stack is in "Media on srv-01", the ebook one in "Books on srv-01" (which is also the only container on this host), Paperless plus the scanner in "Documents on srv-01", Mealie in "Recipes on srv-01", Radicale in "Calendars and contacts on srv-01", CouchDB in "Obsidian sync on srv-01", and Miniflux plus the shared PostgreSQL cluster in "News on srv-01"
+- `srv-01`: Headless bare-metal server with Traefik, LLDAP, Authelia (forward-auth + OIDC provider), Homepage, Jellyfin + the *arr + SABnzbd + Grimmory + Shelfmark over one NFS library from the NAS, Paperless-ngx fed by the multifunction printer's scanner, Mealie, Radicale, CouchDB, Miniflux, Readeck, and a Home Assistant OS libvirt guest bridged onto the LAN via `br0`; LUKS unlocked from the TPM (PCR 7). Backups are a TrueNAS pull, not a push — see "Backing up srv-01"; monitoring is split with the NAS — see "Monitoring srv-01"; it is a NUT secondary of the UPS on the NAS — see "Power on srv-01"; the media stack is in "Media on srv-01", the ebook one in "Books on srv-01" (which is also the only container on this host), Paperless plus the scanner in "Documents on srv-01", Mealie in "Recipes on srv-01", Radicale in "Calendars and contacts on srv-01", CouchDB in "Obsidian sync on srv-01", Miniflux plus the shared PostgreSQL cluster in "News on srv-01", and Readeck in "Read-later on srv-01"
 
 ### Module Organization
 
@@ -855,7 +937,7 @@ One feature = one capability file holding its NixOS **and** home-manager config 
 - `nixos.modules.base` — every host (boot, locale, nix settings, disko, user account + nushell login shell, sshd, avahi, fwupd/smartd/btrfs-scrub, cli tools, preservation, sops)
 - `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, firefox, audio, NetworkManager + CIFS, tailscale, printing client, GUI home)
 - `nixos.modules.server` — srv-01 baseline (`modules/server/`); deliberately thin — only the sops file, the headless service disables and static networking
-- Named opt-in aspects imported only by hosts that want them: `secureBoot` (lanzaboote; every host with a bootloader), `autoUpgrade` (pull-based nightly updates; srv-01 only), `games`, `podman`, `displaysLeshen`, `laptop`, `docker` (no host currently imports it), and the srv-01 services (`traefik`, `authelia`, `lldap`, `homepage`, `backup`, `printScan`, `homeAssistant`, `gatus`, `beszel`, `ups`, `postgresql`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`, `grimmory`, `shelfmark`, `paperless`, `mealie`, `radicale`, `couchdb`, `miniflux`)
+- Named opt-in aspects imported only by hosts that want them: `secureBoot` (lanzaboote; every host with a bootloader), `autoUpgrade` (pull-based nightly updates; srv-01 only), `games`, `podman`, `displaysLeshen`, `laptop`, `docker` (no host currently imports it), and the srv-01 services (`traefik`, `authelia`, `lldap`, `homepage`, `backup`, `printScan`, `homeAssistant`, `gatus`, `beszel`, `ups`, `postgresql`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`, `grimmory`, `shelfmark`, `paperless`, `mealie`, `radicale`, `couchdb`, `miniflux`, `readeck`)
 
 **Cross-aspect collectors.** A few things are contributed *by* a feature but assembled by
 another. Rather than a central list that drifts, the assembling aspect declares a collector and
@@ -1033,7 +1115,7 @@ Scaffolding files live **flat in `modules/`** (`nixos.nix`, `home-manager.nix`, 
 - `nixos.modules.base` — every host (nix settings, locale, boot, disko, user, sshd/avahi/fwupd/smartd, preservation, sops)
 - `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, firefox, audio, NetworkManager, tailscale); also pulls `home.gui`
 - `nixos.modules.server` — srv-01 baseline
-- Named opt-in aspects: `secureBoot`, `autoUpgrade`, `games`, `podman`, `displaysLeshen`, `laptop`, `docker`, `traefik`, `authelia`, `lldap`, `homepage`, `backup`, `printScan`, `homeAssistant`, `gatus`, `beszel`, `ups`, `postgresql`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`, `grimmory`, `shelfmark`, `paperless`, `mealie`, `radicale`, `couchdb`, `miniflux`
+- Named opt-in aspects: `secureBoot`, `autoUpgrade`, `games`, `podman`, `displaysLeshen`, `laptop`, `docker`, `traefik`, `authelia`, `lldap`, `homepage`, `backup`, `printScan`, `homeAssistant`, `gatus`, `beszel`, `ups`, `postgresql`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`, `grimmory`, `shelfmark`, `paperless`, `mealie`, `radicale`, `couchdb`, `miniflux`, `readeck`
 
 **Deliberate divergences from mightyiam/infra**: no `flake-file` (inputs stay hand-written in `flake.nix`); inputs stay real flakes (use `inputs.home-manager.nixosModules.home-manager`, not `flake = false`); single user `tguimbert` hardcoded (no multi-user `users` option machinery). Hardware detection uses nixpkgs' `hardware.facter` (report at `modules/_hosts/<host>/facter.json`, must be git-tracked); a slim `hardware.nix` per host keeps `facter.reportPath` + quirks facter can't detect.
 
