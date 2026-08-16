@@ -86,6 +86,10 @@
       # here that is not sqlite, and the only configuration in the backup that a
       # rebuild cannot reproduce — ../../CLAUDE.md, "Books on srv-01".
       grimmoryDb = "grimmory";
+
+      # Miniflux keeps everything in PostgreSQL and nothing on disk, so this dump
+      # is the whole of it: feeds, entries, API keys and the OIDC link.
+      minifluxDb = "miniflux";
     in
     {
       users = {
@@ -131,7 +135,10 @@
             # For `mariadb-dump` below — the client half of the same package
             # ./grimmory.nix runs the server from.
             config.services.mysql.package
-            # `runuser`, for the same dump.
+            # For `pg_dump`, likewise the client half of ./postgresql.nix's
+            # cluster.
+            config.services.postgresql.package
+            # `runuser`, for both of those dumps.
             pkgs.util-linux
           ];
           # Reports the outcome to ./gatus.nix, which alerts both when this fails
@@ -200,6 +207,19 @@
               mariadb-dump --single-transaction --databases ${grimmoryDb} \
               > ${stagingDir}/mysql/${grimmoryDb}.sql
             chown nas-backup:nas-backup ${stagingDir}/mysql/${grimmoryDb}.sql
+
+            # `runuser` for the same reason, mirrored: peer authentication on the
+            # socket makes `postgres` the superuser, not root. pg_dump takes its
+            # own snapshot, so ./miniflux.nix keeps serving throughout.
+            #
+            # This database rather than pg_dumpall: ./paperless.nix shares the
+            # cluster but is staged by its own exporter above, so dumping
+            # everything would carry a second copy of it.
+            install -d -o nas-backup -g nas-backup -m 0750 ${stagingDir}/postgresql
+            runuser -u ${config.services.postgresql.superUser} -- \
+              pg_dump ${minifluxDb} \
+              > ${stagingDir}/postgresql/${minifluxDb}.sql
+            chown nas-backup:nas-backup ${stagingDir}/postgresql/${minifluxDb}.sql
           '';
         };
 

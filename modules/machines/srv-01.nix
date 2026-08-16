@@ -17,6 +17,7 @@
         gatus
         beszel
         ups
+        postgresql
         mediaLibrary
         jellyfin
         servarr
@@ -30,6 +31,7 @@
         mealie
         radicale
         couchdb
+        miniflux
       ])
       ++ [
         ../_hosts/srv-01/hardware.nix

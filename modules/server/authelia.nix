@@ -45,6 +45,7 @@
           autheliaOidcGrimmoryClientSecretDigest = sopsConfig;
           autheliaOidcPaperlessClientSecretDigest = sopsConfig;
           autheliaOidcMealieClientSecretDigest = sopsConfig;
+          autheliaOidcMinifluxClientSecretDigest = sopsConfig;
         };
       };
       services = {
@@ -281,6 +282,40 @@
                   # Grimmory's fix is unnecessary. No
                   # `userinfo_signed_response_alg`: Immich's RS256 would hand that
                   # fallback a JWT where it expects JSON, as it would Paperless.
+                }
+                {
+                  client_id = "miniflux";
+                  client_name = "Miniflux";
+                  client_secret = "{{ secret \"${config.sops.secrets.autheliaOidcMinifluxClientSecretDigest.path}\" }}";
+                  public = false;
+                  authorization_policy = "two_factor";
+                  consent_mode = "pre-configured";
+                  pre_configured_consent_duration = "1 year";
+                  # Required rather than permitted, as for Grimmory and Mealie:
+                  # Miniflux hardcodes an S256 challenge on every authorization
+                  # request.
+                  require_pkce = true;
+                  pkce_challenge_method = "S256";
+                  response_types = [ "code" ];
+                  grant_types = [ "authorization_code" ];
+                  id_token_signed_response_alg = "RS256";
+                  # Built from ./miniflux.nix's BASE_URL plus the route
+                  # /oauth2/{provider}/callback, so the two have to match.
+                  redirect_uris = [ "https://miniflux.${constants.domain}/oauth2/oidc/callback" ];
+                  # Exactly what Miniflux asks for; it maps no groups.
+                  scopes = [
+                    "openid"
+                    "profile"
+                    "email"
+                  ];
+                  # Three omissions, all deliberate. No
+                  # `userinfo_signed_response_alg`: Miniflux verifies the ID
+                  # token *and* calls userinfo, requiring the two subjects to
+                  # match, so Immich's RS256 would break it as it does Paperless.
+                  # No `claims_policy`: the username claims come from userinfo,
+                  # not the ID token Grimmory needs one for. And no
+                  # `token_endpoint_auth_method`: golang.org/x/oauth2
+                  # auto-detects, trying basic — Authelia's default — first.
                 }
               ];
               claims_policies.grimmory.id_token = [

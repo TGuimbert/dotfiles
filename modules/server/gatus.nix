@@ -255,6 +255,15 @@
                 method = "PROPFIND";
                 status = 401;
               })
+              # Exempt for the same reason again — its phone clients speak
+              # Miniflux's own API. `/healthcheck` is the one of its three
+              # unauthenticated health paths that touches PostgreSQL; `/healthz`
+              # and `/liveness` would stay green with the database gone.
+              (mkHttps {
+                name = "miniflux";
+                path = "/healthcheck";
+                conditions = [ "[BODY] == OK" ];
+              })
               # Exempt from the middleware for the same reason again. `/_up` is
               # the one path ./couchdb.nix leaves open, so this needs no
               # credential; asserting the body keeps a 200 from anything other

@@ -13,12 +13,18 @@
       lib,
       mkHeartbeat,
       mkRouter,
+      requirePostgresql,
       ...
     }:
     let
       inherit (config.services.paperless) consumptionDir dataDir;
     in
     {
+      # The cluster below is preserved by ./postgresql.nix, not here; taking its
+      # argument is what makes a host importing this aspect without that one fail
+      # to evaluate.
+      assertions = [ (requirePostgresql "paperless") ];
+
       # `dataDir` is preserved at 0750 below, and 0777 on the consume directory
       # buys nothing without search permission on the way to it — so the one
       # writer gets the group rather than the archive getting 0755. Without this
@@ -166,24 +172,17 @@
       # unit; the cost is that `paperless` without `gatus` fails to evaluate.
       systemd.services.paperless-exporter.serviceConfig = mkHeartbeat "paperless-exporter";
 
-      # No uid pinning, unlike every sibling aspect: nixpkgs allocates both of
-      # these statically (`ids.uids.paperless = 315`, `postgres = 71`), so they
-      # already survive a rebuild.
+      # No uid pinning, unlike every sibling aspect: nixpkgs allocates paperless
+      # statically (`ids.uids.paperless = 315`), so it already survives a
+      # rebuild. PostgreSQL is preserved by ./postgresql.nix, which owns the
+      # cluster this shares with ./miniflux.nix. Redis is absent on purpose: a
+      # celery broker, the same reasoning as ./gatus.nix's unpreserved sqlite
+      # store.
       preservation.preserveAt."/persistent".directories = [
         {
           directory = dataDir;
           user = "paperless";
           group = "paperless";
-          mode = "0750";
-        }
-        {
-          # The parent, not `services.postgresql.dataDir`, which carries the
-          # major version — pinning that would land the next cluster on the tmpfs
-          # root. Redis is absent on purpose: a celery broker, the same reasoning
-          # as ./gatus.nix's unpreserved sqlite store.
-          directory = "/var/lib/postgresql";
-          user = "postgres";
-          group = "postgres";
           mode = "0750";
         }
       ];
