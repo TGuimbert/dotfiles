@@ -389,6 +389,25 @@ carries the *hashed* admin password as it was, and outranks the sops one. If `co
 has changed since the backup, `rm /var/lib/couchdb/local.ini` before starting and CouchDB will
 re-hash from sops.
 
+Miniflux is the mirror image of Radicale: nothing but a database. Feeds, entries, users, API keys
+and the OIDC link are all rows in the PostgreSQL cluster it shares with Paperless, and there is no
+directory to rsync:
+
+```bash
+systemctl stop miniflux
+
+runuser -u postgres -- psql miniflux < <pulled>/postgresql/miniflux.sql
+
+systemctl start miniflux
+```
+
+The dump carries no `CREATE DATABASE` — the target is the empty database `services.miniflux`
+declares on a rebuilt host — and `runuser` is needed for MariaDB's reason above: peer
+authentication on the socket authenticates the OS user, and PostgreSQL's superuser is `postgres`.
+The local admin comes back from sops on first start either way, and the Authelia link is in the
+dump. Paperless shares that cluster but is not restored this way: its own exporter above is what
+carries it, which is why the dump names one database rather than being a `pg_dumpall`.
+
 Jellyfin's artwork is deliberately not in the backup — it re-fetches it — so expect the libraries
 to look bare until the first metadata scan finishes. Neither SABnzbd nor Recyclarr is in the
 backup either: the first holds a re-downloadable queue, the second a clone of the TRaSH guides and
@@ -540,6 +559,36 @@ Two things the non-admin account cannot do, both by design:
   Paste the admin credential into the plugin for that one operation, then put the account back.
 
 Routine compaction needs neither: CouchDB's smoosh daemon compacts on its own by default.
+
+### Bringing up Miniflux
+
+Miniflux is the feed reader. It authenticates against Authelia over OIDC, but — unlike Mealie —
+the identity is **linked onto an existing account** rather than creating one, so the first run
+needs the local admin the module seeds from sops:
+
+1. `sops secrets/srv-01.yaml` and add three values:
+   - `minifluxAdminPassword` — the local admin's password, at least six characters. The account
+     is `tguimbert`, named in `modules/server/miniflux.nix`.
+   - `autheliaOidcMinifluxClientSecret` and `autheliaOidcMinifluxClientSecretDigest` — a pair from
+     `authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72`, exactly
+     as for Mealie: the plaintext goes into Miniflux's environment file, the digest into
+     `modules/server/authelia.nix`.
+2. `just deploy srv-01`, then `ssh srv-01.local journalctl -u miniflux | grep -i oidc`. A wrong
+   `OAUTH2_OIDC_DISCOVERY_ENDPOINT` fails **here, at startup** (`Failed to initialize OIDC
+   provider`) and not at the first login.
+3. Open `https://miniflux.home.guimbert.fr`, log in with `tguimbert` and the password from step 1,
+   and use **Settings → Link my Authelia account** (the link at the top of the page). Log out and
+   back in through *Sign in with Authelia* to confirm it took. Account creation over OIDC is off,
+   so that link is the only other way in besides the password — which stays enabled on purpose:
+   it is what still works when Authelia is the thing that is down.
+4. For phone and desktop reader apps, **Settings → Integrations**: Miniflux serves its own API
+   and also the Fever and Google Reader ones, each with a credential generated there. The route
+   carries no Authelia middleware precisely so those clients work.
+
+Adding feeds needs no bridge: Reddit publishes `https://www.reddit.com/r/<sub>/.rss`, and the same
+for a user or a multireddit, as do YouTube channels. A **403** from Reddit is it refusing the
+fetcher's user agent, not a misconfiguration — set a per-feed **User Agent** in the feed's
+settings.
 
 ### Bringing up the UPS client
 

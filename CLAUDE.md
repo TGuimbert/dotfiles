@@ -154,10 +154,13 @@ snapshot task, not anything here, and `/var/lib/traefik` is deliberately out of 
 `acme.json` holds the wildcard cert's private key, which Cloudflare DNS re-issues for free.
 Restores are in README.md.
 
-Every database staged is sqlite through the online-backup API, **except Grimmory**, whose library
-metadata, users and OIDC client are in MariaDB and go through `mariadb-dump --single-transaction`.
-That dump is also the only backup of configuration this repo cannot rebuild — see "Books on
-srv-01".
+Every database staged is sqlite through the online-backup API, **except two**. Grimmory's library
+metadata, users and OIDC client are in MariaDB and go through `mariadb-dump --single-transaction`;
+that dump is also the only backup of configuration this repo cannot rebuild — see "Books on
+srv-01". Miniflux is in PostgreSQL and goes through `pg_dump`, one database rather than
+`pg_dumpall`: Paperless shares the cluster but is staged by its own exporter, so dumping
+everything would carry a second copy of it. Both run under `runuser`, because peer authentication
+on either socket authenticates the *OS* user and root is the superuser of neither.
 
 ### Monitoring srv-01
 
@@ -451,8 +454,9 @@ the multifunction printer already attached to this host into an intake pipeline.
     plus three celery processes — write concurrently, which is where sqlite starts returning
     `database is locked`. It is the second engine on this host after Grimmory's MariaDB; that costs
     nothing in `backup.nix`, because the exporter below makes the engine invisible there.
-    `/var/lib/postgresql` is preserved as the **parent**, not `dataDir` — the latter carries the
-    major version, so pinning it would silently land the next cluster on the tmpfs root.
+    The cluster itself is **not** preserved here: it is shared with Miniflux and owned by the
+    `postgresql` aspect (see "News on srv-01"), whose `requirePostgresql` this file calls in its
+    `assertions` so the dependency cannot go silent.
   - **Backed up by its own tooling.** `services.paperless.exporter` runs `document_exporter` at
     00:30 into `/var/lib/paperless/export`, and `backup.nix` rsyncs *that* — not the media
     directory and not a database dump. The export is self-contained (originals, archive PDFs, a
@@ -546,11 +550,14 @@ to pin, no Renovate `customManagers` entry, the weekly lockfile PR covers it. Fo
 easy to get wrong:
 
 - **SQLite, not the PostgreSQL the module can bring up.** `database.createLocally = true` would
-  reuse the cluster `paperless` starts, but `/var/lib/postgresql` is preserved *in
-  `paperless.nix`*, so `mealie` would silently depend on that aspect being imported — the opposite
-  of the loud eval failure `mediaLibrary` and `mkHeartbeat` are built for. As one file at
-  `/var/lib/mealie/mealie.db` it instead falls into `backup.nix`'s existing online-backup loop
-  beside every other sqlite service here.
+  reuse the shared cluster, and at the time that cluster was preserved *inside* `paperless.nix`,
+  so `mealie` would have depended on that aspect being imported without saying so — the opposite
+  of the loud eval failure `mediaLibrary` and `mkHeartbeat` are built for. That specific hazard is
+  gone (the `postgresql` aspect and its `requirePostgresql` now exist, because Miniflux had no
+  sqlite option to fall back on), but the choice stands on its own merits: as one file at
+  `/var/lib/mealie/mealie.db` it falls into `backup.nix`'s existing online-backup loop beside
+  every other sqlite service here, where PostgreSQL would need a second `pg_dump` for a database
+  a single process writes.
 - **`settings` is rendered into `Environment=`,** which reaches the store *and* the journal, so the
   OIDC client secret goes through the module's `credentialsFile` from a sops template — the same
   split `shelfmark.nix` makes for its API keys. Note also that the module passes every `settings`
@@ -705,6 +712,61 @@ one ordering rule they give — secondary indexes before the databases — falls
 walk, since `.shards/` precedes `shards/`. The uid is *not* pinned, unlike every sibling here:
 nixpkgs gives couchdb a static id (106).
 
+### News on srv-01
+
+`miniflux` (`modules/server/miniflux.nix`) — the feed reader. RSS and Atom only, deliberately:
+Reddit publishes a feed per subreddit, per user and per multireddit (`…/.rss`), as do YouTube
+channels and most news sites, so no bridge (RSS-Bridge, RSSHub) is deployed to manufacture feeds
+for sites that publish none — that would be a new aspect, not a setting here. The
+`paperless`/`mealie`/`radicale`/`couchdb` shape (an ordinary nixpkgs module), and `mkRouter`
+rather than `mkAutheliaRouter`, joining Jellyfin, Jellyseerr, Grimmory, Paperless, Mealie,
+Radicale and CouchDB: the phone clients speak Miniflux's own API — or the Fever and Google Reader
+ones it also serves, enabled per user under Settings → Integrations — which no browser SSO round
+trip can serve.
+
+**It is the only service here with no state of its own.** Feeds, entries, users, API keys and the
+OIDC link are all rows; Miniflux has no sqlite mode and no data directory. So it runs under
+`DynamicUser` with nothing preserved and no uid pinned, and its backup is a `pg_dump`.
+
+That is what forced the `postgresql` aspect (`modules/server/postgresql.nix`). The cluster was
+brought up and preserved as a side effect of `paperless`, and a second consumer depending on that
+silently is what `mealie.nix` stays on sqlite to avoid. So `/var/lib/postgresql` — the parent, not
+`dataDir`, which carries the major version — moved into an aspect of its own, publishing
+`requirePostgresql` in the `mkHeartbeat` idiom. `paperless` and `miniflux` both call it in their
+`assertions`, so a host importing either without the cluster aspect fails to evaluate rather than
+putting the database on the tmpfs root.
+
+Four things fail misleadingly:
+
+- **`OAUTH2_OIDC_DISCOVERY_ENDPOINT` is the issuer, not the discovery document.** go-oidc appends
+  `/.well-known/openid-configuration` itself and then compares the `issuer` it gets back against
+  the string byte for byte — so unlike Mealie's `OIDC_CONFIGURATION_URL` this takes neither that
+  suffix nor a trailing slash, and either one fails at *startup* (`Failed to initialize OIDC
+  provider`) rather than at the first login.
+- **The secrets cannot go in `config`.** The module renders that attrset into the unit's
+  `Environment=`, which reaches the store and the journal — `shelfmark.nix`'s trap. Its
+  `adminCredentialsFile` is the *only* `EnvironmentFile=` hook it offers, so the admin password
+  and the OIDC client secret share one sops template. That file is left root-owned, unlike every
+  sibling here: `DynamicUser` leaves no account to chown to, and PID 1 reads `EnvironmentFile=`
+  before dropping privileges.
+- **`config`'s freeform type is `str`/`int`.** Only `CREATE_ADMIN`, `RUN_MIGRATIONS` and
+  `WATCHDOG` coerce a bool, so everything else is `0`/`1` — `OAUTH2_USER_CREATION = false` would
+  be `toString false`, the empty string, the edge `mealie.nix` documents.
+- **`LISTEN_ADDR` must be stated.** Its default is `localhost:8080`, which is Gatus's port.
+
+The Authelia client differs from all four others (see "Authentication on srv-01"): PKCE **S256 is
+required**, because Miniflux hardcodes a challenge on every authorization request; there is no
+`userinfo_signed_response_alg`, because it verifies the ID token *and* calls userinfo and requires
+the two subjects to match, so Immich's RS256 breaks it as it does Paperless; there is no
+`claims_policy`, because the username claims come from userinfo, not the ID token; and there is no
+`token_endpoint_auth_method`, because `golang.org/x/oauth2` auto-detects and tries basic —
+Authelia's default — first.
+
+`OAUTH2_USER_CREATION` stays off and the local login stays enabled, both for Paperless's reasons:
+the Authelia identity is *linked* onto the existing account from the settings page rather than
+self-provisioned, and the password login is the way in when Authelia is the thing that is down.
+Bring-up is in README.md, "Bringing up Miniflux".
+
 ### Formatting and Linting
 
 ```bash
@@ -785,7 +847,7 @@ Each host is a thin import list in `modules/machines/<hostname>.nix` — it sets
 **Current hosts**:
 - `leshen`: Desktop system with niri + noctalia, games, podman (`displaysLeshen` for its dual monitors)
 - `griffin`: Lenovo ThinkPad T490 laptop with niri + noctalia, games, podman (`laptop` for lid handling)
-- `srv-01`: Headless bare-metal server with Traefik, LLDAP, Authelia (forward-auth + OIDC provider), Homepage, Jellyfin + the *arr + SABnzbd + Grimmory + Shelfmark over one NFS library from the NAS, Paperless-ngx fed by the multifunction printer's scanner, Mealie, Radicale, CouchDB, and a Home Assistant OS libvirt guest bridged onto the LAN via `br0`; LUKS unlocked from the TPM (PCR 7). Backups are a TrueNAS pull, not a push — see "Backing up srv-01"; monitoring is split with the NAS — see "Monitoring srv-01"; it is a NUT secondary of the UPS on the NAS — see "Power on srv-01"; the media stack is in "Media on srv-01", the ebook one in "Books on srv-01" (which is also the only container on this host), Paperless plus the scanner in "Documents on srv-01", Mealie in "Recipes on srv-01", Radicale in "Calendars and contacts on srv-01", and CouchDB in "Obsidian sync on srv-01"
+- `srv-01`: Headless bare-metal server with Traefik, LLDAP, Authelia (forward-auth + OIDC provider), Homepage, Jellyfin + the *arr + SABnzbd + Grimmory + Shelfmark over one NFS library from the NAS, Paperless-ngx fed by the multifunction printer's scanner, Mealie, Radicale, CouchDB, Miniflux, and a Home Assistant OS libvirt guest bridged onto the LAN via `br0`; LUKS unlocked from the TPM (PCR 7). Backups are a TrueNAS pull, not a push — see "Backing up srv-01"; monitoring is split with the NAS — see "Monitoring srv-01"; it is a NUT secondary of the UPS on the NAS — see "Power on srv-01"; the media stack is in "Media on srv-01", the ebook one in "Books on srv-01" (which is also the only container on this host), Paperless plus the scanner in "Documents on srv-01", Mealie in "Recipes on srv-01", Radicale in "Calendars and contacts on srv-01", CouchDB in "Obsidian sync on srv-01", and Miniflux plus the shared PostgreSQL cluster in "News on srv-01"
 
 ### Module Organization
 
@@ -793,7 +855,7 @@ One feature = one capability file holding its NixOS **and** home-manager config 
 - `nixos.modules.base` — every host (boot, locale, nix settings, disko, user account + nushell login shell, sshd, avahi, fwupd/smartd/btrfs-scrub, cli tools, preservation, sops)
 - `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, firefox, audio, NetworkManager + CIFS, tailscale, printing client, GUI home)
 - `nixos.modules.server` — srv-01 baseline (`modules/server/`); deliberately thin — only the sops file, the headless service disables and static networking
-- Named opt-in aspects imported only by hosts that want them: `secureBoot` (lanzaboote; every host with a bootloader), `autoUpgrade` (pull-based nightly updates; srv-01 only), `games`, `podman`, `displaysLeshen`, `laptop`, `docker` (no host currently imports it), and the srv-01 services (`traefik`, `authelia`, `lldap`, `homepage`, `backup`, `printScan`, `homeAssistant`, `gatus`, `beszel`, `ups`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`, `grimmory`, `shelfmark`, `paperless`, `mealie`, `radicale`, `couchdb`)
+- Named opt-in aspects imported only by hosts that want them: `secureBoot` (lanzaboote; every host with a bootloader), `autoUpgrade` (pull-based nightly updates; srv-01 only), `games`, `podman`, `displaysLeshen`, `laptop`, `docker` (no host currently imports it), and the srv-01 services (`traefik`, `authelia`, `lldap`, `homepage`, `backup`, `printScan`, `homeAssistant`, `gatus`, `beszel`, `ups`, `postgresql`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`, `grimmory`, `shelfmark`, `paperless`, `mealie`, `radicale`, `couchdb`, `miniflux`)
 
 **Cross-aspect collectors.** A few things are contributed *by* a feature but assembled by
 another. Rather than a central list that drifts, the assembling aspect declares a collector and
@@ -807,12 +869,14 @@ each feature adds to it beside its own config:
   group outside it. Tiles are sorted by name within a group, since merge order follows module
   evaluation rather than intent.
 - `mkRouter` / `mkAutheliaRouter` (`modules/server/traefik-router.nix`), `mkHeartbeat`
-  (`modules/server/gatus.nix`) and `mediaLibrary` (`modules/server/media-library.nix`) are the
-  same idea via `_module.args`: a builder or a constant defined once, read by each feature.
+  (`modules/server/gatus.nix`), `mediaLibrary` (`modules/server/media-library.nix`) and
+  `requirePostgresql` (`modules/server/postgresql.nix`) are the same idea via `_module.args`: a
+  builder or a constant defined once, read by each feature.
 
-Both create a real dependency — an aspect using `homepageTiles`, `mkHeartbeat` or `mediaLibrary`
-will not evaluate on a host that omits `homepage`, `gatus` or `mediaLibrary`. That is deliberate: a loud eval failure beats a tile
-that renders nowhere or a job that reports to nothing.
+Both create a real dependency — an aspect using `homepageTiles`, `mkHeartbeat`, `mediaLibrary` or
+`requirePostgresql` will not evaluate on a host that omits `homepage`, `gatus`, `mediaLibrary` or
+`postgresql`. That is deliberate: a loud eval failure beats a tile
+that renders nowhere, a job that reports to nothing, or a database on a tmpfs root.
 
 Most features are flat `modules/<feature>.nix` files; directories appear only for a cohesive multi-file capability (`desktop/`) or a peer-set (`machines/`, `server/`, `shells/`). Per-user config goes through `homeManager.modules.base` (every host) / `homeManager.modules.gui` (desktop) inside the owning feature file — never `home-manager.users.*` directly (except the wiring in `users.nix`).
 
@@ -969,7 +1033,7 @@ Scaffolding files live **flat in `modules/`** (`nixos.nix`, `home-manager.nix`, 
 - `nixos.modules.base` — every host (nix settings, locale, boot, disko, user, sshd/avahi/fwupd/smartd, preservation, sops)
 - `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, firefox, audio, NetworkManager, tailscale); also pulls `home.gui`
 - `nixos.modules.server` — srv-01 baseline
-- Named opt-in aspects: `secureBoot`, `autoUpgrade`, `games`, `podman`, `displaysLeshen`, `laptop`, `docker`, `traefik`, `authelia`, `lldap`, `homepage`, `backup`, `printScan`, `homeAssistant`, `gatus`, `beszel`, `ups`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`, `grimmory`, `shelfmark`, `paperless`, `mealie`, `radicale`, `couchdb`
+- Named opt-in aspects: `secureBoot`, `autoUpgrade`, `games`, `podman`, `displaysLeshen`, `laptop`, `docker`, `traefik`, `authelia`, `lldap`, `homepage`, `backup`, `printScan`, `homeAssistant`, `gatus`, `beszel`, `ups`, `postgresql`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`, `grimmory`, `shelfmark`, `paperless`, `mealie`, `radicale`, `couchdb`, `miniflux`
 
 **Deliberate divergences from mightyiam/infra**: no `flake-file` (inputs stay hand-written in `flake.nix`); inputs stay real flakes (use `inputs.home-manager.nixosModules.home-manager`, not `flake = false`); single user `tguimbert` hardcoded (no multi-user `users` option machinery). Hardware detection uses nixpkgs' `hardware.facter` (report at `modules/_hosts/<host>/facter.json`, must be git-tracked); a slim `hardware.nix` per host keeps `facter.reportPath` + quirks facter can't detect.
 
