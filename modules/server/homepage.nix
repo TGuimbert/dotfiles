@@ -71,14 +71,6 @@
                 description = "Photo and video management";
               };
             }
-            {
-              Klipper = {
-                icon = "klipper.png";
-                href = "http://klipper.${constants.domain}";
-                siteMonitor = "http://klipper.${constants.domain}";
-                description = "3D printer management";
-              };
-            }
           ];
           Admin = [
             {
