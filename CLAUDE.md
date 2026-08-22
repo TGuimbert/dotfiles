@@ -849,6 +849,45 @@ readeck mounts outside its authenticated router, and it renders from build info 
 stay green with the database gone. There is no unauthenticated path that touches sqlite.
 Bring-up is in README.md, "Bringing up Readeck".
 
+### 3D printing on srv-01
+
+`klipper` (`modules/server/klipper.nix`) — **a Traefik route and a homepage tile, and nothing
+else**. The only aspect here that runs no service on this host: Klipper, Moonranker and the Fluidd
+UI all live on the printer's own machine, which used to terminate its own TLS. This exists so
+`klipper.<domain>` is served under the wildcard certificate `traefik.nix` already holds, with the
+hop to the printer in plain HTTP — the `home-assistant.nix` shape, and the second off-host backend
+on this host's Traefik.
+
+**One router covers everything**, because the printer's nginx on `:80` serves Fluidd *and* already
+reverse-proxies Moonraker (`/server`, `/printer`, `/access`, `/machine`) and the webcam. So there
+is no second route for `:7125`, and none of the three things that usually need middleware need
+any: Traefik forwards `Upgrade` (so `/websocket` completes), does not buffer responses (so the
+MJPEG stream flows) and imposes no request-body limit (so gcode upload works).
+
+`mkRouter`, not `mkAutheliaRouter`, joining Jellyfin, Jellyseerr, Grimmory, Paperless, Mealie,
+Radicale, CouchDB, Miniflux and Readeck: the browser is only one of Moonraker's clients, and the
+slicer's network upload, Mobileraker, Obico and the webcam stream can no more complete a browser
+SSO round trip than a TV can. Fluidd has no login of its own and Moonraker's `force_logins` is
+off, so the printer is unauthenticated on the LAN exactly as it was before.
+
+Two things fail misleadingly:
+
+- **`klipper.lan` and `klipper.<domain>` are load-bearing in opposite directions.** The router
+  dials `klipper.lan` — a name, not the literal address `home-assistant.nix` pins, so Traefik
+  re-resolves per request and a changed DHCP lease needs no rebuild. Only the `<domain>` name
+  moves to srv-01; repointing the `.lan` one too makes this route proxy to itself. There is no
+  wildcard DNS record on the router, so this is one explicit entry changed by hand.
+- **Moonraker needs no proxy trust setting**, which is the exact counterpoint to the
+  `trusted_proxies` block `home-assistant.nix` documents — do not copy that over. Its
+  `trusted_clients` already covers `10.0.0.0/8` and so this host, and Fluidd calls the origin it
+  was served from, so `cors_domains` is never consulted. What proxying *does* change is that every
+  client now reaches Moonraker as srv-01, so its IP-based trust can no longer tell them apart;
+  that costs nothing while the whole RFC1918 space is trusted.
+
+No Gatus endpoint, deliberately: the printer is switched off between prints, and a monitor on it
+would push a Pushover notification every time. The homepage tile's `siteMonitor` dot still shows
+liveness without alerting.
+
 ### Formatting and Linting
 
 ```bash
@@ -929,7 +968,7 @@ Each host is a thin import list in `modules/machines/<hostname>.nix` — it sets
 **Current hosts**:
 - `leshen`: Desktop system with niri + noctalia, games, podman (`displaysLeshen` for its dual monitors)
 - `griffin`: Lenovo ThinkPad T490 laptop with niri + noctalia, games, podman (`laptop` for lid handling)
-- `srv-01`: Headless bare-metal server with Traefik, LLDAP, Authelia (forward-auth + OIDC provider), Homepage, Jellyfin + the *arr + SABnzbd + Grimmory + Shelfmark over one NFS library from the NAS, Paperless-ngx fed by the multifunction printer's scanner, Mealie, Radicale, CouchDB, Miniflux, Readeck, and a Home Assistant OS libvirt guest bridged onto the LAN via `br0`; LUKS unlocked from the TPM (PCR 7). Backups are a TrueNAS pull, not a push — see "Backing up srv-01"; monitoring is split with the NAS — see "Monitoring srv-01"; it is a NUT secondary of the UPS on the NAS — see "Power on srv-01"; the media stack is in "Media on srv-01", the ebook one in "Books on srv-01" (which is also the only container on this host), Paperless plus the scanner in "Documents on srv-01", Mealie in "Recipes on srv-01", Radicale in "Calendars and contacts on srv-01", CouchDB in "Obsidian sync on srv-01", Miniflux plus the shared PostgreSQL cluster in "News on srv-01", and Readeck in "Read-later on srv-01"
+- `srv-01`: Headless bare-metal server with Traefik, LLDAP, Authelia (forward-auth + OIDC provider), Homepage, Jellyfin + the *arr + SABnzbd + Grimmory + Shelfmark over one NFS library from the NAS, Paperless-ngx fed by the multifunction printer's scanner, Mealie, Radicale, CouchDB, Miniflux, Readeck, and a Home Assistant OS libvirt guest bridged onto the LAN via `br0`; LUKS unlocked from the TPM (PCR 7). Backups are a TrueNAS pull, not a push — see "Backing up srv-01"; monitoring is split with the NAS — see "Monitoring srv-01"; it is a NUT secondary of the UPS on the NAS — see "Power on srv-01"; the media stack is in "Media on srv-01", the ebook one in "Books on srv-01" (which is also the only container on this host), Paperless plus the scanner in "Documents on srv-01", Mealie in "Recipes on srv-01", Radicale in "Calendars and contacts on srv-01", CouchDB in "Obsidian sync on srv-01", Miniflux plus the shared PostgreSQL cluster in "News on srv-01", Readeck in "Read-later on srv-01", and the proxied 3D printer UI in "3D printing on srv-01"
 
 ### Module Organization
 
@@ -937,7 +976,8 @@ One feature = one capability file holding its NixOS **and** home-manager config 
 - `nixos.modules.base` — every host (boot, locale, nix settings, disko, user account + nushell login shell, sshd, avahi, fwupd/smartd/btrfs-scrub, cli tools, preservation, sops)
 - `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, firefox, audio, NetworkManager + CIFS, tailscale, printing client, GUI home)
 - `nixos.modules.server` — srv-01 baseline (`modules/server/`); deliberately thin — only the sops file, the headless service disables and static networking
-- Named opt-in aspects imported only by hosts that want them: `secureBoot` (lanzaboote; every host with a bootloader), `autoUpgrade` (pull-based nightly updates; srv-01 only), `games`, `podman`, `displaysLeshen`, `laptop`, `docker` (no host currently imports it), and the srv-01 services (`traefik`, `authelia`, `lldap`, `homepage`, `backup`, `printScan`, `homeAssistant`, `gatus`, `beszel`, `ups`, `postgresql`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`, `grimmory`, `shelfmark`, `paperless`, `mealie`, `radicale`, `couchdb`, `miniflux`, `readeck`)
+- Named opt-in aspects imported only by hosts that want them: `secureBoot` (lanzaboote; every host with a bootloader), `autoUpgrade` (pull-based nightly updates; srv-01 only), `games`, `podman`, `displaysLeshen`, `laptop`, `docker` (no host currently imports it), and the srv-01 services (`traefik`, `authelia`, `lldap`, `homepage`, `backup`, `printScan`, `homeAssistant`, `gatus`, `beszel`, `ups`, `postgresql`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`, `grimmory`, `shelfmark`, `paperless`, `mealie`, `radicale`, `couchdb`, `miniflux`, `readeck`,
+  `klipper`)
 
 **Cross-aspect collectors.** A few things are contributed *by* a feature but assembled by
 another. Rather than a central list that drifts, the assembling aspect declares a collector and
@@ -1115,7 +1155,7 @@ Scaffolding files live **flat in `modules/`** (`nixos.nix`, `home-manager.nix`, 
 - `nixos.modules.base` — every host (nix settings, locale, boot, disko, user, sshd/avahi/fwupd/smartd, preservation, sops)
 - `nixos.modules.desktop` — desktop hosts (niri, noctalia, greeter, appearance, firefox, audio, NetworkManager, tailscale); also pulls `home.gui`
 - `nixos.modules.server` — srv-01 baseline
-- Named opt-in aspects: `secureBoot`, `autoUpgrade`, `games`, `podman`, `displaysLeshen`, `laptop`, `docker`, `traefik`, `authelia`, `lldap`, `homepage`, `backup`, `printScan`, `homeAssistant`, `gatus`, `beszel`, `ups`, `postgresql`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`, `grimmory`, `shelfmark`, `paperless`, `mealie`, `radicale`, `couchdb`, `miniflux`, `readeck`
+- Named opt-in aspects: `secureBoot`, `autoUpgrade`, `games`, `podman`, `displaysLeshen`, `laptop`, `docker`, `traefik`, `authelia`, `lldap`, `homepage`, `backup`, `printScan`, `homeAssistant`, `gatus`, `beszel`, `ups`, `postgresql`, `mediaLibrary`, `jellyfin`, `servarr`, `sabnzbd`, `bazarr`, `recyclarr`, `jellyseerr`, `grimmory`, `shelfmark`, `paperless`, `mealie`, `radicale`, `couchdb`, `miniflux`, `readeck`, `klipper`
 
 **Deliberate divergences from mightyiam/infra**: no `flake-file` (inputs stay hand-written in `flake.nix`); inputs stay real flakes (use `inputs.home-manager.nixosModules.home-manager`, not `flake = false`); single user `tguimbert` hardcoded (no multi-user `users` option machinery). Hardware detection uses nixpkgs' `hardware.facter` (report at `modules/_hosts/<host>/facter.json`, must be git-tracked); a slim `hardware.nix` per host keeps `facter.reportPath` + quirks facter can't detect.
 

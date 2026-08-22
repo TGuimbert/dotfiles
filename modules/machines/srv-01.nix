@@ -33,6 +33,7 @@
         couchdb
         miniflux
         readeck
+        klipper
       ])
       ++ [
         ../_hosts/srv-01/hardware.nix
