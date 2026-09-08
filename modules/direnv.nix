@@ -1,6 +1,8 @@
-{ ... }:
+{ config, ... }:
 {
-  homeManager.modules.gui = {
+  homeManager.modules.gui.imports = [ config.homeManager.modules.direnv ];
+
+  homeManager.modules.direnv = {
     programs.direnv = {
       enable = true;
       nix-direnv.enable = true;

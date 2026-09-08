@@ -10,6 +10,107 @@ Personal NixOS configuration using flakes, featuring an ephemeral-root setup (vi
 - **Declarative**: Everything managed through Nix flakes
 - **Multi-host**: Support for desktops, laptops, and servers
 
+## Reusing terminal modules on macOS or Linux
+
+This flake exports portable **Home Manager** modules under `homeModules`. Import
+them into a Home Manager user configuration, including one managed by nix-darwin.
+The files under `modules/` are flake-parts aspects, not directly importable Home
+Manager modules; use the flake exports instead.
+
+| Export | Includes |
+|--------|----------|
+| `helix` | Editor settings, terminal-color theme, default `EDITOR`/`VISUAL` |
+| `helixLanguages` | Imports `helix`; Markdown, Nix, Go, YAML, Python and HCL tooling |
+| `zellij` | Keybindings, fallback theme and the Rust layout |
+| `nushell` | Shell settings, formats plugin, Carapace and conditional app integrations |
+| `starship` | Prompt with a standalone terminal palette |
+| `bat`, `eza`, `zoxide` | Individual CLI app configurations |
+| `cliTools` | Those three apps plus fd, procs, sd, dust, ripgrep, bottom, htop, wget, jq and dig |
+| `git` | Git preferences and ignores, without identity or signing policy |
+| `difftastic` | Imports `git`; enables its diff integration |
+| `direnv` | direnv and nix-direnv, including Home Manager's shell integrations |
+| `gh` | GitHub CLI aliases and gh-dash, gh-eco and gh-markdown-preview |
+| `gpg` | Imports `git`; personal public key, YubiKey settings, native pinentry and commit signing |
+| `bash` | Bash configuration and `~/.local/bin` on the session path |
+| `terminalSuite` | Helix, Zellij, Nushell, Starship, cliTools, Git, difftastic, direnv, gh and Bash |
+
+`terminalSuite` does not include the heavier `helixLanguages` tooling. Import it
+separately when needed. Imports are the toggle; there is no additional enable
+namespace. Ordinary Home Manager options remain available for customization:
+
+```nix
+# Inside home-manager.users.<your-user>, or a standalone home configuration:
+{
+  imports = [
+    inputs.dotfiles.homeModules.terminalSuite
+    # inputs.dotfiles.homeModules.helixLanguages
+    # inputs.dotfiles.homeModules.gpg
+  ];
+
+  home.stateVersion = "26.05"; # Preserve your existing value when adding modules.
+  programs.git.settings.user = {
+    name = "Your Name";
+    email = "you@example.com";
+  };
+  programs.helix.settings.theme = "base16_default_dark";
+  programs.zellij.settings.default_shell = "nu";
+  programs.gh.settings.editor = "hx";
+}
+```
+
+See [the complete nix-darwin example](examples/nix-darwin/flake.nix) for inputs and
+Home Manager wiring. Copy it into your own configuration, replace `alice`, select
+your Mac's architecture, and retain existing system/Home Manager state versions.
+The example registers Nushell as an available shell; it does not change the login
+shell. Launch `nu` or `zellij` from your terminal application. Use a Nerd Font for
+the prompt glyphs; terminal application settings and font installation belong to
+the consuming machine.
+
+Modules use the consumer's `pkgs`. They are checked with Home Manager and nixpkgs
+26.05. The optional `dotfiles.overlays.terminal` selects this repo's unstable
+Helix, Nushell/plugins and Carapace together; apply it to the nixpkgs instance
+used by Home Manager. Avoid changing just Nushell while retaining plugins from a
+different revision. On Intel Macs the terminal overlay is a no-op because
+nixpkgs unstable has dropped `x86_64-darwin`; use the supported 26.05 package set.
+The full `overlays.default` includes personal Linux desktop
+packages and is not needed here.
+
+On macOS, Nushell does not create or load `private.nu` or any other private file.
+Add personal shell configuration directly through `programs.nushell.extraConfig`
+and `programs.nushell.extraEnv` in your private nix-darwin repo. Home Manager uses
+the macOS `Library/Application Support/nushell` config directory by default;
+with `xdg.enable = true`, it uses `xdg.configHome` instead. Linux retains the
+existing mutable `private.nu` under `programs.nushell.configDir`, creating it if
+missing and sourcing it on startup. Integrations with Helix, bat, eza, Git and
+Zellij are added only when those apps are enabled.
+Zellij uses Nushell when enabled and otherwise falls back to Nix's Bash. Its Rust
+layout requires Helix, Nushell, direnv and a project environment providing Cargo;
+the suite supplies the first three, not the project toolchain.
+
+Git identity, preservation, Foot, Noctalia and Linux-only agent services remain in
+the NixOS composition. Exported modules do not create accounts or set state
+versions. GitHub CLI authentication remains a separate `gh auth login` step.
+
+### Checking the portable modules
+
+`checks.<system>."home:<name>"` evaluates/builds each module, the suite, a suite
+with the terminal overlay, and an override/custom-path configuration. Checks are
+provided for `x86_64-linux`, `aarch64-darwin` and `x86_64-darwin`; this does not make
+the existing Linux development shells portable.
+
+```bash
+# Evaluate all platforms without building or activating a home:
+nix flake check --all-systems --no-build --accept-flake-config
+
+# Build the suite on an Apple Silicon Mac (does not activate it):
+nix build '.#checks.aarch64-darwin."home:terminalSuite"' --accept-flake-config
+```
+
+New files must be tracked by Git before a normal flake reference includes them.
+During development, `path:.` also includes untracked files. The repository's flake
+evaluation uses Nix's `pipe-operators` experimental feature; consumers may need
+`--extra-experimental-features pipe-operators` when evaluating the input.
+
 ## Quick Start
 
 ### Development Environment

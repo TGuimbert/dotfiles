@@ -1,9 +1,28 @@
-{ ... }:
+{ config, ... }:
 {
-  nixos.modules.base =
-    { pkgs, ... }:
-    {
-      environment.systemPackages = with pkgs; [
+  nixos.modules.base = { pkgs, ... }: {
+    # iotop uses Linux kernel interfaces; portable tools belong to the home.
+    environment.systemPackages = [ pkgs.iotop ];
+    preservation.preserveAt."/persistent".users.tguimbert.directories = [
+      ".local/share/zoxide"
+      ".cache/tealdeer"
+    ];
+  };
+
+  nixos.modules.desktop = { pkgs, ... }: {
+    environment.systemPackages = [ pkgs.restic ];
+  };
+
+  homeManager.modules = {
+    base.imports = [ config.homeManager.modules.cliTools ];
+
+    cliTools = { pkgs, ... }: {
+      imports = with config.homeManager.modules; [
+        bat
+        eza
+        zoxide
+      ];
+      home.packages = with pkgs; [
         fd
         procs
         sd
@@ -11,58 +30,41 @@
         ripgrep
         bottom
         htop
-        iotop
         wget
-      ];
-
-      preservation.preserveAt."/persistent".users.tguimbert.directories = [
-        ".local/share/zoxide"
-        ".cache/tealdeer"
-      ];
-    };
-
-  nixos.modules.desktop =
-    { pkgs, ... }:
-    {
-      environment.systemPackages = [ pkgs.restic ];
-    };
-
-  homeManager.modules.base =
-    { pkgs, ... }:
-    {
-      home.packages = with pkgs; [
         jq
         dig
       ];
+    };
 
-      programs = {
-        bat = {
-          enable = true;
-          # The terminal's own colors off-desktop; ./desktop/noctalia.nix overrides.
-          config.theme = "ansi";
-        };
-        eza = {
-          enable = true;
-          git = true;
-          icons = "auto";
-          extraOptions = [
-            "--group-directories-first"
-            "--header"
-          ];
-        };
-        zoxide.enable = true;
+    bat = { lib, ... }: {
+      programs.bat = {
+        enable = true;
+        # Noctalia overrides this only in the Linux desktop composition.
+        config.theme = lib.mkDefault "ansi";
       };
     };
 
-  # dprint is helix's markdown formatter, so it follows the language tooling in
-  # ./helix.nix.
-  homeManager.modules.gui =
-    { pkgs, ... }:
-    {
+    eza = {
+      programs.eza = {
+        enable = true;
+        git = true;
+        icons = "auto";
+        extraOptions = [
+          "--group-directories-first"
+          "--header"
+        ];
+      };
+    };
+
+    zoxide.programs.zoxide.enable = true;
+
+    gui = { pkgs, ... }: {
+      # dprint is owned by helixLanguages alongside its other formatters.
       home.packages = with pkgs; [
-        dprint
         asciinema
         fastfetch
       ];
     };
+  };
+
 }

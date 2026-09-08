@@ -1,5 +1,27 @@
 { inputs, ... }:
 let
+  # Optional portable package policy for consumers of homeModules. Keep the
+  # Nushell executable and its plugins from the same nixpkgs revision.
+  terminalOverlay =
+    _final: prev:
+    # Unstable has dropped Intel macOS; retain the consumer's stable packages.
+    if prev.stdenv.hostPlatform.system == "x86_64-darwin" then
+      { }
+    else
+      let
+        unstable = import inputs.unstable {
+          system = prev.stdenv.hostPlatform.system;
+        };
+      in
+      {
+        inherit (unstable)
+          helix
+          nushell
+          nushellPlugins
+          carapace
+          ;
+      };
+
   overlay =
     final: prev:
     let
@@ -8,15 +30,13 @@ let
         config.allowUnfree = true;
       };
     in
-    {
+    (terminalOverlay final prev)
+    // {
       inherit (unstable)
-        helix
         k9s
-        carapace
         obsidian
         orca-slicer
         rustfinity
-        nushell
         calibre
         sone
         claude-code
@@ -32,8 +52,6 @@ let
         prev.lib.warnIf (prev.lib.versionAtLeast prev.readeck.version "0.23")
           "nixpkgs now carries readeck ${prev.readeck.version}; drop this override and modules/server/readeck.nix's note about it"
           unstable.readeck;
-
-      nushellPlugins.formats = unstable.nushellPlugins.formats;
 
       azure-cli = unstable.azure-cli.withExtensions [
         unstable.azure-cli.extensions.ssh
@@ -58,6 +76,7 @@ let
 in
 {
   flake.overlays.default = overlay;
+  flake.overlays.terminal = terminalOverlay;
 
   perSystem =
     { system, ... }:

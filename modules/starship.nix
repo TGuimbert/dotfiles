@@ -1,6 +1,8 @@
-{ ... }:
+{ config, ... }:
 {
-  homeManager.modules.base = {
+  homeManager.modules.base.imports = [ config.homeManager.modules.starship ];
+
+  homeManager.modules.starship = { lib, ... }: {
     programs.starship = {
       enable = true;
       enableTransience = true;
@@ -9,7 +11,7 @@
         # without it starship drops the styles naming them. Slots rather than
         # hexes, so an ssh'd prompt follows the terminal's own colors and its mode
         # flips — noctalia publishes these two into 173/237.
-        palette = "terminal";
+        palette = lib.mkDefault "terminal";
         palettes.terminal = {
           orange = "173";
           base01 = "237";

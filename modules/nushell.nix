@@ -1,88 +1,117 @@
-{ ... }:
+{ config, ... }:
 {
-  homeManager.modules.base =
-    { pkgs, ... }:
+  homeManager.modules.base.imports = [ config.homeManager.modules.nushell ];
+
+  homeManager.modules.nushell =
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
+    let
+      cfg = config.programs.nushell;
+      # The Linux-only mutable config follows Home Manager's configDir, including
+      # a consumer's relative or absolute override. macOS has no private file.
+      configDir =
+        if lib.hasPrefix "/" (toString cfg.configDir) then
+          toString cfg.configDir
+        else
+          "${config.home.homeDirectory}/${cfg.configDir}";
+      nuString = lib.hm.nushell.toNushell { };
+      privateFile = nuString "${configDir}/private.nu";
+      openCommand =
+        if pkgs.stdenv.isDarwin then "/usr/bin/open" else lib.getExe' pkgs.xdg-utils "xdg-open";
+    in
     {
       programs.nushell = {
         enable = true;
+        # Override the shell and formats plugin together when changing nixpkgs.
         plugins = [ pkgs.nushellPlugins.formats ];
 
-        # Not `home.sessionVariables`: home-manager's nushell module does not
-        # read those. Matters now that nu is the login shell (./user.nix) — over
-        # ssh there is no graphical session to have exported them.
-        environmentVariables = {
-          EDITOR = "hx";
-          VISUAL = "hx";
-          CARAPACE_BRIDGES = "zsh,fish,bash,inshellisense";
-          ZELLIJ_AUTO_ATTACH = "true";
-          ZELLIJ_AUTO_EXIT = "true";
-        };
+        environmentVariables = lib.mkMerge [
+          { CARAPACE_BRIDGES = "zsh,fish,bash,inshellisense"; }
+          (lib.mkIf config.programs.helix.enable {
+            EDITOR = lib.mkDefault "hx";
+            VISUAL = lib.mkDefault "hx";
+          })
+          (lib.mkIf config.programs.zellij.enable {
+            ZELLIJ_AUTO_ATTACH = lib.mkDefault "true";
+            ZELLIJ_AUTO_EXIT = lib.mkDefault "true";
+          })
+        ];
 
         settings = {
           show_banner = false;
-          buffer_editor = "hx";
+          buffer_editor = lib.mkIf config.programs.helix.enable (lib.mkDefault "hx");
         };
 
-        shellAliases = {
-          ll = "ls -la";
-          cat = "bat";
-          b = "bash -c";
-          bash = "/run/current-system/sw/bin/bash";
+        shellAliases = lib.mkMerge [
+          {
+            ll = "ls -la";
+            b = "${lib.getExe pkgs.bash} -c";
+            bash = lib.getExe pkgs.bash;
+          }
+          (lib.mkIf config.programs.bat.enable { cat = "bat"; })
+          (lib.mkIf config.programs.git.enable {
+            gs = "git status";
+            gd = "git diff";
+            gds = "git diff --staged";
+            ga = "git add";
+            gap = "git add --patch";
+            gc = "git commit";
+            gca = "git commit --amend --no-edit";
+            gce = "git commit --amend";
+            gp = "git push";
+            gu = "git pull";
+            gco = "git checkout";
+            gsw = "git switch";
+            gn = "git switch --create";
+            gl = ''git log --graph --all --pretty=format:"%C(magenta)%h %C(white) %an  %ar%C(blue)  %D%n%s%n"'';
+            gb = "git branch";
+          })
+        ];
 
-          gs = "git status";
-          gd = "git diff";
-          gds = "git diff --staged";
-          ga = "git add";
-          gap = "git add --patch";
-          gc = "git commit";
-          gca = "git commit --amend --no-edit";
-          gce = "git commit --amend";
-          gp = "git push";
-          gu = "git pull";
-          gco = "git checkout";
-          gsw = "git switch";
-          gn = "git switch --create";
-          gl = ''git log --graph --all --pretty=format:"%C(magenta)%h %C(white) %an  %ar%C(blue)  %D%n%s%n"'';
-          gb = "git branch";
-        };
-
-        extraEnv = ''
-          if (not ("~/.config/nushell/private.nu" | path exists)) {
-            touch ~/.config/nushell/private.nu
+        # Retain the existing Linux private config. Darwin consumers configure
+        # extraEnv/extraConfig directly in their own private configuration repo.
+        extraEnv = lib.mkIf (!pkgs.stdenv.isDarwin) ''
+          mkdir ${nuString configDir}
+          if (not (${privateFile} | path exists)) {
+            touch ${privateFile}
           }
         '';
 
-        extraConfig = ''
-          use std
+        extraConfig = lib.mkMerge [
+          ''
+            use std
+            ${lib.optionalString (!pkgs.stdenv.isDarwin) "source ${privateFile}"}
 
-          # List existing Zellij layouts
-          def available-layouts [] {
-            ls ~/.config/zellij/layouts/ | get name | path parse | get stem
-          }
+            # Resolve the opener on the host running Nushell.
+            def open-rust-doc [] {
+              ${openCommand} (nix build fenix#latest.rust-docs --json --no-link | from json | first | get outputs.out | path join share/doc/rust/html/index.html)
+            }
+          ''
+          (lib.mkIf config.programs.eza.enable ''
+            use ${pkgs.nu_scripts}/share/nu_scripts/aliases/eza/eza-aliases.nu *
+          '')
+          (lib.mkIf config.programs.zellij.enable ''
+            def available-layouts [] {
+              glob (${nuString config.xdg.configHome} | path join zellij layouts "*.kdl") | path parse | get stem
+            }
 
-          # Replace current Zellij tab with a new one based on the specified layout
-          def replace-with-layout [layout: string@available-layouts] {
-            let temp_tab_name = random chars
-            zellij action rename-tab $temp_tab_name
-            zellij action new-tab --layout $layout --name ($env.PWD | path basename)
-            zellij action go-to-tab-name $temp_tab_name
-            zellij action close-tab
-          }
-
-          source ~/.config/nushell/private.nu
-          use ${pkgs.nu_scripts}/share/nu_scripts/aliases/eza/eza-aliases.nu *
-        '';
+            def replace-with-layout [layout: string@available-layouts] {
+              let temp_tab_name = random chars
+              zellij action rename-tab $temp_tab_name
+              zellij action new-tab --layout $layout --name ($env.PWD | path basename)
+              zellij action go-to-tab-name $temp_tab_name
+              zellij action close-tab
+            }
+          '')
+        ];
       };
 
       programs.carapace.enable = true;
     };
-
-  homeManager.modules.gui.programs.nushell.extraConfig = ''
-    # Open in a browser a local copy of the rust documentation
-    def open-rust-doc [] {
-      xdg-open (nix build fenix#latest.rust-docs --json --no-link | from json | first | get outputs.out | path join share/doc/rust/html/index.html)
-    }
-  '';
 
   nixos.modules.base.preservation.preserveAt."/persistent".users.tguimbert.files = [
     ".config/nushell/history.txt"

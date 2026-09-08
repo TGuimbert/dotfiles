@@ -1,14 +1,21 @@
-{ ... }:
+{ config, ... }:
 {
-  homeManager.modules.gui =
-    { pkgs, ... }:
+  homeManager.modules.gui.imports = [ config.homeManager.modules.gh ];
+
+  homeManager.modules.gh =
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
     {
       programs.gh = {
         enable = true;
         gitCredentialHelper.enable = false;
         settings = {
           git_protocol = "ssh";
-          editor = "hx";
+          editor = lib.mkIf config.programs.helix.enable (lib.mkDefault "hx");
           aliases = {
             pc = "pr create --assignee @me";
             co = "pr checkout";
