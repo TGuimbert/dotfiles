@@ -1,76 +1,87 @@
-{ ... }:
+{ config, ... }:
 {
-  homeManager.modules.base = {
-    programs.zellij = {
-      enable = true;
-      settings = {
-        # A builtin, so it holds where there is no noctalia to render a theme
-        # file; ../desktop/noctalia.nix overrides it on the desktops.
-        theme = "gruvbox-dark";
-        default_shell = "nu";
-        default_layout = "welcome";
-        scrollback_editor = "hx";
-        ui.pane_frames.rounded_corners = true;
-        keybinds = {
-          scroll = {
-            "unbind \"Ctrl s\"" = { };
-            "bind \"Ctrl y\"" = {
-              SwitchToMode = "Normal";
+  homeManager.modules.base.imports = [ config.homeManager.modules.zellij ];
+
+  homeManager.modules.zellij =
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
+    {
+      programs.zellij = {
+        enable = true;
+        settings = {
+          # A builtin, so it holds where there is no noctalia to render a theme
+          # file; ../desktop/noctalia.nix overrides it on the desktops.
+          theme = lib.mkDefault "gruvbox-dark";
+          default_shell = lib.mkDefault (
+            if config.programs.nushell.enable then "nu" else lib.getExe pkgs.bash
+          );
+          default_layout = lib.mkDefault "welcome";
+          scrollback_editor = lib.mkIf config.programs.helix.enable (lib.mkDefault "hx");
+          ui.pane_frames.rounded_corners = true;
+          keybinds = {
+            scroll = {
+              "unbind \"Ctrl s\"" = { };
+              "bind \"Ctrl y\"" = {
+                SwitchToMode = "Normal";
+              };
             };
-          };
-          search = {
-            "unbind \"Ctrl s\"" = { };
-            "bind \"Ctrl y\"" = {
-              SwitchToMode = "Normal";
+            search = {
+              "unbind \"Ctrl s\"" = { };
+              "bind \"Ctrl y\"" = {
+                SwitchToMode = "Normal";
+              };
             };
-          };
-          session = {
-            "unbind \"Ctrl o\"" = { };
-            "bind \"Ctrl e\"" = {
-              SwitchToMode = "Normal";
+            session = {
+              "unbind \"Ctrl o\"" = { };
+              "bind \"Ctrl e\"" = {
+                SwitchToMode = "Normal";
+              };
+              "unbind \"Ctrl s\"" = { };
+              "bind \"Ctrl y\"" = {
+                SwitchToMode = "Scroll";
+              };
+              "bind \"Ctrl q\"" = {
+                Quit = { };
+              };
             };
-            "unbind \"Ctrl s\"" = { };
-            "bind \"Ctrl y\"" = {
-              SwitchToMode = "Scroll";
+            "shared_except \"locked\"" = {
+              "unbind \"Alt i\"" = { };
+              "bind \"Alt w\"" = {
+                MoveTab = "Left";
+              };
+              "unbind \"Alt o\"" = { };
+              "bind \"Alt q\"" = {
+                MoveTab = "Right";
+              };
+              "unbind \"Alt n\"" = { };
+              "bind \"Alt m\"" = {
+                NewPane = "";
+              };
+              "unbind \"Ctrl q\"" = { };
             };
-            "bind \"Ctrl q\"" = {
-              Quit = { };
+            "shared_except \"scroll\" \"locked\"" = {
+              "unbind \"Ctrl s\"" = { };
+              "bind \"Ctrl y\"" = {
+                SwitchToMode = "Scroll";
+              };
             };
-          };
-          "shared_except \"locked\"" = {
-            "unbind \"Alt i\"" = { };
-            "bind \"Alt w\"" = {
-              MoveTab = "Left";
+            "shared_except \"session\" \"locked\"" = {
+              "unbind \"Ctrl o\"" = { };
+              "bind \"Ctrl e\"" = {
+                SwitchToMode = "Session";
+              };
             };
-            "unbind \"Alt o\"" = { };
-            "bind \"Alt q\"" = {
-              MoveTab = "Right";
+            "shared_except \"tmux\" \"locked\"" = {
+              "unbind \"Ctrl b\"" = { };
             };
-            "unbind \"Alt n\"" = { };
-            "bind \"Alt m\"" = {
-              NewPane = "";
-            };
-            "unbind \"Ctrl q\"" = { };
-          };
-          "shared_except \"scroll\" \"locked\"" = {
-            "unbind \"Ctrl s\"" = { };
-            "bind \"Ctrl y\"" = {
-              SwitchToMode = "Scroll";
-            };
-          };
-          "shared_except \"session\" \"locked\"" = {
-            "unbind \"Ctrl o\"" = { };
-            "bind \"Ctrl e\"" = {
-              SwitchToMode = "Session";
-            };
-          };
-          "shared_except \"tmux\" \"locked\"" = {
-            "unbind \"Ctrl b\"" = { };
           };
         };
       };
-    };
 
-    xdg.configFile."zellij/layouts/rust.kdl".source = ./layouts/rust.kdl;
-  };
+      xdg.configFile."zellij/layouts/rust.kdl".source = ./layouts/rust.kdl;
+    };
 }
