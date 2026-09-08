@@ -43,6 +43,8 @@
                   dotfiles.homeModules.terminalSuite
                   # Optional LSPs and formatters, independent of any GUI:
                   # dotfiles.homeModules.helixLanguages
+                  # Personal GPG/YubiKey configuration and signed commits:
+                  # dotfiles.homeModules.gpg
                 ];
                 home.stateVersion = "26.05";
                 programs.git.settings.user = {

@@ -21,6 +21,7 @@
     "difftastic"
     "direnv"
     "gh"
+    "gpg"
     "bash"
     "terminalSuite"
   ] (name: config.homeManager.modules.${name});
@@ -41,6 +42,7 @@
         difftastic
         direnv
         gh
+        gpg
         bash
       ];
     };

@@ -30,6 +30,7 @@ Manager modules; use the flake exports instead.
 | `difftastic` | Imports `git`; enables its diff integration |
 | `direnv` | direnv and nix-direnv, including Home Manager's shell integrations |
 | `gh` | GitHub CLI aliases and gh-dash, gh-eco and gh-markdown-preview |
+| `gpg` | Imports `git`; personal public key, YubiKey settings, native pinentry and commit signing |
 | `bash` | Bash configuration and `~/.local/bin` on the session path |
 | `terminalSuite` | Helix, Zellij, Nushell, Starship, cliTools, Git, difftastic, direnv, gh and Bash |
 
@@ -43,6 +44,7 @@ namespace. Ordinary Home Manager options remain available for customization:
   imports = [
     inputs.dotfiles.homeModules.terminalSuite
     # inputs.dotfiles.homeModules.helixLanguages
+    # inputs.dotfiles.homeModules.gpg
   ];
 
   home.stateVersion = "26.05"; # Preserve your existing value when adding modules.
@@ -85,9 +87,9 @@ Zellij uses Nushell when enabled and otherwise falls back to Nix's Bash. Its Rus
 layout requires Helix, Nushell, direnv and a project environment providing Cargo;
 the suite supplies the first three, not the project toolchain.
 
-Personal identity/signing, preservation, Foot, Noctalia and Linux agent services
-remain in the NixOS composition. Exported modules do not create accounts or set
-state versions. GitHub CLI authentication remains a separate `gh auth login` step.
+Git identity, preservation, Foot, Noctalia and Linux-only agent services remain in
+the NixOS composition. Exported modules do not create accounts or set state
+versions. GitHub CLI authentication remains a separate `gh auth login` step.
 
 ### Checking the portable modules
 

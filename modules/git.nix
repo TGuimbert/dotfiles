@@ -83,13 +83,6 @@
 
     gui = {
       imports = [ config.homeManager.modules.difftastic ];
-      # Signing needs gpg + a pinentry, both desktop-only (../gpg.nix); on srv-01
-      # it would only make a commit fail.
-      programs.git.signing = {
-        signByDefault = true;
-        key = null;
-      };
-
     };
 
     difftastic = { lib, ... }: {
