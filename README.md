@@ -19,8 +19,8 @@ Personal NixOS configuration using flakes, featuring an ephemeral-root setup (vi
 git clone https://github.com/TGuimbert/dotfiles.git
 cd dotfiles
 
-# Enter the development shell (provides all necessary tools)
-nix develop
+# Enter the NixOS development shell (Linux or Apple Silicon macOS)
+nix develop .#nixos
 ```
 
 ## Installation
