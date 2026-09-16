@@ -1,4 +1,8 @@
-{ config, lib, ... }:
+{
+  config,
+  lib,
+  ...
+}:
 {
   options.homeManager.modules = lib.mkOption {
     type = lib.types.lazyAttrsOf lib.types.deferredModule;
@@ -12,6 +16,7 @@
     "helixLanguages"
     "zellij"
     "nushell"
+    "zsh"
     "starship"
     "bat"
     "eza"
@@ -22,6 +27,7 @@
     "direnv"
     "gh"
     "gpg"
+    "kubernetes"
     "bash"
     "terminalSuite"
   ] (name: config.homeManager.modules.${name});
@@ -35,7 +41,7 @@
       imports = with config.homeManager.modules; [
         helix
         zellij
-        nushell
+        zsh
         starship
         cliTools
         git
@@ -43,6 +49,7 @@
         direnv
         gh
         gpg
+        kubernetes
         bash
       ];
     };
