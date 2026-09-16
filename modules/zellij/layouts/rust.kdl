@@ -5,30 +5,30 @@ layout {
   pane split_direction="vertical" {
     pane name="hx" {
       command "direnv"
-      args "exec" "." "nu" "-e" "hx"
+      args "exec" "." "hx"
       focus true
     }
     pane {
       pane stacked=true {
         pane name="cargo check" {
           command "direnv"
-          args "exec" "." "nu" "-c" "watch . --glob=**/*.rs {|| clear; try { cargo check } }"
+          args "exec" "." "zsh" "-c" "while true; do fd --extension rs . | entr -cd cargo check; done"
           start_suspended true
         }
         pane name="cargo test" {
           command "direnv"
-          args "exec" "." "nu" "-c" "watch . --glob=**/*.rs {|| clear; try { cargo test } }"
+          args "exec" "." "zsh" "-c" "while true; do fd --extension rs . | entr -cd cargo test; done"
           start_suspended true
         }
         pane name="cargo run" {
           command "direnv"
-          args "exec" "." "nu" "-c" "watch . --glob=**/*.rs {|| clear; try { cargo run } }"
+          args "exec" "." "zsh" "-c" "while true; do fd --extension rs . | entr -cd cargo run; done"
           start_suspended true
         }
       }
       pane name="clippy" {
         command "direnv"
-        args "exec" "." "nu" "-c" "watch . --glob=**/*.rs {|| clear; try { cargo clippy } }"
+        args "exec" "." "zsh" "-c" "while true; do fd --extension rs . | entr -cd cargo clippy; done"
       }
     }
   }

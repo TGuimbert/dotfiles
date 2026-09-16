@@ -25,9 +25,9 @@
       darwinConfigurations.mac = nix-darwin.lib.darwinSystem {
         modules = [
           home-manager.darwinModules.home-manager
-          ({ pkgs, ... }: {
+          ({ ... }: {
             nixpkgs.hostPlatform = "aarch64-darwin"; # Use x86_64-darwin for Intel.
-            # Optional: use the repo's Helix, Nushell/plugins and Carapace versions.
+            # Optional: use the repo's Helix and Carapace versions.
             nixpkgs.overlays = [ dotfiles.overlays.terminal ];
 
             # Replace this example account with your existing macOS username.
@@ -53,10 +53,6 @@
                 };
               };
             };
-
-            # Launch `nu` from your terminal. Registering it here also makes it
-            # available for an explicit login-shell change by the account owner.
-            environment.shells = [ pkgs.nushell ];
           })
         ];
       };

@@ -1,5 +1,4 @@
-{ config, ... }:
-{
+{ config, ... }: {
   homeManager.modules.base.imports = [ config.homeManager.modules.starship ];
 
   homeManager.modules.starship = { lib, ... }: {
@@ -62,6 +61,7 @@
           format = "[$indicator]($style)";
           bash_indicator = " ";
           nu_indicator = "";
+          zsh_indicator = "󰬡";
         };
         directory = {
           style = "fg:bright-white bg:bright-yellow";

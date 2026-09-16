@@ -23,6 +23,7 @@ Manager modules; use the flake exports instead.
 | `helixLanguages` | Imports `helix`; Markdown, Nix, Go, YAML, Python and HCL tooling |
 | `zellij` | Keybindings, fallback theme and the Rust layout |
 | `nushell` | Shell settings, formats plugin, Carapace and conditional app integrations |
+| `zsh` | Completion, autosuggestions, syntax highlighting, Carapace and shared aliases |
 | `starship` | Prompt with a standalone terminal palette |
 | `bat`, `eza`, `zoxide` | Individual CLI app configurations |
 | `cliTools` | Those three apps plus fd, procs, sd, dust, ripgrep, bottom, htop, wget, jq and dig |
@@ -31,8 +32,9 @@ Manager modules; use the flake exports instead.
 | `direnv` | direnv and nix-direnv, including Home Manager's shell integrations |
 | `gh` | GitHub CLI aliases and gh-dash, gh-eco and gh-markdown-preview |
 | `gpg` | Imports `git`; personal public key, YubiKey settings, native pinentry and commit signing |
+| `kubernetes` | kubectl, kubelogin, Flux, kind, kubectx/kubens, minikube, k9s and shell completion |
 | `bash` | Bash configuration and `~/.local/bin` on the session path |
-| `terminalSuite` | Helix, Zellij, Nushell, Starship, cliTools, Git, difftastic, direnv, gh and Bash |
+| `terminalSuite` | Helix, Zellij, Zsh, Starship, cliTools, Git, difftastic, direnv, gh, GPG, Kubernetes clients and Bash |
 
 `terminalSuite` does not include the heavier `helixLanguages` tooling. Import it
 separately when needed. Imports are the toggle; there is no additional enable
@@ -53,7 +55,7 @@ namespace. Ordinary Home Manager options remain available for customization:
     email = "you@example.com";
   };
   programs.helix.settings.theme = "base16_default_dark";
-  programs.zellij.settings.default_shell = "nu";
+  programs.zellij.settings.default_shell = "/bin/zsh";
   programs.gh.settings.editor = "hx";
 }
 ```
@@ -61,10 +63,10 @@ namespace. Ordinary Home Manager options remain available for customization:
 See [the complete nix-darwin example](examples/nix-darwin/flake.nix) for inputs and
 Home Manager wiring. Copy it into your own configuration, replace `alice`, select
 your Mac's architecture, and retain existing system/Home Manager state versions.
-The example registers Nushell as an available shell; it does not change the login
-shell. Launch `nu` or `zellij` from your terminal application. Use a Nerd Font for
-the prompt glyphs; terminal application settings and font installation belong to
-the consuming machine.
+The suite configures Zsh but does not change the account's login shell. This fits
+macOS, where Zsh is already the default. Launch Zsh or Zellij from your terminal
+application. Use a Nerd Font for the prompt glyphs; terminal application settings
+and font installation belong to the consuming machine.
 
 Modules use the consumer's `pkgs`. They are checked with Home Manager and nixpkgs
 26.05. The optional `dotfiles.overlays.terminal` selects this repo's unstable
@@ -83,9 +85,9 @@ with `xdg.enable = true`, it uses `xdg.configHome` instead. Linux retains the
 existing mutable `private.nu` under `programs.nushell.configDir`, creating it if
 missing and sourcing it on startup. Integrations with Helix, bat, eza, Git and
 Zellij are added only when those apps are enabled.
-Zellij uses Nushell when enabled and otherwise falls back to Nix's Bash. Its Rust
-layout requires Helix, Nushell, direnv and a project environment providing Cargo;
-the suite supplies the first three, not the project toolchain.
+Zellij prefers Zsh, then Nushell, and otherwise falls back to Nix's Bash. Its Rust
+layout requires Helix, direnv, entr and a project environment providing Cargo;
+the module supplies the first three, not the project toolchain.
 
 Git identity, preservation, Foot, Noctalia and Linux-only agent services remain in
 the NixOS composition. Exported modules do not create accounts or set state

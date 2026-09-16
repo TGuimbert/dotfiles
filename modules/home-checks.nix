@@ -40,14 +40,8 @@ in
           modules.git
           modules.cliTools
           {
-            xdg.enable = true;
-            xdg.configHome = "/tmp/module check/config";
             programs = {
-              nushell = {
-                configDir = "/tmp/module check/custom nu";
-                extraConfig = "def personal-command [] { 'from consumer' }";
-                extraEnv = "$env.PERSONAL_SETTING = 'from consumer'";
-              };
+              zsh.initContent = "echo from-consumer";
               helix.settings.theme = "base16_default_dark";
               zellij.settings.default_shell = "bash";
               zellij.settings.scrollback_editor = "vi";
@@ -65,6 +59,20 @@ in
             };
           }
         ]).config;
+      nushellOverrides =
+        (evaluate pkgs [
+          modules.nushell
+          modules.zellij
+          {
+            xdg.enable = true;
+            xdg.configHome = "/tmp/module check/config";
+            programs.nushell = {
+              configDir = "/tmp/module check/custom nu";
+              extraConfig = "def personal-command [] { 'from consumer' }";
+              extraEnv = "$env.PERSONAL_SETTING = 'from consumer'";
+            };
+          }
+        ]).config;
     in
     lib.mapAttrs' (
       name: module: lib.nameValuePair "home:${name}" (evaluate pkgs [ module ]).activationPackage
@@ -78,15 +86,24 @@ in
       "home:overrides" =
         assert overrides.programs.helix.settings.theme == "base16_default_dark";
         assert overrides.programs.zellij.settings.default_shell == "bash";
+        assert overrides.programs.zellij.enableZshIntegration;
+        assert overrides.programs.zellij.attachExistingSession;
+        assert overrides.programs.zellij.exitShellOnExit;
+        assert overrides.programs.zsh.enable;
+        assert !overrides.programs.nushell.enable;
+        assert overrides.programs.zsh.shellAliases.k == "kubectl";
+        assert overrides.programs.zsh.shellAliases.gs == "git status";
+        assert overrides.programs.k9s.enable;
         assert overrides.programs.gh.settings.editor == "vi";
         assert overrides.programs.git.settings.user.name == "Module Check";
         assert
           if pkgs.stdenv.isDarwin then
-            !(lib.hasInfix "private.nu" overrides.programs.nushell.extraConfig)
-            && !(lib.hasInfix "private.nu" overrides.programs.nushell.extraEnv)
+            !(lib.hasInfix "private.nu" nushellOverrides.programs.nushell.extraConfig)
+            && !(lib.hasInfix "private.nu" nushellOverrides.programs.nushell.extraEnv)
           else
-            lib.hasInfix "/tmp/module check/custom nu/private.nu" overrides.programs.nushell.extraConfig;
-        assert lib.hasInfix "/tmp/module check/config" overrides.programs.nushell.extraConfig;
+            lib.hasInfix "/tmp/module check/custom nu/private.nu" nushellOverrides.programs.nushell.extraConfig;
+        assert lib.hasInfix "/tmp/module check/config" nushellOverrides.programs.nushell.extraConfig;
+        assert lib.hasInfix "echo from-consumer" overrides.programs.zsh.initContent;
         assert overrides.programs.git.ignores == lib.unique overrides.programs.git.ignores;
         assert overrides.programs.helix.ignores == lib.unique overrides.programs.helix.ignores;
         assert overrides.programs.eza.extraOptions == lib.unique overrides.programs.eza.extraOptions;

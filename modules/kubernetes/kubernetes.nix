@@ -1,27 +1,41 @@
-{ ... }:
-{
-  homeManager.modules.gui =
-    { pkgs, ... }:
-    {
-      home.packages = with pkgs; [
-        kubectl
-        kubelogin
-        fluxcd
-        kind
-        kubectx
-        minikube
-      ];
+{ config, ... }: {
+  homeManager.modules = {
+    gui.imports = [ config.homeManager.modules.kubernetes ];
 
-      programs.k9s.enable = true;
+    kubernetes =
+      {
+        config,
+        lib,
+        pkgs,
+        ...
+      }:
+      {
+        home.packages = with pkgs; [
+          kubectl
+          kubelogin
+          fluxcd
+          kind
+          kubectx
+          (lib.lowPrio minikube)
+        ];
 
-      programs.nushell.shellAliases.k = "kubectl";
+        programs.k9s.enable = true;
 
-      xdg.configFile = {
-        "k9s/plugins.yaml".source = ./plugins.yaml;
-        "k9s/views.yaml".source = ./views.yaml;
+        programs.nushell.shellAliases.k = lib.mkIf config.programs.nushell.enable "kubectl";
+        programs.zsh = lib.mkIf config.programs.zsh.enable {
+          shellAliases.k = "kubectl";
+          initContent = lib.mkOrder 1100 ''
+            source <(${lib.getExe pkgs.kubectl} completion zsh)
+            compdef __start_kubectl k
+          '';
+        };
+
+        xdg.configFile = {
+          "k9s/plugins.yaml".source = ./plugins.yaml;
+          "k9s/views.yaml".source = ./views.yaml;
+        };
       };
-
-    };
+  };
 
   nixos.modules.desktop.preservation.preserveAt."/persistent".users.tguimbert.directories = [
     ".kube"

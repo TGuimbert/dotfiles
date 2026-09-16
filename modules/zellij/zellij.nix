@@ -1,5 +1,4 @@
-{ config, ... }:
-{
+{ config, ... }: {
   homeManager.modules.base.imports = [ config.homeManager.modules.zellij ];
 
   homeManager.modules.zellij =
@@ -10,14 +9,24 @@
       ...
     }:
     {
+      home.packages = [ pkgs.entr ];
+
       programs.zellij = {
         enable = true;
+        enableZshIntegration = lib.mkDefault config.programs.zsh.enable;
+        attachExistingSession = lib.mkDefault config.programs.zsh.enable;
+        exitShellOnExit = lib.mkDefault config.programs.zsh.enable;
         settings = {
           # A builtin, so it holds where there is no noctalia to render a theme
           # file; ../desktop/noctalia.nix overrides it on the desktops.
           theme = lib.mkDefault "gruvbox-dark";
           default_shell = lib.mkDefault (
-            if config.programs.nushell.enable then "nu" else lib.getExe pkgs.bash
+            if config.programs.zsh.enable then
+              lib.getExe pkgs.zsh
+            else if config.programs.nushell.enable then
+              "nu"
+            else
+              lib.getExe pkgs.bash
           );
           default_layout = lib.mkDefault "welcome";
           scrollback_editor = lib.mkIf config.programs.helix.enable (lib.mkDefault "hx");
