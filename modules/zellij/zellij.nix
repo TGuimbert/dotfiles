@@ -13,9 +13,7 @@
 
       programs.zellij = {
         enable = true;
-        enableZshIntegration = lib.mkDefault config.programs.zsh.enable;
-        attachExistingSession = lib.mkDefault config.programs.zsh.enable;
-        exitShellOnExit = lib.mkDefault config.programs.zsh.enable;
+        enableZshIntegration = false;
         settings = {
           # A builtin, so it holds where there is no noctalia to render a theme
           # file; ../desktop/noctalia.nix overrides it on the desktops.

@@ -86,9 +86,9 @@ in
       "home:overrides" =
         assert overrides.programs.helix.settings.theme == "base16_default_dark";
         assert overrides.programs.zellij.settings.default_shell == "bash";
-        assert overrides.programs.zellij.enableZshIntegration;
-        assert overrides.programs.zellij.attachExistingSession;
-        assert overrides.programs.zellij.exitShellOnExit;
+        assert !overrides.programs.zellij.enableZshIntegration;
+        assert !overrides.programs.zellij.attachExistingSession;
+        assert !overrides.programs.zellij.exitShellOnExit;
         assert overrides.programs.zsh.enable;
         assert !overrides.programs.nushell.enable;
         assert overrides.programs.zsh.shellAliases.k == "kubectl";
