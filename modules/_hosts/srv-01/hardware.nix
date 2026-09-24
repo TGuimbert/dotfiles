@@ -2,37 +2,35 @@
 {
   hardware.facter.reportPath = ./facter.json;
 
-  # The PC611 stops answering if APST lets it reach its deepest sleep state, and
-  # the failure conceals itself: /var/log is on that drive, so the controller
-  # timeout never reaches the journal. What it looks like instead is the journal
-  # stopping mid-line with no error, every service that touches disk failing
-  # (postgresql, mariadb, every sqlite one, lldap — so authelia then reports
-  # "incorrect username or password" for a bind it cannot make), and everything
-  # already resident in memory — traefik, authelia itself — serving happily for
-  # hours afterwards. sshd accepts the connection and resets at kex, because the
-  # listener is fine and only the new session needs disk. SMART is clean
-  # afterwards and btrfs only reports a tree-log replay, so nothing on the next
-  # boot points at the drive; the tell is the NVMe temperature disappearing from
-  # beszel at the moment it happens.
+  # Cheap insurance, not a fix: the host hung again 9h44m after this was
+  # deployed, so whatever is wrong is not APST alone. What it does rule out is
+  # the deepest sleep state — the PC611 exposes a non-operational PS4 at 4mW
+  # whose entry+exit latency totals 10000us, well inside the 100000us the kernel
+  # tolerates by default, so APST was free to park it there on every idle
+  # period. 0 disables the non-operational states outright rather than capping
+  # the tolerance just under PS4 (2000 to 9999 would keep PS3); idle watts are
+  # not worth the risk on a host with no console, and the drive is measurably
+  # healthy anyway — 0 media errors, 100% spare, 1% used, an empty controller
+  # error log, all five btrfs counters at 0 and a clean scrub. LVFS carries no
+  # firmware newer than 11000111 as of 2026-09.
   #
-  # After the fact the test is `find /var/log /persistent /nix -xdev -newermt
-  # <stall> ! -newermt <reboot>`, which returns *nothing* — six hours in which
-  # traefik, gatus and beszel were all answering and not one byte reached the
-  # disk. That is also what separates this from fork exhaustion, which presents
-  # almost identically from outside: journald is already resident and needs no
-  # fork to append, so under that failure these files would carry mtimes.
+  # The fault itself is unidentified and predates this parameter. Its signature
+  # is the journal stopping mid-line with every service healthy a second earlier
+  # and *no* subsystem ever logging anything; the aftermath varies, from the
+  # kernel surviving and serving from memory for six hours (2026-09-23) to a
+  # total hang with the power LED lit and nothing on the wire (2026-09-24). The
+  # memory is non-ECC (`EDAC ie31200: No ECC support`), so a memory fault here
+  # cannot reach a log by construction — which is why ../../server/base.nix
+  # carries a watchdog rather than this file carrying another workaround.
   #
-  # The drive is not worn — 0 media errors, 100% spare, 1% used, nothing in its
-  # error log — so this is firmware behaviour and not degradation. What it does
-  # expose is a non-operational PS4 at 4mW whose entry+exit latency totals
-  # 10000us, well inside the 100000us the kernel tolerates by default, so APST
-  # is free to park it there whenever the host goes idle. Hence intervals of 3h
-  # to 26h, which is why this reads as random rather than as a power state.
-  #
-  # 0 disables the deep states entirely rather than capping the tolerance just
-  # under PS4 (anything from 2000 to 9999 would keep PS3): idle watts are not
-  # worth a drive that stops answering on a host with no console. LVFS carries
-  # no newer firmware than 11000111 as of 2026-09.
+  # Two things look diagnostic and are not, both costing an afternoon: `hrtimer:
+  # interrupt took` appears in every boot including healthy ones, and
+  # ippeveprinter precedes every failure only because a client polls it once a
+  # minute. The one test that does discriminate is `find /var/log /persistent
+  # /nix -xdev -newermt <stall> ! -newermt <reboot>` — returning nothing means
+  # not one byte reached the disk while the host was still answering, which also
+  # separates this from fork exhaustion, since journald is resident and needs no
+  # fork to append.
   boot.kernelParams = [ "nvme_core.default_ps_max_latency_us=0" ];
 
   # The uplink is a USB 2.5G dongle (onboard enp2s0 has no cable) and its
